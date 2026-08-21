@@ -6,6 +6,7 @@
 
 #include "common.hpp"
 #include "chunk.hpp"
+#include "compiler.hpp"
 
 
 // interpret results
@@ -27,10 +28,21 @@ class VM{
         uint8_t*       ip;
         vector<double> stack;    // it's easier to iterate over a vector
 
-        InterpretResult interpret(Chunk* chunk) {
-            this->chunk = chunk;
-            this->ip = this->chunk->code.data();    // ip = instruction pointer
-            return run();
+        InterpretResult interpret(string source) {
+
+            Chunk chunkToInterpret;
+
+            // compile error
+            if(!compile(source, &chunkToInterpret)) {
+                return INTERPRET_COMPILE_ERROR;
+            }
+
+            this->chunk = &chunkToInterpret;
+            this->ip = this->chunk->code.data();
+
+            InterpretResult result = run();
+            return result;
+
         }
 
         uint8_t readByte() {

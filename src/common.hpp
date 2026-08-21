@@ -15,7 +15,7 @@
 
 // convenience
 
-using std::cin, std::cout, std::string, std::vector, std::format;
+using std::cin, std::cout, std::cerr, std::string, std::vector, std::format;
 
 typedef unsigned int uint;
 

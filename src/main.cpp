@@ -22,7 +22,7 @@ using std::cout, std::cin, std::cerr, std::string, std::ifstream, std::stringstr
 // interpret
 
 InterpretResult interpret(string source) {
-    compile(source);
+    //compile(source);
     return INTERPRET_OK;
 }
 
