@@ -2,8 +2,8 @@
 
 // includes
 
-#include <string>
-#include <iostream>
+#include "common.hpp"
+#include "chunk.hpp"
 
 using std::cout, std::cin, std::string;
 
@@ -18,6 +18,20 @@ using std::cout, std::cin, std::string;
 
 int main(int argc, const char* argv[]) {
     
+
+    Chunk chunk;
+
+    int constant = chunk.addConstant(1.2);
+    chunk.write(OP_CONSTANT, 123);
+    chunk.write(constant, 123);
+
+    chunk.write(OP_RETURN, 123);
+
+    chunk.disassemble("test chunk");
+
+    return 0;
+
+
     // no arguments
     if(argc <= 1) {
         cout << "Please supply an argument. Use caro -h to get help.\n";
