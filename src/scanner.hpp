@@ -92,8 +92,8 @@ class Scanner{
 
         // helpers for scanning tokens
 
-        bool isAtEnd() {
-            return this->current >= (int)this->source.length();
+        bool isAtEnd(int offset = 0) {
+            return this->current + offset >= (int)this->source.length();
         }
 
         char peek() {
@@ -101,7 +101,7 @@ class Scanner{
             return this->source[this->current];
         }
         char peekNext() {
-            if(isAtEnd()) return '\0';
+            if(isAtEnd(1)) return '\0';
             return this->source[this->current + 1];
         }
 
