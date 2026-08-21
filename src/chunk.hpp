@@ -65,7 +65,7 @@ class Chunk{
         }
         int constantInstruction(const char* name, int offset) {
             uint8_t constant = this->code[offset + 1];
-            cout << format("{:<16} {:4d}", name, offset) << " '";
+            cout << format("{:<16} {:4d}", name, constant) << " '";
             printValue(this->constants[constant]);
             cout << "'\n";
             return offset + 2;
