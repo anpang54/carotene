@@ -37,6 +37,26 @@ class VM{
             return *this->ip++;
         }
 
+        void binaryOperation(char operation) {
+
+            // get a and b
+            double b = this->stack.back();
+            this->stack.pop_back();
+            double a = this->stack.back();
+            this->stack.pop_back();
+            
+            // do the operation
+            double result;
+            switch(operation) {
+                case '+': result = a + b; break;
+                case '-': result = a - b; break;
+                case '*': result = a * b; break;
+                case '/': result = a / b; break;
+            }
+            this->stack.push_back(result);
+
+        }
+
         InterpretResult run() {
 
             for (;;){
@@ -63,6 +83,16 @@ class VM{
                     case OP_CONSTANT: {
                         double constant = this->chunk->constants[readByte()];
                         this->stack.push_back(constant);
+                        break;
+                    }
+
+                    case OP_ADD:      { binaryOperation('+'); break; }
+                    case OP_SUBTRACT: { binaryOperation('-'); break; }
+                    case OP_MULTIPLY: { binaryOperation('*'); break; }
+                    case OP_DIVIDE:   { binaryOperation('/'); break; }
+
+                    case OP_NEGATE: {
+                        this->stack.back() = -this->stack.back();
                         break;
                     }
 

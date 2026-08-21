@@ -10,8 +10,20 @@
 // opcodes
 
 enum OpCode{
+
+    // constant
     OP_CONSTANT,
+
+    // arithmetic
+    OP_ADD,
+    OP_SUBTRACT,
+    OP_MULTIPLY,
+    OP_DIVIDE,
+    OP_NEGATE,
+
+    // return
     OP_RETURN,
+
 };
 
 
@@ -70,13 +82,28 @@ class Chunk{
             uint8_t instruction = this->code[offset];
 
             switch(instruction) {
+
                 case OP_CONSTANT:
                     return constantInstruction("OP_CONSTANT", offset);
+
+                case OP_ADD:
+                    return simpleInstruction("OP_ADD", offset);
+                case OP_SUBTRACT:
+                    return simpleInstruction("OP_SUBTRACT", offset);
+                case OP_MULTIPLY:
+                    return simpleInstruction("OP_MULTIPLY", offset);
+                case OP_DIVIDE:
+                    return simpleInstruction("OP_DIVIDE", offset);
+                case OP_NEGATE:
+                    return simpleInstruction("OP_NEGATE", offset);
+
                 case OP_RETURN:
                     return simpleInstruction("OP_RETURN", offset);
+
                 default:
                     cout << "Unknown opcode " << instruction << '\n';
                     return offset + 1;
+
             }
 
         }

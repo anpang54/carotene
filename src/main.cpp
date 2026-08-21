@@ -23,9 +23,12 @@ int main(int argc, const char* argv[]) {
     VM vm;
     Chunk chunk;
 
-    int constant = chunk.addConstant(1.2);
     chunk.write(OP_CONSTANT, 123);
-    chunk.write(constant, 123);
+    chunk.write(chunk.addConstant(3), 123);
+    chunk.write(OP_CONSTANT, 123);
+    chunk.write(chunk.addConstant(5), 123);
+    chunk.write(OP_ADD, 123);
+    
     chunk.write(OP_RETURN, 123);
 
     vm.interpret(&chunk);
