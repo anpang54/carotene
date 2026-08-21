@@ -2,11 +2,15 @@
 
 // includes
 
+#include <fstream>
+#include <sstream>
+
 #include "common.hpp"
 #include "chunk.hpp"
 #include "vm.hpp"
+#include "compiler.hpp"
 
-using std::cout, std::cin, std::string;
+using std::cout, std::cin, std::cerr, std::string, std::ifstream, std::stringstream;
 
 
 // version
@@ -15,30 +19,50 @@ using std::cout, std::cin, std::string;
 #define VERSION_DATE "21 Aug 2026"
 
 
+// interpret
+
+InterpretResult interpret(string source) {
+    compile(source);
+    return INTERPRET_OK;
+}
+
+
+// input
+
+void repl() {
+    string line;
+    for(;;) {
+        cout << "> ";
+        std::getline(std::cin, line);
+        interpret(line);
+    }
+}
+
+void runFile(string path) {
+
+    ifstream file(path);
+
+    if(!file.is_open()) {
+        cerr << "Couldn't open the file!\n";
+        exit(0);
+    }
+
+    stringstream buffer;
+    buffer << file.rdbuf();
+    string content = buffer.str();
+
+    interpret(content);
+
+}
+
+
 // main
 
 int main(int argc, const char* argv[]) {
     
-
-    VM vm;
-    Chunk chunk;
-
-    chunk.write(OP_CONSTANT, 123);
-    chunk.write(chunk.addConstant(3), 123);
-    chunk.write(OP_CONSTANT, 123);
-    chunk.write(chunk.addConstant(5), 123);
-    chunk.write(OP_EXPONENTIATE, 123);
-    
-    chunk.write(OP_RETURN, 123);
-
-    vm.interpret(&chunk);
-
-    return 0;
-
-
-    // no arguments
+    // no arguments, repl
     if(argc <= 1) {
-        cout << "Please supply an argument. Use caro -h to get help.\n";
+        repl();
         return 1;
     }
 
@@ -58,6 +82,9 @@ int main(int argc, const char* argv[]) {
     switch(option) {
 
         case ' ':
+            runFile(argv[2]);
+            break;
+
         case 'c':
         case 'r':
         case 't':
