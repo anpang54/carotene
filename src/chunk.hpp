@@ -20,6 +20,8 @@ enum OpCode{
     OP_MULTIPLY,
     OP_DIVIDE,
     OP_NEGATE,
+    OP_MODULO,
+    OP_EXPONENTIATE,
 
     // return
     OP_RETURN,
@@ -96,6 +98,10 @@ class Chunk{
                     return simpleInstruction("OP_DIVIDE", offset);
                 case OP_NEGATE:
                     return simpleInstruction("OP_NEGATE", offset);
+                case OP_MODULO:
+                    return simpleInstruction("OP_MODULO", offset);
+                case OP_EXPONENTIATE:
+                    return simpleInstruction("OP_EXPONENTIATE", offset);
 
                 case OP_RETURN:
                     return simpleInstruction("OP_RETURN", offset);

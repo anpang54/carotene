@@ -27,7 +27,7 @@ int main(int argc, const char* argv[]) {
     chunk.write(chunk.addConstant(3), 123);
     chunk.write(OP_CONSTANT, 123);
     chunk.write(chunk.addConstant(5), 123);
-    chunk.write(OP_ADD, 123);
+    chunk.write(OP_EXPONENTIATE, 123);
     
     chunk.write(OP_RETURN, 123);
 

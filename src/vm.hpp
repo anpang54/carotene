@@ -48,10 +48,12 @@ class VM{
             // do the operation
             double result;
             switch(operation) {
-                case '+': result = a + b; break;
-                case '-': result = a - b; break;
-                case '*': result = a * b; break;
-                case '/': result = a / b; break;
+                case '+': result = a + b;           break;
+                case '-': result = a - b;           break;
+                case '*': result = a * b;           break;
+                case '/': result = a / b;           break;
+                case '%': result = (int)a % (int)b; break;
+                case '^': result = std::pow(a, b);  break;
             }
             this->stack.push_back(result);
 
@@ -86,10 +88,12 @@ class VM{
                         break;
                     }
 
-                    case OP_ADD:      { binaryOperation('+'); break; }
-                    case OP_SUBTRACT: { binaryOperation('-'); break; }
-                    case OP_MULTIPLY: { binaryOperation('*'); break; }
-                    case OP_DIVIDE:   { binaryOperation('/'); break; }
+                    case OP_ADD:          { binaryOperation('+'); break; }
+                    case OP_SUBTRACT:     { binaryOperation('-'); break; }
+                    case OP_MULTIPLY:     { binaryOperation('*'); break; }
+                    case OP_DIVIDE:       { binaryOperation('/'); break; }
+                    case OP_MODULO:       { binaryOperation('%'); break; }
+                    case OP_EXPONENTIATE: { binaryOperation('^'); break; }
 
                     case OP_NEGATE: {
                         this->stack.back() = -this->stack.back();
