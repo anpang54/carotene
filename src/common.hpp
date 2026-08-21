@@ -18,3 +18,8 @@
 using std::cin, std::cout, std::string, std::vector, std::format;
 
 typedef unsigned int uint;
+
+
+// switches
+
+#define DEBUG_TRACE_EXECUTION true

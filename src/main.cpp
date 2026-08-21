@@ -4,6 +4,7 @@
 
 #include "common.hpp"
 #include "chunk.hpp"
+#include "vm.hpp"
 
 using std::cout, std::cin, std::string;
 
@@ -19,15 +20,15 @@ using std::cout, std::cin, std::string;
 int main(int argc, const char* argv[]) {
     
 
+    VM vm;
     Chunk chunk;
 
     int constant = chunk.addConstant(1.2);
     chunk.write(OP_CONSTANT, 123);
     chunk.write(constant, 123);
-
     chunk.write(OP_RETURN, 123);
 
-    chunk.disassemble("test chunk");
+    vm.interpret(&chunk);
 
     return 0;
 
