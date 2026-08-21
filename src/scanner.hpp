@@ -62,6 +62,9 @@ class Scanner{
             // clox has start and current as const char*
         int line;
 
+        // constructor that doesn't construct anything
+        Scanner() {}
+
         Scanner(string source) {
             this->source = source;
             this->start = 0;

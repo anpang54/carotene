@@ -10,7 +10,7 @@
 
 // parser
 
-class Parser{
+class Compiler{
 
     public:
 
@@ -21,7 +21,25 @@ class Parser{
         bool hadError = false;
         bool panicMode = false;    // suppresses other errors
 
-        Scanner* scanner;
+        Chunk* compilingChunk;
+        Scanner scanner;
+
+
+        // constructor/compile
+
+        bool compile(string source, Chunk* chunk) {
+            
+            this->scanner = Scanner(source);
+            this->compilingChunk = chunk;
+            
+            this->advance();    // "primes the pump"
+            this->expression();    // parse 1 expression
+            this->consume(TOKEN_EOF, "Expect end of expression.");    // end expression
+            this->endCompiler();
+
+            return !hadError;
+
+        }
 
 
         // errors
@@ -60,14 +78,11 @@ class Parser{
         void advance() {
             this->previous = this->current;
             for(;;) {
-                this->current = this->scanner->scanToken();
+                this->current = this->scanner.scanToken();
                 if(this->current.type != TOKEN_ERROR) break;
                 errorAtCurrent(this->current.start);
             }
         }
-
-
-        // consume
 
         void consume(TokenType type, string message) {
             if(this->current.type == type) {
@@ -77,19 +92,25 @@ class Parser{
             errorAtCurrent(message);
         }
 
+
+        // emitting bytecode
+
+        void emitByte(uint8_t byte) {
+            compilingChunk->write(byte, this->previous.line);
+        }
+        void emitBytes(uint8_t byte1, uint8_t byte2) {
+            emitByte(byte1);
+            emitByte(byte2);
+        }
+        void emitReturn() {
+            emitByte(OP_RETURN);
+        }
+
+
+        // end
+
+        void endCompiler() {
+            emitReturn();
+        }
 };
 
-
-// compile
-
-bool compile(string source, Chunk* chunk) {
-
-    Scanner scanner(source);
-
-    Parser parser;
-    parser.advance();    // "primes the pump"
-    parser.expression();    // parse 1 expression
-    parser.consume(TOKEN_EOF, "Expect end of expression.");    // end expression
-    return !parser.hadError;
-
-}

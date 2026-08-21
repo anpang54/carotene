@@ -33,7 +33,8 @@ class VM{
             Chunk chunkToInterpret;
 
             // compile error
-            if(!compile(source, &chunkToInterpret)) {
+            Compiler compiler;
+            if(!compiler.compile(source, &chunkToInterpret)) {
                 return INTERPRET_COMPILE_ERROR;
             }
 
