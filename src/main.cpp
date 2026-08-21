@@ -82,7 +82,7 @@ int main(int argc, const char* argv[]) {
     switch(option) {
 
         case ' ':
-            runFile(argv[2]);
+            runFile(filename);
             break;
 
         case 'c':
