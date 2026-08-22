@@ -5,10 +5,13 @@
 // includes
 
 #include <cstdarg>
+#include <unordered_map>
 
 #include "common.hpp"
 #include "chunk.hpp"
 #include "compiler.hpp"
+
+using std::unordered_map;
 
 
 // interpret results
@@ -31,7 +34,9 @@ class VM{
         uint8_t*      ip;
         vector<Value> stack;    // it's easier to iterate over a vector
 
+        unordered_map<string, Value> globals;
     
+
         // interpret
 
         InterpretResult interpret(string source) {
@@ -282,19 +287,54 @@ class VM{
                         this->stack.push_back(CaroBool(!valuesEqual(a, b)));
                         break;
                     }
-                    case OP_LESS:          { numberBinary(OP_LESS);          }
-                    case OP_LESS_EQUAL:    { numberBinary(OP_LESS_EQUAL);    }
-                    case OP_GREATER:       { numberBinary(OP_GREATER);       }
-                    case OP_GREATER_EQUAL: { numberBinary(OP_GREATER_EQUAL); }
+                    case OP_LESS:          { numberBinary(OP_LESS);          break; }
+                    case OP_LESS_EQUAL:    { numberBinary(OP_LESS_EQUAL);    break; }
+                    case OP_GREATER:       { numberBinary(OP_GREATER);       break; }
+                    case OP_GREATER_EQUAL: { numberBinary(OP_GREATER_EQUAL); break; }
                     
                     case OP_NULL:  this->stack.push_back(CaroNull);        break;
                     case OP_TRUE:  this->stack.push_back(CaroBool(true));  break;
                     case OP_FALSE: this->stack.push_back(CaroBool(false)); break;
 
-                    case OP_RETURN: {
+                    case OP_DEFINE_GLOBAL: {
+                        ObjString* name = asString(this->chunk->constants[readByte()]);
+                        this->globals[name->str] = peek(0);
+                        this->stack.pop_back();
+                        break;
+                    }
+                    case OP_GET_GLOBAL: {
+                        ObjString* name = asString(this->chunk->constants[readByte()]);
+                        auto found = this->globals.find(name->str);
+                        if(found == this->globals.end()) {
+                            runtimeError("Undefined variable '%s'.", name->str.c_str());
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                        this->stack.push_back(found->second);
+                        break;
+                    }
+                    case OP_SET_GLOBAL: {
+                        ObjString* name = asString(this->chunk->constants[readByte()]);
+                        auto found = this->globals.find(name->str);
+                        if(found == this->globals.end()) {
+                            runtimeError("Undefined variable '%s'.", name->str.c_str());
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                        found->second = peek(0);
+                        break;
+                    }
+
+                    case OP_PRINT: {
                         printValue(this->stack.back());
-                        this->stack.pop_back();    // apparently pop_back() doesn't return the value
+                        this->stack.pop_back();
                         cout << '\n';
+                        break;
+                    }
+
+                    case OP_POP: {
+                        this->stack.pop_back();
+                        break;
+                    }
+                    case OP_RETURN: {
                         return INTERPRET_OK;
                     }
 

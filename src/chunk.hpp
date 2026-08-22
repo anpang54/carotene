@@ -37,7 +37,16 @@ enum OpCode{
     OP_GREATER,
     OP_GREATER_EQUAL,
 
-    // return
+    // variables
+    OP_DEFINE_GLOBAL,
+    OP_GET_GLOBAL,
+    OP_SET_GLOBAL,
+
+    // functions
+    OP_PRINT,
+
+    // misc
+    OP_POP,
     OP_RETURN,
 
 };
@@ -141,6 +150,18 @@ class Chunk{
                 case OP_FALSE:
                     return simpleInstruction("OP_FALSE", offset);
 
+                case OP_DEFINE_GLOBAL:
+                    return constantInstruction("OP_DEFINE_GLOBAL", offset);
+                case OP_GET_GLOBAL:
+                    return constantInstruction("OP_GET_GLOBAL", offset);
+                case OP_SET_GLOBAL:
+                    return constantInstruction("OP_SET_GLOBAL", offset);
+
+                case OP_PRINT:
+                    return simpleInstruction("OP_PRINT", offset);
+
+                case OP_POP:
+                    return simpleInstruction("OP_POP", offset);
                 case OP_RETURN:
                     return simpleInstruction("OP_RETURN", offset);
 

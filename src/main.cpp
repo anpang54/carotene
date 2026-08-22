@@ -22,17 +22,14 @@ using std::cout, std::cin, std::cerr, std::string, std::ifstream, std::stringstr
 #define VERSION_DATE "21 Aug 2026"
 
 
-// interpret
+// input
+
+VM vm;
 
 InterpretResult interpret(string source) {
-    VM vm;
     InterpretResult result = vm.interpret(source);
-    freeObjects();
     return result;
 }
-
-
-// input
 
 void repl() {
     for(;;) {
@@ -42,6 +39,7 @@ void repl() {
         interpret(string(line));
         free(line);
     }
+    freeObjects();
 }
 
 void runFile(string path) {

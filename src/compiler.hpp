@@ -31,7 +31,8 @@ enum Precedence{
 
 class Compiler;    // forward declaration
 
-typedef void (Compiler::*ParseFn)();
+typedef void (Compiler::*ParseFn)(bool canAssign);
+
 struct ParseRule{
     ParseFn prefix;
     ParseFn infix;
@@ -63,9 +64,10 @@ class Compiler{
             this->scanner = Scanner(source);
             this->compilingChunk = chunk;
             
-            this->advance();    // "primes the pump"
-            this->expression();    // parse 1 expression
-            this->consume(TOKEN_EOF, "Expect end of expression.");    // end expression
+            this->advance();
+            while(!match(TOKEN_EOF)) {
+                this->declaration();
+            }
             this->endCompiler();
 
             return !hadError;
@@ -144,7 +146,7 @@ class Compiler{
 
         // each part
 
-        void makeGrouping() {
+        void makeGrouping(bool canAssign) {
             expression();
             consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
         }
@@ -158,7 +160,7 @@ class Compiler{
             return (uint8_t)constant;
         }
 
-        void makeUnary() {
+        void makeUnary(bool canAssign) {
             TokenType operatorType = this->previous.type;
             parsePrecedence(PREC_UNARY);    // compile the operand
             switch (operatorType) {    // emit the operator instruction
@@ -171,7 +173,7 @@ class Compiler{
                 default: return;    // unreachable
             }
         }
-        void makeBinary() {
+        void makeBinary(bool canAssign) {
 
             TokenType operatorType = this->previous.type;
             ParseRule* rule = getRule(operatorType);
@@ -204,11 +206,11 @@ class Compiler{
 
         }
         
-        void parseNumber() {
+        void parseNumber(bool canAssign) {
             double value = std::stod(this->previous.start);
             emitConstant(CaroNumber(value));
         }
-        void parseLiteral() {
+        void parseLiteral(bool canAssign) {
             switch(this->previous.type) {
                 case TOKEN_FALSE: emitByte(OP_FALSE); break;
                 case TOKEN_NULL:  emitByte(OP_NULL);  break;
@@ -216,7 +218,7 @@ class Compiler{
                 default: return;    // unreachable
             }
         }
-        void parseString() {
+        void parseString(bool canAssign) {
             emitConstant(
                 CaroObj(copyString(this->previous.start.substr(1, this->previous.length - 2)))
             );
@@ -233,12 +235,18 @@ class Compiler{
                 error("Expect expression.");
                 return;
             }
-            (this->*prefixRule)();
+
+            bool canAssign = precedence <= PREC_ASSIGNMENT;
+            (this->*prefixRule)(canAssign);
 
             while(precedence <= getRule(this->current.type)->precedence) {
                 advance();
                 ParseFn infixRule = getRule(this->previous.type)->infix;
-                (this->*infixRule)();
+                (this->*infixRule)(canAssign);
+            }
+
+            if(canAssign && match(TOKEN_EQUAL)) {
+                error("Invalid assignment target.");
             }
 
         }
@@ -250,6 +258,113 @@ class Compiler{
 
         void expression() {
             parsePrecedence(PREC_ASSIGNMENT);
+        }
+
+
+        // statements and declarations
+
+        bool check(TokenType type) {
+            return this->current.type == type;
+        }
+        bool match(TokenType type) {
+            if(!check(type)) return false;
+            advance();
+            return true;
+        }
+
+        void statement() {
+            if(match(TOKEN_PRINT)) {
+                printStatement();
+            } else {
+                expressionStatement();
+            }
+        }
+        void printStatement() {
+            expression();
+            consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+            emitByte(OP_PRINT);
+        }
+        void expressionStatement() {
+            expression();
+            consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+            emitByte(OP_POP);
+        }
+
+        void declaration() {
+
+            if(match(TOKEN_VAR)) {
+                varDeclaration();
+            } else {
+                statement();
+            }
+
+            if(this->panicMode) synchronize();
+
+        }
+        void varDeclaration() {
+
+            uint8_t global = parseVariable("Expect variable name.");
+
+            if(match(TOKEN_EQUAL)) {
+                expression();
+            } else {
+                emitByte(OP_NULL);
+            }
+            consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+
+            defineVariable(global);
+            
+        }
+        uint8_t parseVariable(string errorMessage) {
+            consume(TOKEN_IDENTIFIER, errorMessage);
+            return identifierConstant(&this->previous);
+        }
+        uint8_t identifierConstant(Token* name) {
+            return makeConstant(CaroObj(copyString(name->start)));
+        }
+        void defineVariable(uint8_t global) {
+            emitBytes(OP_DEFINE_GLOBAL, global);
+        }
+
+        void synchronize() {
+
+            this->panicMode = false;
+
+            while(this->current.type != TOKEN_EOF) {
+                if(this->previous.type == TOKEN_SEMICOLON) return;
+                switch(this->current.type) {
+
+                    case TOKEN_CLASS:
+                    case TOKEN_FUNC:
+                    case TOKEN_VAR:
+                    case TOKEN_FOR:
+                    case TOKEN_IF:
+                    case TOKEN_WHILE:
+                    case TOKEN_PRINT:
+                    case TOKEN_RETURN:
+                        return;
+
+                    default:    // do nothing.
+                }
+                advance();
+            }
+
+        }
+
+
+        // variables
+
+        void makeVariable(bool canAssign) {
+            namedVariable(this->previous, canAssign);
+        }
+        void namedVariable(Token name, bool canAssign) {
+            uint8_t arg = identifierConstant(&name);
+            if(canAssign && match(TOKEN_EQUAL)) {
+                expression();
+                emitBytes(OP_SET_GLOBAL, arg);
+            } else {
+                emitBytes(OP_GET_GLOBAL, arg);
+            }
         }
 
 
@@ -301,7 +416,7 @@ inline ParseRule rules[] = {
     [TOKEN_GREATER_EQUAL] = { NULL,                    &Compiler::makeBinary, PREC_COMPARISON },
 
     // literals
-    [TOKEN_IDENTIFIER]    = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_IDENTIFIER]    = { &Compiler::makeVariable, NULL,                  PREC_NONE       },
     [TOKEN_STRING]        = { &Compiler::parseString,  NULL,                  PREC_NONE       },
     [TOKEN_NUMBER]        = { &Compiler::parseNumber,  NULL,                  PREC_NONE       },
 
