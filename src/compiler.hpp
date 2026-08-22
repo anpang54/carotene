@@ -216,6 +216,11 @@ class Compiler{
                 default: return;    // unreachable
             }
         }
+        void parseString() {
+            emitConstant(
+                CaroObj(copyString(this->previous.start.substr(1, this->previous.length - 2)))
+            );
+        }
 
 
         // precedence
@@ -297,7 +302,7 @@ inline ParseRule rules[] = {
 
     // literals
     [TOKEN_IDENTIFIER]    = { NULL,                    NULL,                  PREC_NONE       },
-    [TOKEN_STRING]        = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_STRING]        = { &Compiler::parseString,  NULL,                  PREC_NONE       },
     [TOKEN_NUMBER]        = { &Compiler::parseNumber,  NULL,                  PREC_NONE       },
 
     // keywords

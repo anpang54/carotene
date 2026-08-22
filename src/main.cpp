@@ -23,8 +23,9 @@ using std::cout, std::cin, std::cerr, std::string, std::ifstream, std::stringstr
 
 InterpretResult interpret(string source) {
     VM vm;
-    vm.interpret(source);
-    return INTERPRET_OK;
+    InterpretResult result = vm.interpret(source);
+    freeObjects();
+    return result;
 }
 
 

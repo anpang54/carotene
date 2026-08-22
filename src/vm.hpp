@@ -31,7 +31,7 @@ class VM{
         uint8_t*      ip;
         vector<Value> stack;    // it's easier to iterate over a vector
 
-
+    
         // interpret
 
         InterpretResult interpret(string source) {
@@ -60,20 +60,6 @@ class VM{
         }
         Value peek(int distance) {
             return this->stack[this->stack.size() - 1 - distance];
-        }
-
-        bool valuesEqual(Value a, Value b) {
-            if (a.type != b.type) return false;
-            switch(a.type) {
-                case TYPE_BOOL:   return a.as.boolean == b.as.boolean;
-                case TYPE_NULL:   return true;
-                case TYPE_NUMBER: return a.as.number == b.as.number;
-                default:          return false;    // unreachable
-            }
-        }
-
-        bool isFalsey(Value value) {
-            return value.type == TYPE_NULL || (value.type == TYPE_BOOL && !value.as.boolean);
         }
 
         void runtimeError(const char* format, ...) {
@@ -142,6 +128,18 @@ class VM{
 
         }
 
+        void concatenate() {
+
+            // get a and b
+            string b = asString(this->stack.back())->str;
+            this->stack.pop_back();
+            string a = asString(this->stack.back())->str;
+            this->stack.pop_back();
+
+            // concatenate
+            this->stack.push_back(CaroObj(copyString(a + b)));
+
+        }
 
         // run
 
@@ -177,7 +175,18 @@ class VM{
                     #define unary()    if(unaryOperation()    == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
                     #define binary(op) if(binaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
                     
-                    case OP_ADD:          { binary(OP_ADD);          }
+                    case OP_ADD: {
+                        if(isString(peek(0)) && isString(peek(1))) {
+                            concatenate();
+                            break;
+                        } else if(peek(0).type == TYPE_NUMBER && peek(1).type == TYPE_NUMBER) {
+                            binary(OP_ADD);
+                            break;
+                        } else {
+                            runtimeError("Operands must be numbers or strings.");
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                    }
                     case OP_SUBTRACT:     { binary(OP_SUBTRACT);     }
                     case OP_MULTIPLY:     { binary(OP_MULTIPLY);     }
                     case OP_DIVIDE:       { binary(OP_DIVIDE);       }
