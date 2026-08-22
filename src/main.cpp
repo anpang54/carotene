@@ -5,8 +5,10 @@
 #include <fstream>
 #include <sstream>
 
+#ifdef __linux__
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
 
 #include "common.hpp"
 #include "chunk.hpp"
@@ -33,11 +35,25 @@ InterpretResult interpret(string source) {
 
 void repl() {
     for(;;) {
-        char* line = readline("> ");
-        if(line == nullptr) break;
-        if(*line) add_history(line);
-        interpret(string(line));
-        free(line);
+
+        // get line
+        string source;
+        #ifdef __linux__
+            // linux uses readline
+            char* line = readline("> ");
+            if(line == nullptr) break;
+            if(*line) add_history(line);
+            source = line;
+            free(line);
+        #else
+            // windows doesn't have readline so it just gets plain getline
+            cout << "> ";
+            if(!std::getline(cin, source)) break;
+        #endif
+
+        // interpret
+        interpret(source);
+
     }
     freeObjects();
 }
