@@ -29,7 +29,7 @@ typedef enum {
     TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
 
     // keywords
-    TOKEN_VAR,
+    TOKEN_DOLLAR,
     TOKEN_FUNC, TOKEN_RETURN,
     TOKEN_CLASS, TOKEN_THIS, TOKEN_SUPER,
     TOKEN_IF, TOKEN_ELSE,
@@ -183,7 +183,7 @@ class Scanner{
                     }
                     break;
              // case 'u':
-                case 'v': return checkKeyword(1, 2, "ar", TOKEN_VAR);
+             // case 'v':
                 case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
              // case 'x':
              // case 'y':
@@ -273,6 +273,7 @@ class Scanner{
                 case '^': return makeToken(TOKEN_CARET);
                 case '&': return makeToken(TOKEN_AMPERSAND);
                 case '|': return makeToken(TOKEN_PIPE);
+                case '$': return makeToken(TOKEN_DOLLAR);
 
                 // 1 or 2 chars
                 case '!': return makeToken(match('=')? TOKEN_BANG_EQUAL   : TOKEN_BANG);

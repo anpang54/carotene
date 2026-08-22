@@ -298,7 +298,7 @@ class Compiler{
 
         void declaration() {
 
-            if(match(TOKEN_VAR)) {
+            if(match(TOKEN_DOLLAR)) {
                 varDeclaration();
             } else {
                 statement();
@@ -342,7 +342,7 @@ class Compiler{
 
                     case TOKEN_CLASS:
                     case TOKEN_FUNC:
-                    case TOKEN_VAR:
+                    case TOKEN_DOLLAR:
                     case TOKEN_FOR:
                     case TOKEN_IF:
                     case TOKEN_WHILE:
@@ -413,6 +413,7 @@ inline ParseRule rules[] = {
     [TOKEN_SLASH]         = { NULL,                    &Compiler::makeBinary, PREC_FACTOR     },
     [TOKEN_PERCENT]       = { NULL,                    &Compiler::makeBinary, PREC_FACTOR     },
     [TOKEN_CARET]         = { NULL,                    &Compiler::makeBinary, PREC_POWER      },
+    [TOKEN_DOLLAR]        = { NULL,                    NULL,                  PREC_NONE       },
 
     // 1 or 2 chars
     [TOKEN_BANG]          = { &Compiler::makeUnary,    NULL,                  PREC_NONE       },
@@ -431,7 +432,6 @@ inline ParseRule rules[] = {
     [TOKEN_NUMBER]        = { &Compiler::parseNumber,  NULL,                  PREC_NONE       },
 
     // keywords
-    [TOKEN_VAR]           = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_FUNC]          = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_RETURN]        = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_CLASS]         = { NULL,                    NULL,                  PREC_NONE       },
