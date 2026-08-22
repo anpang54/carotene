@@ -89,7 +89,7 @@ class VM{
             return INTERPRET_OK;
         }
 
-        InterpretResult binaryOperation(OpCode op) {
+        InterpretResult numberBinaryOperation(OpCode op) {
 
             // check type
             if(peek(0).type != TYPE_NUMBER || peek(1).type != TYPE_NUMBER) {
@@ -128,16 +128,69 @@ class VM{
 
         }
 
-        void concatenate() {
+        InterpretResult stringBinaryOperation(OpCode op) {
 
             // get a and b
-            string b = asString(this->stack.back())->str;
-            this->stack.pop_back();
-            string a = asString(this->stack.back())->str;
-            this->stack.pop_back();
+            string strA, strB;
+            int multiplier;
+            if(op == OP_MULTIPLY) {
 
-            // concatenate
-            this->stack.push_back(CaroObj(copyString(a + b)));
+                if(peek(0).type == TYPE_NUMBER) {    // number is on the right
+                    multiplier = (int)this->stack.back().as.number;
+                    this->stack.pop_back();
+                    strA = asString(this->stack.back())->str;
+                    this->stack.pop_back();
+                } else if(peek(1).type == TYPE_NUMBER) {    // number is on the left
+                    strA = asString(this->stack.back())->str;
+                    this->stack.pop_back();
+                    multiplier = (int)this->stack.back().as.number;
+                    this->stack.pop_back();
+                } else {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+            } else {
+
+                strB = asString(this->stack.back()) -> str;
+                this->stack.pop_back();
+                strA = asString(this->stack.back()) -> str;
+                this->stack.pop_back();
+
+            }
+
+            // do the operation
+            string result;
+            switch(op) {
+
+                case OP_ADD: {    // concatenates a and b
+                    result = strA + strB;
+                    break;
+                }
+                case OP_SUBTRACT: {    // removes all occurrences of b in a
+                    result = strA;
+                    replace(result, strB, "");
+                    break;
+                }
+
+                case OP_MULTIPLY: {    // duplicates a b times
+                    if(multiplier < 0) {
+                        runtimeError("Strings can only be duplicated a positive amount of times.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+                    result.reserve(strA.length() * multiplier);
+                    for(int i = 0; i < multiplier; ++i) {
+                        result += strA;
+                    }
+                    break;
+                }
+
+                default: break;
+                    
+            }
+            
+            this->stack.push_back(CaroObj(copyString(result)));
+
+            return INTERPRET_OK;
 
         }
 
@@ -163,8 +216,8 @@ class VM{
                 }
 
                 // run the instruction
-                uint8_t instruction;
-                switch(instruction = readByte()) {
+                OpCode instruction;
+                switch(instruction = (OpCode)readByte()) {
 
                     case OP_CONSTANT: {
                         Value constant = this->chunk->constants[readByte()];
@@ -172,26 +225,40 @@ class VM{
                         break;
                     }
 
-                    #define unary()    if(unaryOperation()    == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
-                    #define binary(op) if(binaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
+                    #define unary()          if(unaryOperation()          == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
+                    #define numberBinary(op) if(numberBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
+                    #define stringBinary(op) if(stringBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
                     
-                    case OP_ADD: {
+                    case OP_ADD: case OP_SUBTRACT: {
                         if(isString(peek(0)) && isString(peek(1))) {
-                            concatenate();
+                            stringBinary(instruction);
                             break;
                         } else if(peek(0).type == TYPE_NUMBER && peek(1).type == TYPE_NUMBER) {
-                            binary(OP_ADD);
+                            numberBinary(instruction);
                             break;
                         } else {
                             runtimeError("Operands must be numbers or strings.");
                             return INTERPRET_RUNTIME_ERROR;
                         }
                     }
-                    case OP_SUBTRACT:     { binary(OP_SUBTRACT);     }
-                    case OP_MULTIPLY:     { binary(OP_MULTIPLY);     }
-                    case OP_DIVIDE:       { binary(OP_DIVIDE);       }
-                    case OP_MODULO:       { binary(OP_MODULO);       }
-                    case OP_EXPONENTIATE: { binary(OP_EXPONENTIATE); }
+                    case OP_MULTIPLY: {
+                        if(
+                            (peek(0).type == TYPE_NUMBER && isString(peek(1))) ||
+                            (peek(1).type == TYPE_NUMBER && isString(peek(0)))
+                        ) {
+                            stringBinary(instruction);
+                            break;
+                        } else if(peek(0).type == TYPE_NUMBER && peek(1).type == TYPE_NUMBER) {
+                            numberBinary(instruction);
+                            break;
+                        } else {
+                            runtimeError("Operands must be numbers or strings.");
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                    }
+                    case OP_DIVIDE:       { numberBinary(OP_DIVIDE);       }
+                    case OP_MODULO:       { numberBinary(OP_MODULO);       }
+                    case OP_EXPONENTIATE: { numberBinary(OP_EXPONENTIATE); }
 
                     case OP_NEGATE:       { unary();     }
 
@@ -215,10 +282,10 @@ class VM{
                         this->stack.push_back(CaroBool(!valuesEqual(a, b)));
                         break;
                     }
-                    case OP_LESS:          { binary(OP_LESS);          }
-                    case OP_LESS_EQUAL:    { binary(OP_LESS_EQUAL);    }
-                    case OP_GREATER:       { binary(OP_GREATER);       }
-                    case OP_GREATER_EQUAL: { binary(OP_GREATER_EQUAL); }
+                    case OP_LESS:          { numberBinary(OP_LESS);          }
+                    case OP_LESS_EQUAL:    { numberBinary(OP_LESS_EQUAL);    }
+                    case OP_GREATER:       { numberBinary(OP_GREATER);       }
+                    case OP_GREATER_EQUAL: { numberBinary(OP_GREATER_EQUAL); }
                     
                     case OP_NULL:  this->stack.push_back(CaroNull);        break;
                     case OP_TRUE:  this->stack.push_back(CaroBool(true));  break;
