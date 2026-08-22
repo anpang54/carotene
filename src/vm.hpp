@@ -293,6 +293,7 @@ class VM{
                     case OP_GREATER_EQUAL: { numberBinary(OP_GREATER_EQUAL); break; }
                     
                     case OP_NULL:  this->stack.push_back(CaroNull);        break;
+                    case OP_SMTH:  this->stack.push_back(CaroSmth);        break;
                     case OP_TRUE:  this->stack.push_back(CaroBool(true));  break;
                     case OP_FALSE: this->stack.push_back(CaroBool(false)); break;
 

@@ -212,9 +212,10 @@ class Compiler{
         }
         void parseLiteral(bool canAssign) {
             switch(this->previous.type) {
-                case TOKEN_FALSE: emitByte(OP_FALSE); break;
                 case TOKEN_NULL:  emitByte(OP_NULL);  break;
+                case TOKEN_SMTH:  emitByte(OP_SMTH);  break;
                 case TOKEN_TRUE:  emitByte(OP_TRUE);  break;
+                case TOKEN_FALSE: emitByte(OP_FALSE); break;
                 default: return;    // unreachable
             }
         }
@@ -392,6 +393,7 @@ inline ParseRule rules[] = {
 
 //   token                   prefix                    infix                  precedence
 
+    // 1 char
     [TOKEN_LEFT_PAREN]    = { &Compiler::makeGrouping, NULL,                  PREC_NONE       },
     [TOKEN_RIGHT_PAREN]   = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_LEFT_BRACE]    = { NULL,                    NULL,                  PREC_NONE       },
@@ -406,6 +408,7 @@ inline ParseRule rules[] = {
     [TOKEN_PERCENT]       = { NULL,                    &Compiler::makeBinary, PREC_FACTOR     },
     [TOKEN_CARET]         = { NULL,                    &Compiler::makeBinary, PREC_POWER      },
 
+    // 1 or 2 chars
     [TOKEN_BANG]          = { &Compiler::makeUnary,    NULL,                  PREC_NONE       },
     [TOKEN_BANG_EQUAL]    = { NULL,                    &Compiler::makeBinary, PREC_EQUALITY   },
     [TOKEN_EQUAL]         = { NULL,                    NULL,                  PREC_NONE       },
@@ -434,6 +437,7 @@ inline ParseRule rules[] = {
     [TOKEN_TRUE]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_FALSE]         = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_NULL]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
+    [TOKEN_SMTH]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_PRINT]         = { NULL,                    NULL,                  PREC_NONE       },
 
     // misc

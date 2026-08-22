@@ -14,6 +14,7 @@ enum OpCode{
     // values
     OP_CONSTANT,
     OP_NULL,
+    OP_SMTH,
     OP_TRUE,
     OP_FALSE,
 

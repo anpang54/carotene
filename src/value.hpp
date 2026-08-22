@@ -10,6 +10,7 @@
 // values
 
 #define CaroNull          ((Value){ TYPE_NULL,   { .number  = 0            }})
+#define CaroSmth          ((Value){ TYPE_SMTH,   { .number  = 0            }})
 #define CaroBool(value)   ((Value){ TYPE_BOOL,   { .boolean = value        }})
 #define CaroNumber(value) ((Value){ TYPE_NUMBER, { .number  = value        }})
 #define CaroObj(object)   ((Value){ TYPE_OBJ,    { .obj     = (Obj*)object }})
@@ -18,6 +19,7 @@ struct Obj;    // forward declaration
 
 enum ValueType{
     TYPE_NULL,
+    TYPE_SMTH,
     TYPE_BOOL,
     TYPE_NUMBER,
     TYPE_OBJ,
@@ -42,6 +44,7 @@ bool valuesEqual(Value a, Value b) {
     switch(a.type) {
         case TYPE_BOOL:   return a.as.boolean == b.as.boolean;
         case TYPE_NULL:   return true;
+        case TYPE_SMTH:   return true;
         case TYPE_NUMBER: return a.as.number == b.as.number;
         case TYPE_OBJ:    return asString(a)->str == asString(b)->str;
         default:          return false;    // unreachable
@@ -59,6 +62,9 @@ void printValue(Value value) {
             break;
         case TYPE_NULL:
             cout << "null";
+            break;
+        case TYPE_SMTH:
+            cout << "smth";
             break;
         case TYPE_NUMBER:
             cout << value.as.number;
