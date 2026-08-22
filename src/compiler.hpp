@@ -199,7 +199,8 @@ class Compiler{
                 case TOKEN_LESS_EQUAL:    emitByte(OP_LESS_EQUAL);    break;
                 case TOKEN_GREATER:       emitByte(OP_GREATER);       break;
                 case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL); break;
-
+                case TOKEN_SPACESHIP:     emitByte(OP_SPACESHIP);     break;
+                
                 default: return;    // unreachable
 
             }
@@ -417,6 +418,7 @@ inline ParseRule rules[] = {
     [TOKEN_LESS_EQUAL]    = { NULL,                    &Compiler::makeBinary, PREC_COMPARISON },
     [TOKEN_GREATER]       = { NULL,                    &Compiler::makeBinary, PREC_COMPARISON },
     [TOKEN_GREATER_EQUAL] = { NULL,                    &Compiler::makeBinary, PREC_COMPARISON },
+    [TOKEN_SPACESHIP]     = { NULL,                    &Compiler::makeBinary, PREC_COMPARISON },
 
     // literals
     [TOKEN_IDENTIFIER]    = { &Compiler::makeVariable, NULL,                  PREC_NONE       },

@@ -23,6 +23,7 @@ typedef enum {
     TOKEN_EQUAL,   TOKEN_EQUAL_EQUAL,
     TOKEN_LESS,    TOKEN_LESS_EQUAL,
     TOKEN_GREATER, TOKEN_GREATER_EQUAL,
+    TOKEN_SPACESHIP,
 
     // literals
     TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
@@ -275,9 +276,17 @@ class Scanner{
                 // 1 or 2 chars
                 case '!': return makeToken(match('=')? TOKEN_BANG_EQUAL   : TOKEN_BANG);
                 case '=': return makeToken(match('=')? TOKEN_EQUAL_EQUAL  : TOKEN_EQUAL);
-                case '<': return makeToken(match('=')? TOKEN_LESS_EQUAL   : TOKEN_LESS);
+                case '<': {
+                    if(match('=')) {
+                        if(match('>')) {
+                            return makeToken(TOKEN_SPACESHIP);
+                        }
+                        return makeToken(TOKEN_LESS_EQUAL);
+                    }
+                    return makeToken(TOKEN_LESS);
+                }
                 case '>': return makeToken(match('=')? TOKEN_GREATER_EQUAL: TOKEN_GREATER);
-
+                
                 // literals
                 case '"': return scanString();
 

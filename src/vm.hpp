@@ -112,18 +112,20 @@ class VM{
             Value result;
             switch(op) {
 
-                case OP_ADD:           result = CaroNumber(a + b);                     break;
-                case OP_SUBTRACT:      result = CaroNumber(a - b);                     break;
-                case OP_MULTIPLY:      result = CaroNumber(a * b);                     break;
-                case OP_DIVIDE:        result = CaroNumber(a / b);                     break;
-                case OP_MODULO:        result = CaroNumber((double)((int)a % (int)b)); break;
-                case OP_EXPONENTIATE:  result = CaroNumber(std::pow(a, b));            break;
+                case OP_ADD:           result = CaroNumber(a + b);                          break;
+                case OP_SUBTRACT:      result = CaroNumber(a - b);                          break;
+                case OP_MULTIPLY:      result = CaroNumber(a * b);                          break;
+                case OP_DIVIDE:        result = CaroNumber(a / b);                          break;
+                case OP_MODULO:        result = CaroNumber((double)((int)a % (int)b));      break;
+                case OP_EXPONENTIATE:  result = CaroNumber(std::pow(a, b));                 break;
 
-                case OP_LESS:          result = CaroBool(a < b);                       break;
-                case OP_LESS_EQUAL:    result = CaroBool(a <= b);                      break;
-                case OP_GREATER:       result = CaroBool(a > b);                       break;
-                case OP_GREATER_EQUAL: result = CaroBool(a >= b);                      break;
-            
+                case OP_LESS:          result = CaroBool(a < b);                            break;
+                case OP_LESS_EQUAL:    result = CaroBool(a <= b);                           break;
+                case OP_GREATER:       result = CaroBool(a > b);                            break;
+                case OP_GREATER_EQUAL: result = CaroBool(a >= b);                           break;
+                case OP_SPACESHIP:     result = CaroNumber(a < b? -1.0: (a > b? 1.0: 0.0)); break;
+                                                // todo: remove decimals when adding ints
+
                 default: break;
 
             }
@@ -291,7 +293,8 @@ class VM{
                     case OP_LESS_EQUAL:    { numberBinary(OP_LESS_EQUAL);    break; }
                     case OP_GREATER:       { numberBinary(OP_GREATER);       break; }
                     case OP_GREATER_EQUAL: { numberBinary(OP_GREATER_EQUAL); break; }
-                    
+                    case OP_SPACESHIP:     { numberBinary(OP_SPACESHIP);     break; }
+
                     case OP_NULL:  this->stack.push_back(CaroNull);        break;
                     case OP_SMTH:  this->stack.push_back(CaroSmth);        break;
                     case OP_TRUE:  this->stack.push_back(CaroBool(true));  break;

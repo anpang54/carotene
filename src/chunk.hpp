@@ -37,6 +37,7 @@ enum OpCode{
     OP_LESS_EQUAL,
     OP_GREATER,
     OP_GREATER_EQUAL,
+    OP_SPACESHIP,
 
     // variables
     OP_DEFINE_GLOBAL,
@@ -143,7 +144,9 @@ class Chunk{
                     return simpleInstruction("OP_GREATER", offset);
                 case OP_GREATER_EQUAL:
                     return simpleInstruction("OP_GREATER_EQUAL", offset);
-
+                case OP_SPACESHIP:
+                    return simpleInstruction("OP_SPACEASHIP", offset);
+                    
                 case OP_NULL:
                     return simpleInstruction("OP_NULL", offset);
                 case OP_TRUE:
