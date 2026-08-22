@@ -11,8 +11,11 @@
 
 enum OpCode{
 
-    // constant
+    // values
     OP_CONSTANT,
+    OP_NULL,
+    OP_TRUE,
+    OP_FALSE,
 
     // arithmetic
     OP_ADD,
@@ -22,6 +25,17 @@ enum OpCode{
     OP_NEGATE,
     OP_MODULO,
     OP_EXPONENTIATE,
+
+    // logic
+    OP_NOT,
+    
+    // comparison
+    OP_EQUAL,
+    OP_NOT_EQUAL,
+    OP_LESS,
+    OP_LESS_EQUAL,
+    OP_GREATER,
+    OP_GREATER_EQUAL,
 
     // return
     OP_RETURN,
@@ -40,7 +54,7 @@ class Chunk{
 
         vector<uint8_t> code;
         vector<uint>    lines;
-        vector<double>  constants;
+        vector<Value>  constants;
             // crafting interpreters uses custom dynamic arrays because it's C but here we just use vectors
 
 
@@ -51,7 +65,7 @@ class Chunk{
             this->lines.push_back(line);
         }
 
-        int addConstant(double value) {
+        int addConstant(Value value) {
             this->constants.push_back(value);
             return this->constants.size() - 1;    // return new constant's index
         }
@@ -96,12 +110,36 @@ class Chunk{
                     return simpleInstruction("OP_MULTIPLY", offset);
                 case OP_DIVIDE:
                     return simpleInstruction("OP_DIVIDE", offset);
-                case OP_NEGATE:
-                    return simpleInstruction("OP_NEGATE", offset);
                 case OP_MODULO:
                     return simpleInstruction("OP_MODULO", offset);
                 case OP_EXPONENTIATE:
                     return simpleInstruction("OP_EXPONENTIATE", offset);
+
+                case OP_NEGATE:
+                    return simpleInstruction("OP_NEGATE", offset);
+
+                case OP_NOT:
+                    return simpleInstruction("OP_NOT", offset);
+
+                case OP_EQUAL:
+                    return simpleInstruction("OP_EQUAL", offset);
+                case OP_NOT_EQUAL:
+                    return simpleInstruction("OP_NOT_EQUAL", offset);
+                case OP_LESS:
+                    return simpleInstruction("OP_LESS", offset);
+                case OP_LESS_EQUAL:
+                    return simpleInstruction("OP_LESS_EQUAL", offset);
+                case OP_GREATER:
+                    return simpleInstruction("OP_GREATER", offset);
+                case OP_GREATER_EQUAL:
+                    return simpleInstruction("OP_GREATER_EQUAL", offset);
+
+                case OP_NULL:
+                    return simpleInstruction("OP_NULL", offset);
+                case OP_TRUE:
+                    return simpleInstruction("OP_TRUE", offset);
+                case OP_FALSE:
+                    return simpleInstruction("OP_FALSE", offset);
 
                 case OP_RETURN:
                     return simpleInstruction("OP_RETURN", offset);
