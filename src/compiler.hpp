@@ -170,6 +170,9 @@ class Compiler{
                 case TOKEN_BANG:
                     emitByte(OP_NOT);
                     break;
+                case TOKEN_TYPEOF:
+                    emitByte(OP_TYPEOF);
+                    break;
                 default: return;    // unreachable
             }
         }
@@ -209,7 +212,8 @@ class Compiler{
         
         void parseNumber(bool canAssign) {
             double value = std::stod(this->previous.start);
-            emitConstant(CaroNumber(value));
+            emitConstant(CaroNumber(TYPE_DOUBLE, value));
+                // todo: emit something other than a double
         }
         void parseLiteral(bool canAssign) {
             switch(this->previous.type) {
@@ -343,6 +347,7 @@ class Compiler{
                     case TOKEN_IF:
                     case TOKEN_WHILE:
                     case TOKEN_PRINT:
+                    case TOKEN_TYPEOF:
                     case TOKEN_RETURN:
                         return;
 
@@ -441,6 +446,7 @@ inline ParseRule rules[] = {
     [TOKEN_NULL]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_SMTH]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_PRINT]         = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_TYPEOF]        = { &Compiler::makeUnary,    NULL,                  PREC_NONE       },
 
     // misc
     [TOKEN_ERROR]         = { NULL,                    NULL,                  PREC_NONE       },

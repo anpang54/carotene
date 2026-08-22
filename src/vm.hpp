@@ -86,45 +86,51 @@ class VM{
         // operators
 
         InterpretResult unaryOperation() {
-            if(peek(0).type != TYPE_NUMBER) {
+            if(!isNumeric(peek(0).type)) {
                 runtimeError("Operand must be a number.");
                 return INTERPRET_RUNTIME_ERROR;
             }
-            this->stack.back() = CaroNumber(-this->stack.back().as.number);
+            this->stack.back() = CaroNumber(peek(0).type, -asNumberToDouble(this->stack.back()));
             return INTERPRET_OK;
         }
 
         InterpretResult numberBinaryOperation(OpCode op) {
 
             // check type
-            if(peek(0).type != TYPE_NUMBER || peek(1).type != TYPE_NUMBER) {
+            if(!isNumeric(peek(0).type) || !isNumeric(peek(1).type)) {
                 runtimeError("Operands must be numbers.");
                 return INTERPRET_RUNTIME_ERROR;
             }
+            if(peek(0).type != peek(1).type) {
+                runtimeError("Arithmetic operations between numbers of different types currently aren't supported yet.");
+                    // todo: support
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            const ValueType type = peek(0).type;
 
             // get a and b
-            double b = this->stack.back().as.number;
+            double b = asNumberToDouble(this->stack.back());
             this->stack.pop_back();
-            double a = this->stack.back().as.number;
+            double a = asNumberToDouble(this->stack.back());
             this->stack.pop_back();
             
             // do the operation
             Value result;
             switch(op) {
 
-                case OP_ADD:           result = CaroNumber(a + b);                          break;
-                case OP_SUBTRACT:      result = CaroNumber(a - b);                          break;
-                case OP_MULTIPLY:      result = CaroNumber(a * b);                          break;
-                case OP_DIVIDE:        result = CaroNumber(a / b);                          break;
-                case OP_MODULO:        result = CaroNumber((double)((int)a % (int)b));      break;
-                case OP_EXPONENTIATE:  result = CaroNumber(std::pow(a, b));                 break;
+                case OP_ADD:           result = CaroNumber(type, a + b);                          break;
+                case OP_SUBTRACT:      result = CaroNumber(type, a - b);                          break;
+                case OP_MULTIPLY:      result = CaroNumber(type, a * b);                          break;
+                case OP_DIVIDE:        result = CaroNumber(type, a / b);                          break;
+                case OP_MODULO:        result = CaroNumber(type, (double)((int)a % (int)b));      break;
+                case OP_EXPONENTIATE:  result = CaroNumber(type, std::pow(a, b));                 break;
 
-                case OP_LESS:          result = CaroBool(a < b);                            break;
-                case OP_LESS_EQUAL:    result = CaroBool(a <= b);                           break;
-                case OP_GREATER:       result = CaroBool(a > b);                            break;
-                case OP_GREATER_EQUAL: result = CaroBool(a >= b);                           break;
-                case OP_SPACESHIP:     result = CaroNumber(a < b? -1.0: (a > b? 1.0: 0.0)); break;
-                                                // todo: remove decimals when adding ints
+                case OP_LESS:          result = CaroBool  (a < b);                                break;
+                case OP_LESS_EQUAL:    result = CaroBool  (a <= b);                               break;
+                case OP_GREATER:       result = CaroBool  (a > b);                                break;
+                case OP_GREATER_EQUAL: result = CaroBool  (a >= b);                               break;
+                case OP_SPACESHIP:     result = CaroInt   (a < b? -1.0: (a > b? 1.0: 0.0));       break;
+                                                        // todo: remove decimals when adding ints
 
                 default: break;
 
@@ -142,15 +148,15 @@ class VM{
             int multiplier;
             if(op == OP_MULTIPLY) {
 
-                if(peek(0).type == TYPE_NUMBER) {    // number is on the right
-                    multiplier = (int)this->stack.back().as.number;
+                if(isNumeric(peek(0).type)) {    // number is on the right
+                    multiplier = (int)asNumberToDouble(this->stack.back());
                     this->stack.pop_back();
                     strA = asString(this->stack.back())->str;
                     this->stack.pop_back();
-                } else if(peek(1).type == TYPE_NUMBER) {    // number is on the left
+                } else if(isNumeric(peek(1).type)) {    // number is on the left
                     strA = asString(this->stack.back())->str;
                     this->stack.pop_back();
-                    multiplier = (int)this->stack.back().as.number;
+                    multiplier = (int)asNumberToDouble(this->stack.back());
                     this->stack.pop_back();
                 } else {
                     return INTERPRET_RUNTIME_ERROR;
@@ -240,7 +246,7 @@ class VM{
                         if(isString(peek(0)) && isString(peek(1))) {
                             stringBinary(instruction);
                             break;
-                        } else if(peek(0).type == TYPE_NUMBER && peek(1).type == TYPE_NUMBER) {
+                        } else if(isNumeric(peek(0).type) && isNumeric(peek(1).type)) {
                             numberBinary(instruction);
                             break;
                         } else {
@@ -250,12 +256,12 @@ class VM{
                     }
                     case OP_MULTIPLY: {
                         if(
-                            (peek(0).type == TYPE_NUMBER && isString(peek(1))) ||
-                            (peek(1).type == TYPE_NUMBER && isString(peek(0)))
+                            (isNumeric(peek(0).type) && isString(peek(1))) ||
+                            (isNumeric(peek(1).type) && isString(peek(0)))
                         ) {
                             stringBinary(instruction);
                             break;
-                        } else if(peek(0).type == TYPE_NUMBER && peek(1).type == TYPE_NUMBER) {
+                        } else if(isNumeric(peek(0).type) && isNumeric(peek(1).type)) {
                             numberBinary(instruction);
                             break;
                         } else {
@@ -331,6 +337,10 @@ class VM{
                         printValue(this->stack.back());
                         this->stack.pop_back();
                         cout << '\n';
+                        break;
+                    }
+                    case OP_TYPEOF: {
+                        this->stack.back() = CaroObj(copyString(typeof(this->stack.back())));
                         break;
                     }
 

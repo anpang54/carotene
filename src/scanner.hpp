@@ -36,7 +36,7 @@ typedef enum {
     TOKEN_FOR, TOKEN_WHILE,
     TOKEN_TRUE, TOKEN_FALSE,
     TOKEN_NULL, TOKEN_SMTH,
-    TOKEN_PRINT,
+    TOKEN_PRINT, TOKEN_TYPEOF,
 
     // misc
     TOKEN_ERROR, TOKEN_EOF
@@ -178,6 +178,7 @@ class Scanner{
                         switch(this->source[this->start + 1]) {
                             case 'h': return checkKeyword(2, 2, "is", TOKEN_THIS);
                             case 'r': return checkKeyword(2, 2, "ue", TOKEN_TRUE);
+                            case 'y': return checkKeyword(2, 4, "peof", TOKEN_TYPEOF);
                         }
                     }
                     break;

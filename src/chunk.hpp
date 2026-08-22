@@ -46,6 +46,7 @@ enum OpCode{
 
     // functions
     OP_PRINT,
+    OP_TYPEOF,
 
     // misc
     OP_POP,
@@ -163,7 +164,9 @@ class Chunk{
 
                 case OP_PRINT:
                     return simpleInstruction("OP_PRINT", offset);
-
+                case OP_TYPEOF:
+                    return simpleInstruction("OP_TYPEOF", offset);
+                    
                 case OP_POP:
                     return simpleInstruction("OP_POP", offset);
                 case OP_RETURN:
