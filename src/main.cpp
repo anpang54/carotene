@@ -5,6 +5,9 @@
 #include <fstream>
 #include <sstream>
 
+#include <readline/readline.h>
+#include <readline/history.h>
+
 #include "common.hpp"
 #include "chunk.hpp"
 #include "vm.hpp"
@@ -32,11 +35,12 @@ InterpretResult interpret(string source) {
 // input
 
 void repl() {
-    string line;
     for(;;) {
-        cout << "> ";
-        std::getline(std::cin, line);
-        interpret(line);
+        char* line = readline("> ");
+        if(line == nullptr) break;
+        if(*line) add_history(line);
+        interpret(string(line));
+        free(line);
     }
 }
 
