@@ -584,6 +584,8 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
 }
 
+#define ANY_NUMERIC {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE}
+
 #define p(...)\
     do{\
         string checkResult = checkParameters(__VA_ARGS__, args);\

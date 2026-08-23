@@ -4,6 +4,8 @@
 
 // includes
 
+#include <type_traits>
+
 #include "common.hpp"
 
 
@@ -47,15 +49,15 @@ struct Value{    // total 16 bytes
     ValueType type;     // 4 bytes
                         // 4 bytes of padding
     union{              // 8 bytes max
-        bool     Abool;   // 1
-        uint8_t  Abyte;   // 1
-        uint32_t Auint;   // 4
-        int32_t  Aint;    // 4
-        uint64_t Aulong;  // 8
-        int64_t  Along;   // 8
-        float    Afloat;  // 4
-        double   Adouble; // 8
-        Obj* obj;         // 8
+        bool     Abool;
+        uint8_t  Abyte;
+        uint32_t Auint;
+        int32_t  Aint;
+        uint64_t Aulong;
+        int64_t  Along;
+        float    Afloat;
+        double   Adouble;
+        Obj* obj;
     } as;
 };
     // crafting interpreters section 30.3 uses NaN boxing to condense everything into a single double
@@ -78,6 +80,10 @@ inline constexpr Value CaroSmth                             { TYPE_SMTH,   {    
 
        constexpr Value CaroObj   (    Obj* v) { return Value{ TYPE_OBJ,    { .obj     = v } }; }
 
+
+// number handling functions
+// including 6 very boilerplate switch cases
+
 template<typename T>
 Value CaroNumber(ValueType type, T v) {
     switch(type) {
@@ -89,6 +95,19 @@ Value CaroNumber(ValueType type, T v) {
         case TYPE_FLOAT : return Value{ type, { .Afloat  =    (float)v } };
         case TYPE_DOUBLE: return Value{ type, { .Adouble =   (double)v } };
         default: return CaroNull;    // unreachable
+    }
+}
+
+float asNumberToFloat(Value& v) {
+    switch(v.type) {
+        case TYPE_BYTE  : return (float)v.as.Abyte  ;
+        case TYPE_UINT  : return (float)v.as.Auint  ;
+        case TYPE_INT   : return (float)v.as.Aint   ;
+        case TYPE_ULONG : return (float)v.as.Aulong ;
+        case TYPE_LONG  : return (float)v.as.Along  ;
+        case TYPE_FLOAT : return (float)v.as.Afloat ;
+        case TYPE_DOUBLE: return (float)v.as.Adouble;
+        default: return (float)0;    // unreachable
     }
 }
 double asNumberToDouble(Value& v) {
@@ -113,6 +132,51 @@ string asNumberToString(Value& v) {
         case TYPE_FLOAT : return to_string(v.as.Afloat );
         case TYPE_DOUBLE: return to_string(v.as.Adouble);
         default: return "0";    // unreachable
+    }
+}
+
+template<typename F>
+Value mapNumber(Value& v, F f) {
+    switch(v.type) {
+        case TYPE_BYTE  : return CaroByte  (f(v.as.Abyte  ));
+        case TYPE_UINT  : return CaroUint  (f(v.as.Auint  ));
+        case TYPE_INT   : return CaroInt   (f(v.as.Aint   ));
+        case TYPE_ULONG : return CaroUlong (f(v.as.Aulong ));
+        case TYPE_LONG  : return CaroLong  (f(v.as.Along  ));
+        case TYPE_FLOAT : return CaroFloat (f(v.as.Afloat ));
+        case TYPE_DOUBLE: return CaroDouble(f(v.as.Adouble));
+        default: return CaroNull;    // unreachable
+    }
+}
+template<typename F>
+Value mapNumbers(Value& a, Value& b, F f) {
+    switch(a.type) {
+        case TYPE_BYTE  : return CaroByte  (f(a.as.Abyte  , b.as.Abyte  ));
+        case TYPE_UINT  : return CaroUint  (f(a.as.Auint  , b.as.Auint  ));
+        case TYPE_INT   : return CaroInt   (f(a.as.Aint   , b.as.Aint   ));
+        case TYPE_ULONG : return CaroUlong (f(a.as.Aulong , b.as.Aulong ));
+        case TYPE_LONG  : return CaroLong  (f(a.as.Along  , b.as.Along  ));
+        case TYPE_FLOAT : return CaroFloat (f(a.as.Afloat , b.as.Afloat ));
+        case TYPE_DOUBLE: return CaroDouble(f(a.as.Adouble, b.as.Adouble));
+        default: return CaroNull;    // unreachable
+    }
+}
+template<typename F>
+Value mapFloat(Value& v, F f) {
+    return mapNumber(v, [&](auto x) -> decltype(x) {
+        if constexpr(std::is_floating_point_v<decltype(x)>) {
+            return f(x);
+        } else {
+            return x;
+        }
+    });
+}
+template<typename F>
+Value toFloat(Value& v, F f) {
+    if(v.type == TYPE_FLOAT) {
+        return CaroFloat(f(v.as.Afloat));
+    } else {
+        return CaroDouble(f(asNumberToDouble(v)));
     }
 }
 
