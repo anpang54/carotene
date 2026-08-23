@@ -246,6 +246,13 @@ class Scanner{
                         this->line++;
                         advance();
                         break;
+                    case '/':
+                        if(peekNext() == '/') {
+                            while(peek() != '\n' && !isAtEnd()) advance();
+                        } else {
+                            return;
+                        }
+                        break;
                     default:
                         return;
                 }
