@@ -89,13 +89,21 @@ int main(int argc, const char* argv[]) {
     // get arguments
     char option = ' ';
     string filename;
+    uint moreArgumentsStart;
     if(argv[1][0] == '-') {
         option = argv[1][1];
         if(argc >= 3) {
             filename = argv[2];
         }
+        moreArgumentsStart = 3;
     } else {
         filename = argv[1];
+        moreArgumentsStart = 2;
+    }
+
+    // store additional arguments for the script
+    for(int i = moreArgumentsStart; i < argc; ++i) {
+        moreArguments.push_back(argv[i]);
     }
 
     // do something

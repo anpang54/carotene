@@ -79,6 +79,16 @@ class VM{
 
             this->frames.reserve(FRAMES_MAX);
 
+            // add script arguments
+            this->globals["_args"] = CaroDouble(moreArguments.size());
+                                  // todo: change to uint
+            for(uint i = 0; i < moreArguments.size(); ++i) {
+                this->globals["_" + to_string(i + 1)] = CaroObj(copyString(moreArguments[i]));
+                // yes, indexes are supposed to start at 0
+                // but in C argv[0] is the name of the file and argv[1] is the first argument, so we're gonna match that
+            }
+            
+            // add native functions
             for(const pair<string, NativeFn>& native: natives) {
                 defineNative(native.first, native.second);
             }
