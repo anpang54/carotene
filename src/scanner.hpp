@@ -36,7 +36,7 @@ typedef enum {
     TOKEN_FOR, TOKEN_WHILE, TOKEN_REPEAT, TOKEN_FOREVER,
     TOKEN_TRUE, TOKEN_FALSE,
     TOKEN_NULL, TOKEN_SMTH,
-    TOKEN_PRINT, TOKEN_TYPEOF,
+    TOKEN_TYPEOF,
 
     // misc
     TOKEN_ERROR, TOKEN_EOF
@@ -183,7 +183,7 @@ class Scanner{
 
              // case 'o':
 
-                case 'p': return checkKeyword(1, 4, "rint", TOKEN_PRINT);
+             // case 'p':
 
              // case 'q':
 

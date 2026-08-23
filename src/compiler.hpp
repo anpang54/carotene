@@ -349,9 +349,7 @@ class Compiler{
         }
 
         void statement() {
-            if(match(TOKEN_PRINT)) {
-                printStatement();
-            } else if(match(TOKEN_FOR)) {
+            if(match(TOKEN_FOR)) {
                 forStatement();
             } else if(match(TOKEN_REPEAT)) {
                 repeatStatement();
@@ -370,12 +368,6 @@ class Compiler{
             } else {
                 expressionStatement();
             }
-        }
-
-        void printStatement() {
-            expression();
-            consume(TOKEN_SEMICOLON, "Expect ';' after value.");
-            emitByte(OP_PRINT);
         }
 
         void forStatement() {
@@ -696,7 +688,6 @@ class Compiler{
                     case TOKEN_REPEAT:
                     case TOKEN_IF:
                     case TOKEN_WHILE:
-                    case TOKEN_PRINT:
                     case TOKEN_TYPEOF:
                     case TOKEN_RETURN:
                         return;
@@ -926,7 +917,6 @@ inline ParseRule rules[] = {
     [TOKEN_FALSE]         = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_NULL]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_SMTH]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
-    [TOKEN_PRINT]         = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_TYPEOF]        = { &Compiler::makeUnary,    NULL,                  PREC_NONE       },
 
     // misc

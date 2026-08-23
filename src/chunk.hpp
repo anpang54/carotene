@@ -51,7 +51,6 @@ enum OpCode{
     OP_RETURN,
 
     // specific functions
-    OP_PRINT,
     OP_TYPEOF,
 
     // control flow
@@ -188,8 +187,6 @@ class Chunk{
                 case OP_SET_LOCAL:
                     return byteInstruction("OP_SET_LOCAL", offset);
 
-                case OP_PRINT:
-                    return simpleInstruction("OP_PRINT", offset);
                 case OP_TYPEOF:
                     return simpleInstruction("OP_TYPEOF", offset);
                 
@@ -197,7 +194,7 @@ class Chunk{
                     return byteInstruction("OP_CALL", offset);
                 case OP_RETURN:
                     return simpleInstruction("OP_RETURN", offset);
-                    
+
                 case OP_JUMP:
                     return jumpInstruction("OP_JUMP", 1, offset);
                 case OP_JUMP_IF_FALSE:

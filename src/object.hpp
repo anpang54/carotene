@@ -70,7 +70,7 @@ ObjFunction* newFunction() {
 
 class VM;    // forward? declaration
 
-typedef Value (*NativeFn)(VM* vm, int argCount, Value* args);
+typedef Value (*NativeFn)(VM* vm, vector<Value> args);
 
 struct ObjNative: Obj{
     NativeFn function;

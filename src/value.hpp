@@ -178,8 +178,8 @@ void printValue(Value value) {
     }
 }
 
-string typeof(Value value) {
-    switch(value.type) {
+string typeofType(ValueType type) {
+    switch(type) {
 
         case TYPE_BOOL:   return "bool";
         case TYPE_NULL:   return "null";
@@ -192,10 +192,15 @@ string typeof(Value value) {
         case TYPE_LONG:   return "long";
         case TYPE_FLOAT:  return "float";
         case TYPE_DOUBLE: return "double";
-        
-        case TYPE_OBJ:    return typeofObject(value.as.obj);
 
         default:        return "unknown";    // should be unreachable
 
+    }
+}
+string typeof(Value value) {
+    if(value.type == TYPE_OBJ) {
+        return typeofObject(value.as.obj);
+    } else {
+        return typeofType(value.type);
     }
 }
