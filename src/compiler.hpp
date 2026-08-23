@@ -212,7 +212,7 @@ class Compiler{
         }
 
         void emitReturn() {
-            emitByte(OP_RETURN);
+            emitBytes(OP_NULL, OP_RETURN);
         }
 
 
@@ -357,6 +357,8 @@ class Compiler{
                 repeatStatement();
             } else if(match(TOKEN_IF)) {
                 ifStatement();
+            } else if (match(TOKEN_RETURN)) {
+                returnStatement();
             } else if(match(TOKEN_WHILE)) {
                 whileStatement();
             } else if(match(TOKEN_FOREVER)) {
@@ -504,6 +506,22 @@ class Compiler{
             currentChunk()->code[offset] = (jump >> 8) & 0xff;
             currentChunk()->code[offset + 1] = jump & 0xff;
         
+        }
+
+        void returnStatement() {
+
+            if(cur().type == TYPE_SCRIPT) {
+                error("Can't return from top-level code.");
+            }
+
+            if(match(TOKEN_SEMICOLON)) {
+                emitReturn();
+            } else {
+                expression();
+                consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
+                emitByte(OP_RETURN);
+            }
+
         }
 
         void whileStatement() {
@@ -768,6 +786,25 @@ class Compiler{
             
         }
 
+        void makeCall(bool canAssign) {
+            uint8_t argCount = argumentList();
+            emitBytes(OP_CALL, argCount);
+        }
+        uint8_t argumentList() {
+            uint8_t argCount = 0;
+            if(!check(TOKEN_RIGHT_PAREN)) {
+                do{
+                    expression();
+                    if(argCount == 255) {
+                        error("Can't have more than 255 arguments.");
+                    }
+                    argCount++;
+                } while (match(TOKEN_COMMA));
+            }
+            consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+            return argCount;
+        }
+
 
         // variables
 
@@ -839,7 +876,7 @@ inline ParseRule rules[] = {
 //   token                   prefix                    infix                  precedence
 
     // 1 char
-    [TOKEN_LEFT_PAREN]    = { &Compiler::makeGrouping, NULL,                  PREC_NONE       },
+    [TOKEN_LEFT_PAREN]    = { &Compiler::makeGrouping, &Compiler::makeCall,   PREC_CALL       },    // ( is an infix operator for function calls
     [TOKEN_RIGHT_PAREN]   = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_LEFT_BRACE]    = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_RIGHT_BRACE]   = { NULL,                    NULL,                  PREC_NONE       },

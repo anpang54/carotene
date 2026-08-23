@@ -47,6 +47,10 @@ enum OpCode{
     OP_SET_LOCAL,
 
     // functions
+    OP_CALL,
+    OP_RETURN,
+
+    // specific functions
     OP_PRINT,
     OP_TYPEOF,
 
@@ -57,7 +61,6 @@ enum OpCode{
 
     // misc
     OP_POP,
-    OP_RETURN,
 
 };
 
@@ -190,6 +193,11 @@ class Chunk{
                 case OP_TYPEOF:
                     return simpleInstruction("OP_TYPEOF", offset);
                 
+                case OP_CALL:
+                    return byteInstruction("OP_CALL", offset);
+                case OP_RETURN:
+                    return simpleInstruction("OP_RETURN", offset);
+                    
                 case OP_JUMP:
                     return jumpInstruction("OP_JUMP", 1, offset);
                 case OP_JUMP_IF_FALSE:
@@ -199,8 +207,6 @@ class Chunk{
 
                 case OP_POP:
                     return simpleInstruction("OP_POP", offset);
-                case OP_RETURN:
-                    return simpleInstruction("OP_RETURN", offset);
 
                 default:
                     cout << "Unknown opcode " << instruction << '\n';

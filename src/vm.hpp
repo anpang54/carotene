@@ -23,6 +23,8 @@ enum InterpretResult{
     INTERPRET_RUNTIME_ERROR
 };
 
+#define FRAMES_MAX 64    // there is a limit here to stop infinite recursion
+
 struct CallFrame{
     ObjFunction* function;
     uint8_t* ip;
@@ -53,12 +55,10 @@ class VM{
             ObjFunction* function = compiler.compile(source);
             if(function == NULL) return INTERPRET_COMPILE_ERROR;
 
+            this->frames.reserve(FRAMES_MAX);
+
             this->stack.push_back(CaroObj(function));
-            this->frames.push_back(CallFrame());
-            frame = &this->frames.back();
-            frame->function = function;
-            frame->ip = function->chunk.code.data();
-            frame->slots = this->stack.size() - 1;
+            if(!call(function, 0)) return INTERPRET_RUNTIME_ERROR;
 
             return run();
 
@@ -86,13 +86,27 @@ class VM{
             va_end(args);
             cerr << '\n';
 
-            CallFrame* frame = &this->frames.back();
-            size_t instruction = frame->ip - frame->function->chunk.code.data() - 1;
-            int line = frame->function->chunk.lines[instruction];
+            for(int i = (int)this->frames.size() - 1; i >= 0; --i) {
+                CallFrame* callFrame = &this->frames[i];
+                ObjFunction* function = callFrame->function;
+                size_t instruction = callFrame->ip - function->chunk.code.data() - 1;
+                cerr << "[line " << function->chunk.lines[instruction] << "] in ";
+                if(function->name.empty()) {
+                    cerr << "script";
+                } else {
+                    cerr << function->name << "()";
+                }
+                cerr << '\n';
+            }
 
-            cerr << "[line " << line << "] in script\n";
+            resetStack();
+
+        }
+
+        void resetStack() {
             this->stack.clear();
-
+            this->frames.clear();
+            this->frame = nullptr;
         }
 
 
@@ -225,6 +239,47 @@ class VM{
             return INTERPRET_OK;
 
         }
+
+
+        // calling functions
+
+        bool call(ObjFunction* function, int argCount) {
+
+            // check number of arguments
+            if(argCount != function->arity) {
+                runtimeError("Expected %d arguments but got %d.", function->arity, argCount);
+                return false;
+            }
+
+            // check stack
+            if(this->frames.size() == FRAMES_MAX) {
+                runtimeError("Stack overflow.");
+                return false;
+            }
+                // user probably wrote an infinitely recursing function
+
+            CallFrame* newFrame = &this->frames.emplace_back();
+            newFrame->function = function;
+            newFrame->ip = function->chunk.code.data();
+            newFrame->slots = this->stack.size() - argCount - 1;
+
+            return true;
+
+        }
+
+        bool callValue(Value callee, int argCount) {
+            if(callee.type == TYPE_OBJ) {
+                switch(callee.as.obj->type) {
+                    case OBJ_FUNCTION:
+                        return call(asFunction(callee), argCount);
+                    default:
+                        break;    // non-callable object type
+                }
+            }
+            runtimeError("Can only call functions and classes.");
+            return false;
+        }
+
 
         // run
 
@@ -365,6 +420,36 @@ class VM{
                         break;
                     }
 
+                    case OP_CALL: {
+                        int argCount = readByte();
+                        if(!callValue(peek(argCount), argCount)) {
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                        frame = &this->frames.back();
+                        break;
+                    }
+                    case OP_RETURN: {
+
+                        Value result = this->stack.back();
+                        this->stack.pop_back();
+
+                        size_t slots = frame->slots;
+                        this->frames.pop_back();
+
+                        if(this->frames.empty()) {
+                            this->stack.pop_back();
+                            return INTERPRET_OK;
+                        }
+
+                        this->stack.resize(slots);
+                        this->stack.push_back(result);
+                        
+                        frame = &this->frames.back();
+
+                        break;
+
+                    }
+
                     case OP_PRINT: {
                         printValue(this->stack.back());
                         this->stack.pop_back();
@@ -395,9 +480,6 @@ class VM{
                     case OP_POP: {
                         this->stack.pop_back();
                         break;
-                    }
-                    case OP_RETURN: {
-                        return INTERPRET_OK;
                     }
 
                 }
