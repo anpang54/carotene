@@ -107,13 +107,19 @@ class VM{
                 return INTERPRET_RUNTIME_ERROR;
             }
             const ValueType type = peek(0).type;
-            
+
             // get a and b
             double b = asNumberToDouble(this->stack.back());
             this->stack.pop_back();
             double a = asNumberToDouble(this->stack.back());
             this->stack.pop_back();
             
+            // check divisiom by zero
+            if((op == OP_DIVIDE || op == OP_MODULO) && b == 0) {
+                runtimeError("Division by zero.");
+                return INTERPRET_COMPILE_ERROR;
+            }
+
             // do the operation
             Value result;
             switch(op) {
