@@ -43,6 +43,8 @@ enum OpCode{
     OP_DEFINE_GLOBAL,
     OP_GET_GLOBAL,
     OP_SET_GLOBAL,
+    OP_GET_LOCAL,
+    OP_SET_LOCAL,
 
     // functions
     OP_PRINT,
@@ -85,17 +87,23 @@ class Chunk{
 
         // disassembly
 
-        int simpleInstruction(const char* name, int offset) {
+        int simpleInstruction(string name, int offset) {
             cout << name << '\n';
             return offset + 1;
         }
-        int constantInstruction(const char* name, int offset) {
+        int constantInstruction(string name, int offset) {
             uint8_t constant = this->code[offset + 1];
             cout << format("{:<16} {:4d}", name, constant) << " '";
             printValue(this->constants[constant]);
             cout << "'\n";
             return offset + 2;
         }
+        int byteInstruction(string name, int offset) {
+            uint8_t slot = this->code[offset + 1];
+            cout << format("{:<16} {:4d}", name, slot) << " '\n";
+            return offset + 2; 
+        }
+
 
         int disassembleInstruction(int offset) {
 
@@ -161,6 +169,11 @@ class Chunk{
                     return constantInstruction("OP_GET_GLOBAL", offset);
                 case OP_SET_GLOBAL:
                     return constantInstruction("OP_SET_GLOBAL", offset);
+
+                case OP_GET_LOCAL:
+                    return byteInstruction("OP_GET_LOCAL", offset);
+                case OP_SET_LOCAL:
+                    return byteInstruction("OP_SET_LOCAL", offset);
 
                 case OP_PRINT:
                     return simpleInstruction("OP_PRINT", offset);

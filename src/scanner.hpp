@@ -172,7 +172,7 @@ class Scanner{
                             case 'u': return checkKeyword(2, 3, "per", TOKEN_SUPER);
                         }
                     }
-                
+                    break;
                 case 't':
                     if(this->current - this->start > 1) {
                         switch(this->source[this->start + 1]) {

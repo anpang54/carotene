@@ -2,11 +2,16 @@
 #pragma once
 
 
-// includes
+// INCLUDES
+
+#include <string_view>
 
 #include "common.hpp"
 #include "scanner.hpp"
 #include "chunk.hpp"
+
+
+// SETUP
 
 
 // precedence
@@ -27,7 +32,7 @@ enum Precedence{
 };
 
 
-// parse rule type
+// structs
 
 class Compiler;    // forward declaration
 
@@ -39,30 +44,42 @@ struct ParseRule{
     Precedence precedence;
 };
 
+struct Local{
+    Token name;
+    int depth;
+};
 
-// parser
+
+// COMPILER
 
 class Compiler{
 
     public:
 
 
+        // variables
+
+        Chunk* compilingChunk;
+        Scanner scanner;
         Token current;
         Token previous;
 
         bool hadError = false;
         bool panicMode = false;    // suppresses other errors
 
-        Chunk* compilingChunk;
-        Scanner scanner;
+        vector<Local> locals;
+        int localCount;
+        int scopeDepth;
 
 
-        // constructor/compile
+        // compile
 
         bool compile(string source, Chunk* chunk) {
             
-            this->scanner = Scanner(source);
             this->compilingChunk = chunk;
+            this->scanner = Scanner(source);
+            this->localCount = 0;
+            this->scopeDepth = 0;
             
             this->advance();
             while(!match(TOKEN_EOF)) {
@@ -106,7 +123,7 @@ class Compiler{
         }
         
 
-        // advance
+        // advance/consume
 
         void advance() {
             this->previous = this->current;
@@ -267,7 +284,7 @@ class Compiler{
         }
 
 
-        // statements and declarations
+        // statements
 
         bool check(TokenType type) {
             return this->current.type == type;
@@ -281,6 +298,10 @@ class Compiler{
         void statement() {
             if(match(TOKEN_PRINT)) {
                 printStatement();
+            } else if(match(TOKEN_LEFT_BRACE)) {
+                beginScope();
+                block();
+                endScope();
             } else {
                 expressionStatement();
             }
@@ -295,6 +316,9 @@ class Compiler{
             consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
             emitByte(OP_POP);
         }
+
+
+        // variables and declarations
 
         void declaration() {
 
@@ -321,16 +345,55 @@ class Compiler{
             defineVariable(global);
             
         }
+
         uint8_t parseVariable(string errorMessage) {
             consume(TOKEN_IDENTIFIER, errorMessage);
+            declareVariable();
+            if(this->scopeDepth > 0) return 0;
             return identifierConstant(&this->previous);
         }
         uint8_t identifierConstant(Token* name) {
             return makeConstant(CaroObj(copyString(name->start)));
         }
+
+        void declareVariable() {
+
+            if(this->scopeDepth == 0) return;
+            Token* name = &this->previous;
+
+            for(int i = this->localCount - 1; i >= 0; --i) {
+                Local* local = &this->locals[i];
+                if(local->depth != -1 && local->depth < this->scopeDepth) {
+                    break; 
+                }
+                if(name->start == local->name.start) {
+                    error("Already a variable with this name in this scope.");
+                }
+            }
+
+            addLocal(*name);
+
+        }
+
         void defineVariable(uint8_t global) {
+            if(this->scopeDepth > 0) {
+                markInitialized();
+                return;
+            }
             emitBytes(OP_DEFINE_GLOBAL, global);
         }
+        void markInitialized() {
+            this->locals[this->localCount - 1].depth = this->scopeDepth;
+        }
+
+        void addLocal(Token name) {
+            // clox has a limit on the number of locals here but we don't because locals is a vector instead of an array
+            this->locals.push_back({name, -1});
+            ++this->localCount;
+        }
+
+
+        // synchronize
 
         void synchronize() {
 
@@ -359,19 +422,65 @@ class Compiler{
         }
 
 
+        // blocks
+
+        void block() {
+            while(!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+                declaration();
+            }
+            consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+        }
+        void beginScope() {
+            this->scopeDepth++;
+        }
+        void endScope() {
+            this->scopeDepth--;
+            while(this->localCount > 0 && this->locals[this->localCount - 1].depth > this->scopeDepth) {
+                emitByte(OP_POP);
+                this->locals.pop_back();
+                this->localCount--;
+            }
+        }
+
+
         // variables
 
         void makeVariable(bool canAssign) {
             namedVariable(this->previous, canAssign);
         }
         void namedVariable(Token name, bool canAssign) {
-            uint8_t arg = identifierConstant(&name);
+
+            uint8_t getOp, setOp;
+            int arg = resolveLocal(&name);
+            if(arg != -1) {
+                getOp = OP_GET_LOCAL;
+                setOp = OP_SET_LOCAL;
+            } else {
+                arg = identifierConstant(&name);
+                getOp = OP_GET_GLOBAL;
+                setOp = OP_SET_GLOBAL;
+            }
+
             if(canAssign && match(TOKEN_EQUAL)) {
                 expression();
-                emitBytes(OP_SET_GLOBAL, arg);
+                emitBytes(setOp, (uint8_t)arg);
             } else {
-                emitBytes(OP_GET_GLOBAL, arg);
+                emitBytes(getOp, (uint8_t)arg);
             }
+
+        }
+
+        int resolveLocal(Token* name) {
+            for(int i = this->localCount - 1; i >= 0; --i) {
+                Local* local = &this->locals[i];
+                if(name->start == local->name.start) {
+                    if(local->depth == -1) {
+                        error("Can't read local variable in its own initializer.");
+                    }
+                    return i;
+                }
+            }
+            return -1;
         }
 
 

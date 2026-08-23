@@ -107,7 +107,7 @@ class VM{
                 return INTERPRET_RUNTIME_ERROR;
             }
             const ValueType type = peek(0).type;
-
+            
             // get a and b
             double b = asNumberToDouble(this->stack.back());
             this->stack.pop_back();
@@ -330,6 +330,17 @@ class VM{
                             return INTERPRET_RUNTIME_ERROR;
                         }
                         found->second = peek(0);
+                        break;
+                    }
+
+                    case OP_GET_LOCAL: {
+                        uint8_t slot = readByte();
+                        this->stack.push_back(this->stack[slot]); 
+                        break;
+                    }
+                    case OP_SET_LOCAL: {
+                        uint8_t slot = readByte();
+                        this->stack[slot] = peek(0);
                         break;
                     }
 

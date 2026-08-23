@@ -132,11 +132,15 @@ bool valuesEqual(Value a, Value b) {
         case TYPE_OBJ:    return asString(a)->str == asString(b)->str;
 
         default:
-            if(isNumeric(a.type)) {
-                return a.as.Adouble == b.as.Adouble;
-                    // todo: compare other numeric types too
-            } else {
-                return false;    // unreachable
+            switch(a.type) {
+                case TYPE_BYTE:   return a.as.Abyte   == b.as.Abyte;
+                case TYPE_UINT:   return a.as.Auint   == b.as.Auint;
+                case TYPE_INT:    return a.as.Aint    == b.as.Aint;
+                case TYPE_ULONG:  return a.as.Aulong  == b.as.Aulong;
+                case TYPE_LONG:   return a.as.Along   == b.as.Along;
+                case TYPE_FLOAT:  return a.as.Afloat  == b.as.Afloat;
+                case TYPE_DOUBLE: return a.as.Adouble == b.as.Adouble;
+                default:          return false;    // unreachable
             }
 
     }
