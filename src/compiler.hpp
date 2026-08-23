@@ -156,9 +156,9 @@ class Compiler{
         void emitConstant(Value value) {
             emitBytes(OP_CONSTANT, makeConstant(value));
         }
-
-        void emitReturn() {
-            emitByte(OP_RETURN);
+        void emitNumber(double value) {
+            emitConstant(CaroNumber(TYPE_DOUBLE, value));
+                // todo: emit something other than a double
         }
 
         int emitJump(uint8_t instruction) {
@@ -167,7 +167,6 @@ class Compiler{
             emitByte(0xff);
             return this->compilingChunk->code.size() - 2;
         }
-
         void emitLoop(int loopStart) {
 
             emitByte(OP_LOOP);
@@ -177,6 +176,10 @@ class Compiler{
             emitByte((offset >> 8) & 0xff);
             emitByte(offset & 0xff);
             
+        }
+
+        void emitReturn() {
+            emitByte(OP_RETURN);
         }
 
 
@@ -247,9 +250,7 @@ class Compiler{
         }
         
         void parseNumber(bool canAssign) {
-            double value = std::stod(this->previous.start);
-            emitConstant(CaroNumber(TYPE_DOUBLE, value));
-                // todo: emit something other than a double
+            emitNumber(std::stod(this->previous.start));
         }
         void parseLiteral(bool canAssign) {
             switch(this->previous.type) {
@@ -317,12 +318,16 @@ class Compiler{
         void statement() {
             if(match(TOKEN_PRINT)) {
                 printStatement();
-            } else if (match(TOKEN_FOR)) {
+            } else if(match(TOKEN_FOR)) {
                 forStatement();
-            } else if (match(TOKEN_IF)) {
+            } else if(match(TOKEN_REPEAT)) {
+                repeatStatement();
+            } else if(match(TOKEN_IF)) {
                 ifStatement();
-            } else if (match(TOKEN_WHILE)) {
+            } else if(match(TOKEN_WHILE)) {
                 whileStatement();
+            } else if(match(TOKEN_FOREVER)) {
+                foreverStatement();
             } else if(match(TOKEN_LEFT_BRACE)) {
                 beginScope();
                 block();
@@ -391,6 +396,55 @@ class Compiler{
 
         }
 
+        void repeatStatement() {
+            
+            beginScope();
+
+            // consume and store the number of repetitions
+            consume(TOKEN_LEFT_PAREN, "Expect '(' after 'repeat'.");
+            expression();
+            consume(TOKEN_RIGHT_PAREN, "Expect ')' after the number of repetitions.");
+            uint8_t countSlot = makeHiddenLocal('c');
+
+            // consume and declare the counter variable
+            if(match(TOKEN_COLON)) {
+                consume(TOKEN_DOLLAR, "Expect '$' before the variable name.");
+                consume(TOKEN_IDENTIFIER, "Expect variable name.");
+                declareVariable();
+                markInitialized();
+            } else {
+                makeHiddenLocal('r');
+            }
+            uint8_t counterSlot = countSlot + 1;
+            emitNumber(0);
+
+            // check counter < count
+            int loopStart = this->compilingChunk->code.size();
+            emitBytes(OP_GET_LOCAL, counterSlot);
+            emitBytes(OP_GET_LOCAL, countSlot);
+            emitByte(OP_LESS);
+            int exitJump = emitJump(OP_JUMP_IF_FALSE);
+            emitByte(OP_POP);
+
+            // stuff inside the block
+            statement();
+
+            // increment counter
+            emitBytes(OP_GET_LOCAL, counterSlot);
+            emitNumber(1);
+            emitByte(OP_ADD);
+            emitBytes(OP_SET_LOCAL, counterSlot);
+            emitByte(OP_POP);
+
+            // loop
+            emitLoop(loopStart);
+            patchJump(exitJump);
+            emitByte(OP_POP);
+
+            endScope();
+            
+        }
+
         void ifStatement() {
 
             consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
@@ -435,6 +489,42 @@ class Compiler{
             patchJump(exitJump);
             emitByte(OP_POP);
         
+        }
+
+        void foreverStatement() {
+            // derived from repeatStatement, not whileStatement, cuz it needs the counter variable thingy
+
+            beginScope();
+
+            // consume and declare the counter variable
+            if(match(TOKEN_COLON)) {
+                consume(TOKEN_DOLLAR, "Expect '$' before the variable name.");
+                consume(TOKEN_IDENTIFIER, "Expect variable name.");
+                declareVariable();
+                markInitialized();
+            } else {
+                makeHiddenLocal('r');
+            }
+            uint8_t counterSlot = this->localCount - 1;
+            emitNumber(0);
+
+            int loopStart = this->compilingChunk->code.size();
+            
+            // stuff inside the block
+            statement();
+
+            // increment counter
+            emitBytes(OP_GET_LOCAL, counterSlot);
+            emitNumber(1);
+            emitByte(OP_ADD);
+            emitBytes(OP_SET_LOCAL, counterSlot);
+            emitByte(OP_POP);
+
+            // loop
+            emitLoop(loopStart);
+
+            endScope();
+
         }
 
         void expressionStatement() {
@@ -518,6 +608,13 @@ class Compiler{
             ++this->localCount;
         }
 
+        uint8_t makeHiddenLocal(char name) {
+            addLocal({TOKEN_IDENTIFIER, string({' ', name}), 2, this->previous.line});
+                // names start with a space so there can't be an actual local with the same name
+            markInitialized();
+            return this->localCount - 1;
+        }
+
 
         // synchronize
 
@@ -533,6 +630,7 @@ class Compiler{
                     case TOKEN_FUNC:
                     case TOKEN_DOLLAR:
                     case TOKEN_FOR:
+                    case TOKEN_REPEAT:
                     case TOKEN_IF:
                     case TOKEN_WHILE:
                     case TOKEN_PRINT:
@@ -668,6 +766,7 @@ inline ParseRule rules[] = {
     [TOKEN_RIGHT_BRACE]   = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_DOT]           = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_COMMA]         = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_COLON]         = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_SEMICOLON]     = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_PLUS]          = { NULL,                    &Compiler::makeBinary, PREC_TERM       },
     [TOKEN_MINUS]         = { &Compiler::makeUnary,    &Compiler::makeBinary, PREC_TERM       },
@@ -705,6 +804,8 @@ inline ParseRule rules[] = {
     [TOKEN_ELSE]          = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_FOR]           = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_WHILE]         = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_REPEAT]        = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_FOREVER]       = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_TRUE]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_FALSE]         = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_NULL]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },

@@ -14,11 +14,11 @@ typedef enum {
     // 1 char
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,
     TOKEN_LEFT_BRACE, TOKEN_RIGHT_BRACE,
-    TOKEN_DOT, TOKEN_COMMA, TOKEN_SEMICOLON,
+    TOKEN_DOT, TOKEN_COMMA, TOKEN_COLON, TOKEN_SEMICOLON,
     TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_SLASH, TOKEN_PERCENT, TOKEN_CARET,
     TOKEN_AMPERSAND, TOKEN_PIPE,
     TOKEN_DOLLAR,
-    
+
     // 1 or 2 chars
     TOKEN_BANG,    TOKEN_BANG_EQUAL,
     TOKEN_EQUAL,   TOKEN_EQUAL_EQUAL,
@@ -33,7 +33,7 @@ typedef enum {
     TOKEN_FUNC, TOKEN_RETURN,
     TOKEN_CLASS, TOKEN_THIS, TOKEN_SUPER,
     TOKEN_IF, TOKEN_ELSE,
-    TOKEN_FOR, TOKEN_WHILE,
+    TOKEN_FOR, TOKEN_WHILE, TOKEN_REPEAT, TOKEN_FOREVER,
     TOKEN_TRUE, TOKEN_FALSE,
     TOKEN_NULL, TOKEN_SMTH,
     TOKEN_PRINT, TOKEN_TYPEOF,
@@ -139,32 +139,63 @@ class Scanner{
 
             // trie
             switch(this->source[this->start]) {
+
              // case 'a':
+
              // case 'b':
+
                 case 'c': return checkKeyword(1, 4, "lass", TOKEN_CLASS);
+
              // case 'd':
+
                 case 'e': return checkKeyword(1, 3, "lse", TOKEN_ELSE);
+
                 case 'f':
                     if(this->current - this->start > 1) {
                         switch(this->source[this->start + 1]) {
                             case 'a': return checkKeyword(2, 3, "lse", TOKEN_FALSE);
-                            case 'o': return checkKeyword(2, 1, "r", TOKEN_FOR);
+                            case 'o':
+                                // forever starts with for so we disambiguate by length
+                                if(this->current - this->start == 3) {
+                                    return checkKeyword(2, 1, "r", TOKEN_FOR);
+                                }
+                                return checkKeyword(2, 5, "rever", TOKEN_FOREVER);
                             case 'u': return checkKeyword(2, 2, "nc", TOKEN_FUNC);
                         }
                     }
                     break;
+
              // case 'g':
+
              // case 'h':
+
                 case 'i': return checkKeyword(1, 1, "f", TOKEN_IF);
+
              // case 'j':
+
              // case 'k':
+
              // case 'l':
+
              // case 'm':
+
                 case 'n': return checkKeyword(1, 3, "ull", TOKEN_NULL);
+
              // case 'o':
+
                 case 'p': return checkKeyword(1, 4, "rint", TOKEN_PRINT);
+
              // case 'q':
-                case 'r': return checkKeyword(1, 5, "eturn", TOKEN_RETURN);
+
+                case 'r':
+                    if(this->current - this->start > 2 && this->source[this->start + 1] == 'e') {
+                        switch(this->source[this->start + 2]) {
+                            case 'p': return checkKeyword(3, 3, "eat", TOKEN_REPEAT);
+                            case 't': return checkKeyword(3, 3, "urn", TOKEN_RETURN);
+                        }
+                    }
+                    break;
+
                 case 's':
                     if(this->current - this->start > 1) {
                         switch(this->source[this->start + 1]) {
@@ -173,6 +204,7 @@ class Scanner{
                         }
                     }
                     break;
+
                 case 't':
                     if(this->current - this->start > 1) {
                         switch(this->source[this->start + 1]) {
@@ -182,12 +214,19 @@ class Scanner{
                         }
                     }
                     break;
+
              // case 'u':
+
              // case 'v':
+
                 case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
+
              // case 'x':
+
              // case 'y':
+
              // case 'z':
+             
             }
 
             return TOKEN_IDENTIFIER;
@@ -264,6 +303,7 @@ class Scanner{
                 case '}': return makeToken(TOKEN_RIGHT_BRACE);
                 case '.': return makeToken(TOKEN_DOT);
                 case ',': return makeToken(TOKEN_COMMA);
+                case ':': return makeToken(TOKEN_COLON);
                 case ';': return makeToken(TOKEN_SEMICOLON);
                 case '+': return makeToken(TOKEN_PLUS);
                 case '-': return makeToken(TOKEN_MINUS);
