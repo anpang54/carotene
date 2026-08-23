@@ -15,6 +15,7 @@ vector<Obj*> objects;    // vector of pointers to objects for tracking allocatio
 enum ObjType{
     OBJ_STRING,
     OBJ_FUNCTION,
+    OBJ_NATIVE,
 };
 
 struct Obj{
@@ -65,6 +66,28 @@ ObjFunction* newFunction() {
 }
 
 
+// native functions
+
+typedef Value (*NativeFn)(int argCount, Value* args);
+
+struct ObjNative: Obj{
+    NativeFn function;
+};
+
+bool isNative(Value value) {
+    return value.type == TYPE_OBJ && value.as.obj->type == OBJ_NATIVE;
+}
+ObjNative* asNative(Value value) {
+    return static_cast<ObjNative*>(value.as.obj);
+}
+
+ObjNative* newNative(NativeFn function) {
+    ObjNative* native = new ObjNative({OBJ_NATIVE}, function);
+    objects.push_back(native);
+    return native;
+}
+
+
 // free
 
 void freeObject(Obj* object) {
@@ -74,6 +97,9 @@ void freeObject(Obj* object) {
             break;
         case OBJ_FUNCTION:
             delete static_cast<ObjFunction*>(object);
+            break;
+        case OBJ_NATIVE:
+            delete static_cast<ObjNative*>(object);
             break;
     }
 }
@@ -105,6 +131,11 @@ void printObject(Obj* object) {
             break;
         }
 
+        case OBJ_NATIVE: {
+            cout << "<native func>";
+            break;
+        }
+
     }
 }
 
@@ -112,6 +143,7 @@ string typeofObject(Obj* object) {
     switch(object->type) {
         case OBJ_STRING:   return "str";
         case OBJ_FUNCTION: return "func";
+        case OBJ_NATIVE:   return "native";
     }
     return "unknown";    // should be unreachable
 }
@@ -121,6 +153,7 @@ bool objectsEqual(Obj* a, Obj* b) {
     switch(a->type) {
         case OBJ_STRING:   return static_cast<ObjString*>(a)->str == static_cast<ObjString*>(b)->str;
         case OBJ_FUNCTION: return a == b;
+        case OBJ_NATIVE:   return a == b;    // ?
     }
     return false;    // should be unreachable
 }

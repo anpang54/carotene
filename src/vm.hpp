@@ -6,6 +6,7 @@
 
 #include <cstdarg>
 #include <unordered_map>
+#include <ctime>
 
 #include "common.hpp"
 #include "chunk.hpp"
@@ -33,6 +34,13 @@ struct CallFrame{
     // represents a single ongoing function call
 
 
+// native functions
+
+Value Nclock(int argCount, Value* args) {
+    return CaroDouble((double)clock() / CLOCKS_PER_SEC);
+}
+
+
 // vm
 
 class VM{
@@ -47,6 +55,13 @@ class VM{
         CallFrame* frame = nullptr;
         
 
+        // native functions
+
+        void defineNative(string name, NativeFn function) {
+            this->globals[name] = CaroObj(newNative(function));
+        }
+
+
         // interpret
 
         InterpretResult interpret(string source) {
@@ -56,6 +71,8 @@ class VM{
             if(function == NULL) return INTERPRET_COMPILE_ERROR;
 
             this->frames.reserve(FRAMES_MAX);
+
+            defineNative("clock", Nclock);
 
             this->stack.push_back(CaroObj(function));
             if(!call(function, 0)) return INTERPRET_RUNTIME_ERROR;
@@ -270,8 +287,16 @@ class VM{
         bool callValue(Value callee, int argCount) {
             if(callee.type == TYPE_OBJ) {
                 switch(callee.as.obj->type) {
-                    case OBJ_FUNCTION:
+                    case OBJ_FUNCTION: {
                         return call(asFunction(callee), argCount);
+                    }
+                    case OBJ_NATIVE: {
+                        NativeFn native = asNative(callee)->function;
+                        Value result = native(argCount, this->stack.data() + this->stack.size() - argCount);
+                        this->stack.resize(this->stack.size() - argCount - 1);
+                        this->stack.push_back(result);
+                        return true;
+                    }
                     default:
                         break;    // non-callable object type
                 }
@@ -443,7 +468,7 @@ class VM{
 
                         this->stack.resize(slots);
                         this->stack.push_back(result);
-                        
+
                         frame = &this->frames.back();
 
                         break;
