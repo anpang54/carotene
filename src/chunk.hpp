@@ -50,6 +50,11 @@ enum OpCode{
     OP_PRINT,
     OP_TYPEOF,
 
+    // control flow
+    OP_JUMP,
+    OP_JUMP_IF_FALSE,
+    OP_LOOP,
+
     // misc
     OP_POP,
     OP_RETURN,
@@ -93,17 +98,22 @@ class Chunk{
         }
         int constantInstruction(string name, int offset) {
             uint8_t constant = this->code[offset + 1];
-            cout << format("{:<16} {:4d}", name, constant) << " '";
+            cout << format("{:<16} {:4d} '", name, constant);
             printValue(this->constants[constant]);
             cout << "'\n";
             return offset + 2;
         }
         int byteInstruction(string name, int offset) {
             uint8_t slot = this->code[offset + 1];
-            cout << format("{:<16} {:4d}", name, slot) << " '\n";
+            cout << format("{:<16} {:4d}\n", name, slot);
             return offset + 2; 
         }
-
+        int jumpInstruction(string name, int sign, int offset) {
+            uint16_t jump = (uint16_t)(this->code[offset + 1] << 8);
+            jump |= this->code[offset + 2];
+            cout << format("{:<16} {:4d} -> {:d}\n", name, offset, offset + 3 + (sign * jump));
+            return offset + 3;
+        }
 
         int disassembleInstruction(int offset) {
 
@@ -179,7 +189,14 @@ class Chunk{
                     return simpleInstruction("OP_PRINT", offset);
                 case OP_TYPEOF:
                     return simpleInstruction("OP_TYPEOF", offset);
-                    
+                
+                case OP_JUMP:
+                    return jumpInstruction("OP_JUMP", 1, offset);
+                case OP_JUMP_IF_FALSE:
+                    return jumpInstruction("OP_JUMP_IF_FALSE", 1, offset);
+                case OP_LOOP:
+                    return jumpInstruction("OP_LOOP", -1, offset);
+
                 case OP_POP:
                     return simpleInstruction("OP_POP", offset);
                 case OP_RETURN:

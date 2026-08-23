@@ -156,8 +156,27 @@ class Compiler{
         void emitConstant(Value value) {
             emitBytes(OP_CONSTANT, makeConstant(value));
         }
+
         void emitReturn() {
             emitByte(OP_RETURN);
+        }
+
+        int emitJump(uint8_t instruction) {
+            emitByte(instruction);
+            emitByte(0xff);
+            emitByte(0xff);
+            return this->compilingChunk->code.size() - 2;
+        }
+
+        void emitLoop(int loopStart) {
+
+            emitByte(OP_LOOP);
+
+            int offset = this->compilingChunk->code.size() - loopStart + 2;
+
+            emitByte((offset >> 8) & 0xff);
+            emitByte(offset & 0xff);
+            
         }
 
 
@@ -298,6 +317,12 @@ class Compiler{
         void statement() {
             if(match(TOKEN_PRINT)) {
                 printStatement();
+            } else if (match(TOKEN_FOR)) {
+                forStatement();
+            } else if (match(TOKEN_IF)) {
+                ifStatement();
+            } else if (match(TOKEN_WHILE)) {
+                whileStatement();
             } else if(match(TOKEN_LEFT_BRACE)) {
                 beginScope();
                 block();
@@ -306,11 +331,112 @@ class Compiler{
                 expressionStatement();
             }
         }
+
         void printStatement() {
             expression();
             consume(TOKEN_SEMICOLON, "Expect ';' after value.");
             emitByte(OP_PRINT);
         }
+
+        void forStatement() {
+
+            beginScope();
+
+            consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+            if (match(TOKEN_SEMICOLON)) {
+                // no initializer
+            } else if(match(TOKEN_DOLLAR)) {    // variable
+                varDeclaration();
+            } else {
+                expressionStatement();
+            }
+
+            int loopStart = this->compilingChunk->code.size();
+
+            int exitJump = -1;
+            if(!match(TOKEN_SEMICOLON)) {
+
+                expression();
+                consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+
+                // jump out of the loop if the condition is false
+                exitJump = emitJump(OP_JUMP_IF_FALSE);
+                emitByte(OP_POP);    // condition
+
+            }
+
+            if(!match(TOKEN_RIGHT_PAREN)) {
+
+                int bodyJump = emitJump(OP_JUMP);
+                int incrementStart = this->compilingChunk->code.size();
+                expression();
+                emitByte(OP_POP);
+                consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+
+                emitLoop(loopStart);
+                loopStart = incrementStart;
+                patchJump(bodyJump);
+
+            }
+
+            statement();
+            emitLoop(loopStart);
+
+            if(exitJump != -1) {
+                patchJump(exitJump);
+                emitByte(OP_POP); // Condition.
+            }
+
+            endScope();
+
+        }
+
+        void ifStatement() {
+
+            consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+            expression();
+            consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition."); 
+
+            int thenJump = emitJump(OP_JUMP_IF_FALSE);
+            emitByte(OP_POP);
+            statement();
+
+            int elseJump = emitJump(OP_JUMP);
+            patchJump(thenJump);
+            emitByte(OP_POP);
+
+            if(match(TOKEN_ELSE)) statement();
+            patchJump(elseJump);
+        
+        }
+        void patchJump(int offset) {
+            
+            int jump = this->compilingChunk->code.size() - offset - 2;
+                // -2 to adjust for the bytecode for the jump offset itself
+
+            this->compilingChunk->code[offset] = (jump >> 8) & 0xff;
+            this->compilingChunk->code[offset + 1] = jump & 0xff;
+        
+        }
+
+        void whileStatement() {
+
+            int loopStart = this->compilingChunk->code.size();
+
+            consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+            expression();
+            consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+            int exitJump = emitJump(OP_JUMP_IF_FALSE);
+            emitByte(OP_POP);
+            statement();
+            emitLoop(loopStart);
+
+            patchJump(exitJump);
+            emitByte(OP_POP);
+        
+        }
+
         void expressionStatement() {
             expression();
             consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
@@ -443,6 +569,33 @@ class Compiler{
         }
 
 
+        // logical operators
+
+        void makeAnd(bool canAssign) {
+
+            int endJump = emitJump(OP_JUMP_IF_FALSE);
+
+            emitByte(OP_POP);
+            parsePrecedence(PREC_AND);
+
+            patchJump(endJump);
+
+        }
+
+        void makeOr(bool canAssign) {
+
+            int elseJump = emitJump(OP_JUMP_IF_FALSE);
+            int endJump = emitJump(OP_JUMP);
+
+            patchJump(elseJump);
+            emitByte(OP_POP);
+
+            parsePrecedence(PREC_OR);
+            patchJump(endJump);
+        
+        }
+
+
         // variables
 
         void makeVariable(bool canAssign) {
@@ -522,6 +675,8 @@ inline ParseRule rules[] = {
     [TOKEN_SLASH]         = { NULL,                    &Compiler::makeBinary, PREC_FACTOR     },
     [TOKEN_PERCENT]       = { NULL,                    &Compiler::makeBinary, PREC_FACTOR     },
     [TOKEN_CARET]         = { NULL,                    &Compiler::makeBinary, PREC_POWER      },
+    [TOKEN_AMPERSAND]     = { NULL,                    &Compiler::makeAnd,    PREC_AND        },
+    [TOKEN_PIPE]          = { NULL,                    &Compiler::makeOr,     PREC_OR         },
     [TOKEN_DOLLAR]        = { NULL,                    NULL,                  PREC_NONE       },
 
     // 1 or 2 chars

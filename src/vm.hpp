@@ -63,6 +63,10 @@ class VM{
         uint8_t readByte() {
             return *this->ip++;
         }
+        uint16_t readShort() {
+            return (this->ip += 2, (uint16_t)((this->ip[-2] << 8) | this->ip[-1]));
+        }
+        
         Value peek(int distance) {
             return this->stack[this->stack.size() - 1 - distance];
         }
@@ -358,6 +362,22 @@ class VM{
                     }
                     case OP_TYPEOF: {
                         this->stack.back() = CaroObj(copyString(typeof(this->stack.back())));
+                        break;
+                    }
+
+                    case OP_JUMP: {
+                        uint16_t offset = readShort();
+                        this->ip += offset;
+                        break;
+                    }
+                    case OP_JUMP_IF_FALSE: {
+                        uint16_t offset = readShort();
+                        if(isFalsey(peek(0))) this->ip += offset;
+                        break;
+                    }
+                    case OP_LOOP: {
+                        uint16_t offset = readShort();
+                        this->ip -= offset;
                         break;
                     }
 
