@@ -7,13 +7,14 @@
 #include <cstdarg>
 #include <unordered_map>
 #include <ctime>
+#include <utility>
 
 #include "common.hpp"
 #include "chunk.hpp"
 #include "object.hpp"
 #include "compiler.hpp"
 
-using std::unordered_map;
+using std::pair, std::unordered_map;
 
 
 // setup
@@ -36,9 +37,13 @@ struct CallFrame{
 
 // native functions
 
-Value Nclock(int argCount, Value* args) {
-    return CaroDouble((double)clock() / CLOCKS_PER_SEC);
-}
+vector<pair<string, NativeFn>> natives;
+
+struct DefineNative{
+    DefineNative(string name, NativeFn function) {
+        natives.push_back({std::move(name), function});
+    }
+};
 
 
 // vm
@@ -72,7 +77,9 @@ class VM{
 
             this->frames.reserve(FRAMES_MAX);
 
-            defineNative("clock", Nclock);
+            for(const pair<string, NativeFn>& native: natives) {
+                defineNative(native.first, native.second);
+            }
 
             this->stack.push_back(CaroObj(function));
             if(!call(function, 0)) return INTERPRET_RUNTIME_ERROR;
@@ -292,7 +299,7 @@ class VM{
                     }
                     case OBJ_NATIVE: {
                         NativeFn native = asNative(callee)->function;
-                        Value result = native(argCount, this->stack.data() + this->stack.size() - argCount);
+                        Value result = native(this, argCount, this->stack.data() + this->stack.size() - argCount);
                         this->stack.resize(this->stack.size() - argCount - 1);
                         this->stack.push_back(result);
                         return true;
@@ -515,3 +522,10 @@ class VM{
 
 
 };
+
+
+// native functions
+
+DefineNative Nclock("clock", [](VM* vm, int argCount, Value* args) -> Value {
+    return CaroDouble((double)clock() / CLOCKS_PER_SEC);
+});
