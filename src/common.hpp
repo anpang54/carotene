@@ -25,8 +25,8 @@ typedef unsigned int uint;
 
 // switches
 
-#define DEBUG_PRINT_CODE      false
-#define DEBUG_TRACE_EXECUTION false
+#define DEBUG_PRINT_CODE      true
+#define DEBUG_TRACE_EXECUTION true
 
 
 // helpers

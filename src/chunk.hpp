@@ -210,7 +210,7 @@ class Chunk{
 
         }
 
-        void disassemble(const char* name) {
+        void disassemble(string name) {
             cout << "== " << name << " ==\n";
             for(int offset = 0; offset < this->code.size();) {
                 offset = disassembleInstruction(offset);

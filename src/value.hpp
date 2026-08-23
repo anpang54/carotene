@@ -7,9 +7,17 @@
 #include "common.hpp"
 
 
-// types
+// forward declarations
 
-struct Obj;    // forward declaration
+struct Obj;
+
+void   printObject (Obj* object);
+string typeofObject(Obj* object);
+bool   objectsEqual(Obj* a, Obj* b);
+
+
+
+// types
 
 enum ValueType{
 
@@ -111,8 +119,6 @@ string asNumberToString(Value& v) {
 
 // functions
 
-#include "object.hpp"
-
 bool isNumeric(ValueType type) {
     return type == TYPE_BYTE
         || type == TYPE_UINT  || type == TYPE_INT    || type == TYPE_ULONG || type == TYPE_LONG
@@ -129,7 +135,7 @@ bool valuesEqual(Value a, Value b) {
         case TYPE_BOOL:   return a.as.Abool == b.as.Abool;
         case TYPE_NULL:   return true;
         case TYPE_SMTH:   return true;
-        case TYPE_OBJ:    return asString(a)->str == asString(b)->str;
+        case TYPE_OBJ:    return objectsEqual(a.as.obj, b.as.obj);
 
         default:
             switch(a.type) {
@@ -158,14 +164,9 @@ void printValue(Value value) {
         case TYPE_SMTH:
             cout << "smth";
             break;
-        case TYPE_OBJ: {
-            switch(value.as.obj->type) {
-                case OBJ_STRING:
-                    cout << asString(value)->str;
-                    break;
-            }
+        case TYPE_OBJ:
+            printObject(value.as.obj);
             break;
-        }
 
         default:
             if(isNumeric(value.type)) {
@@ -192,12 +193,7 @@ string typeof(Value value) {
         case TYPE_FLOAT:  return "float";
         case TYPE_DOUBLE: return "double";
         
-        case TYPE_OBJ: {
-            switch(value.as.obj->type) {
-                case OBJ_STRING: return "str";
-            }
-            break;
-        }
+        case TYPE_OBJ:    return typeofObject(value.as.obj);
 
         default:        return "unknown";    // should be unreachable
 

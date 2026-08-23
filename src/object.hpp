@@ -5,27 +5,29 @@
 // includes
 
 #include "common.hpp"
+#include "chunk.hpp"
 
 
-// values
+// objects
 
 vector<Obj*> objects;    // vector of pointers to objects for tracking allocation
 
 enum ObjType{
     OBJ_STRING,
+    OBJ_FUNCTION,
 };
 
 struct Obj{
     ObjType type;
 };
 
+
+// strings
+
 struct ObjString: Obj{
     string str;
 };
     // just a wrapper around an std::string
-
-
-// functions
 
 bool isString(Value value) {
     return value.type == TYPE_OBJ && value.as.obj->type == OBJ_STRING;
@@ -40,11 +42,39 @@ ObjString* copyString(string str) {
     return object;
 }
 
+
+// functions
+
+struct ObjFunction: Obj{
+    int arity;
+    Chunk chunk;
+    string name;
+};
+
+bool isFunction(Value value) {
+    return value.type == TYPE_OBJ && value.as.obj->type == OBJ_FUNCTION;
+}
+ObjFunction* asFunction(Value value) {
+    return static_cast<ObjFunction*>(value.as.obj);
+}
+
+ObjFunction* newFunction() {
+    ObjFunction* function = new ObjFunction({OBJ_FUNCTION}, 0, Chunk(), "");
+    objects.push_back(function);
+    return function;
+}
+
+
+// free
+
 void freeObject(Obj* object) {
     switch(object->type) {
         case OBJ_STRING:
-        delete static_cast<ObjString*>(object);
-        break;
+            delete static_cast<ObjString*>(object);
+            break;
+        case OBJ_FUNCTION:
+            delete static_cast<ObjFunction*>(object);
+            break;
     }
 }
 void freeObjects() {
@@ -53,3 +83,46 @@ void freeObjects() {
     }
     objects.clear();
 }
+
+
+// object functions that were separated from value functions
+
+void printObject(Obj* object) {
+    switch(object->type) {
+
+        case OBJ_STRING: {
+            cout << static_cast<ObjString*>(object)->str;
+            break;
+        }
+
+        case OBJ_FUNCTION: {
+            ObjFunction* function = static_cast<ObjFunction*>(object);
+            if(function->name.empty()) {
+                cout << "<script>";
+            } else {
+                cout << "<func " << function->name << '>';
+            }
+            break;
+        }
+
+    }
+}
+
+string typeofObject(Obj* object) {
+    switch(object->type) {
+        case OBJ_STRING:   return "str";
+        case OBJ_FUNCTION: return "func";
+    }
+    return "unknown";    // should be unreachable
+}
+
+bool objectsEqual(Obj* a, Obj* b) {
+    if(a->type != b->type) return false;
+    switch(a->type) {
+        case OBJ_STRING:   return static_cast<ObjString*>(a)->str == static_cast<ObjString*>(b)->str;
+        case OBJ_FUNCTION: return a == b;
+    }
+    return false;    // should be unreachable
+}
+
+

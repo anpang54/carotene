@@ -9,18 +9,26 @@
 
 #include "common.hpp"
 #include "chunk.hpp"
+#include "object.hpp"
 #include "compiler.hpp"
 
 using std::unordered_map;
 
 
-// interpret results
+// setup
 
 enum InterpretResult{
     INTERPRET_OK,
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR
 };
+
+struct CallFrame{
+    ObjFunction* function;
+    uint8_t* ip;
+    size_t slots;
+};
+    // represents a single ongoing function call
 
 
 // vm
@@ -30,30 +38,29 @@ class VM{
     public:
 
     
-        Chunk*        chunk;
-        uint8_t*      ip;
+        vector<CallFrame> frames;
         vector<Value> stack;    // it's easier to iterate over a vector
-
         unordered_map<string, Value> globals;
     
+        CallFrame* frame = nullptr;
+        
 
         // interpret
 
         InterpretResult interpret(string source) {
 
-            Chunk chunkToInterpret;
-
-            // compile error
             Compiler compiler;
-            if(!compiler.compile(source, &chunkToInterpret)) {
-                return INTERPRET_COMPILE_ERROR;
-            }
+            ObjFunction* function = compiler.compile(source);
+            if(function == NULL) return INTERPRET_COMPILE_ERROR;
 
-            this->chunk = &chunkToInterpret;
-            this->ip = this->chunk->code.data();
+            this->stack.push_back(CaroObj(function));
+            this->frames.push_back(CallFrame());
+            frame = &this->frames.back();
+            frame->function = function;
+            frame->ip = function->chunk.code.data();
+            frame->slots = this->stack.size() - 1;
 
-            InterpretResult result = run();
-            return result;
+            return run();
 
         }
 
@@ -61,10 +68,10 @@ class VM{
         // helpers
 
         uint8_t readByte() {
-            return *this->ip++;
+            return *frame->ip++;
         }
         uint16_t readShort() {
-            return (this->ip += 2, (uint16_t)((this->ip[-2] << 8) | this->ip[-1]));
+            return (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]));
         }
         
         Value peek(int distance) {
@@ -79,8 +86,10 @@ class VM{
             va_end(args);
             cerr << '\n';
 
-            size_t instruction = this->ip - this->chunk->code.data() - 1;
-            int line = this->chunk->lines[instruction];
+            CallFrame* frame = &this->frames.back();
+            size_t instruction = frame->ip - frame->function->chunk.code.data() - 1;
+            int line = frame->function->chunk.lines[instruction];
+
             cerr << "[line " << line << "] in script\n";
             this->stack.clear();
 
@@ -221,6 +230,8 @@ class VM{
 
         InterpretResult run() {
 
+            frame = &this->frames.back();
+
             for (;;){
 
                 // debug trace execution
@@ -234,7 +245,7 @@ class VM{
                     }
                     cout << '\n';
 
-                    this->chunk->disassembleInstruction((int)(this->ip - this->chunk->code.data()));
+                    frame->function->chunk.disassembleInstruction((int)(frame->ip - frame->function->chunk.code.data()));
 
                 }
 
@@ -243,7 +254,7 @@ class VM{
                 switch(instruction = (OpCode)readByte()) {
 
                     case OP_CONSTANT: {
-                        Value constant = this->chunk->constants[readByte()];
+                        Value constant = frame->function->chunk.constants[readByte()];
                         this->stack.push_back(constant);
                         break;
                     }
@@ -317,13 +328,13 @@ class VM{
                     case OP_FALSE: this->stack.push_back(CaroBool(false)); break;
 
                     case OP_DEFINE_GLOBAL: {
-                        ObjString* name = asString(this->chunk->constants[readByte()]);
+                        ObjString* name = asString(frame->function->chunk.constants[readByte()]);
                         this->globals[name->str] = peek(0);
                         this->stack.pop_back();
                         break;
                     }
                     case OP_GET_GLOBAL: {
-                        ObjString* name = asString(this->chunk->constants[readByte()]);
+                        ObjString* name = asString(frame->function->chunk.constants[readByte()]);
                         auto found = this->globals.find(name->str);
                         if(found == this->globals.end()) {
                             runtimeError("Undefined variable '%s'.", name->str.c_str());
@@ -333,7 +344,7 @@ class VM{
                         break;
                     }
                     case OP_SET_GLOBAL: {
-                        ObjString* name = asString(this->chunk->constants[readByte()]);
+                        ObjString* name = asString(frame->function->chunk.constants[readByte()]);
                         auto found = this->globals.find(name->str);
                         if(found == this->globals.end()) {
                             runtimeError("Undefined variable '%s'.", name->str.c_str());
@@ -345,12 +356,12 @@ class VM{
 
                     case OP_GET_LOCAL: {
                         uint8_t slot = readByte();
-                        this->stack.push_back(this->stack[slot]); 
+                        this->stack.push_back(this->stack[frame->slots + slot]);
                         break;
                     }
                     case OP_SET_LOCAL: {
                         uint8_t slot = readByte();
-                        this->stack[slot] = peek(0);
+                        this->stack[frame->slots + slot] = peek(0);
                         break;
                     }
 
@@ -367,17 +378,17 @@ class VM{
 
                     case OP_JUMP: {
                         uint16_t offset = readShort();
-                        this->ip += offset;
+                        frame->ip += offset;
                         break;
                     }
                     case OP_JUMP_IF_FALSE: {
                         uint16_t offset = readShort();
-                        if(isFalsey(peek(0))) this->ip += offset;
+                        if(isFalsey(peek(0))) frame->ip += offset;
                         break;
                     }
                     case OP_LOOP: {
                         uint16_t offset = readShort();
-                        this->ip -= offset;
+                        frame->ip -= offset;
                         break;
                     }
 
