@@ -1,0 +1,67 @@
+
+
+// Get arguments
+
+$platform;
+$release;
+$valid = true;
+
+if(_args == 0) {
+    platform = "linux";
+    release = false;
+} else {
+    if(_1 == "windows" | _1 == "linux") {
+        platform = _1;
+        release = true;
+    } else {
+        print("Invalid platform " + _1 + ".");
+        valid = false;
+    }
+}
+
+
+if(valid) {
+
+
+    // Make command
+
+    $command = "zig c++ src/main.cpp -std=c++23 -Wno-c99-designator ";
+    $windows_only = "-target x86_64-windows-gnu ";
+    $linux_only = "-target x86_64-linux-gnu.2.28 -idirafter /usr/include -L/usr/lib -lreadline ";
+    $release_only = "-O2 -g0 -s ";
+
+    // We compile with Zig, which in turn runs Clang, because it allows us to specify a glibc version.
+    // Clang support for C++26 is still rather incomplete, so this uses C++23.
+
+    $output = "caro";
+    $message = "Built for";
+    
+    if(release) {
+        output = output + "-release";
+    }
+    if(platform == "windows") {
+        command = command + windows_only;
+        output = output + ".exe";
+        message = message + " Windows";
+    } else {
+        command = command + linux_only;
+        message = message + " Linux";
+    }
+    if(release) {
+        command = command + release_only;
+        message = message + " release!";
+    } else {
+        message = message + " debug!";
+    }
+
+    command = command + "-o " + output;
+
+
+    // Build
+
+    sh(command);
+    print(message);
+
+
+}
+
