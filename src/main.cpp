@@ -10,18 +10,18 @@
 #include <readline/history.h>
 #endif
 
-#include "common.hpp"
-#include "chunk.hpp"
-#include "vm.hpp"
-#include "compiler.hpp"
+#include "core/common.hpp"
+#include "core/chunk.hpp"
+#include "core/vm.hpp"
+#include "core/compiler.hpp"
 
 using std::cout, std::cin, std::cerr, std::string, std::ifstream, std::stringstream;
 
 
 // version
 
-#define VERSION      "0.1.0a"
-#define VERSION_DATE "21 Aug 2026"
+#define VERSION      "0.1.0b"
+#define VERSION_DATE "24 Aug 2026"
 
 
 // input
