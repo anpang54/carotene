@@ -36,17 +36,6 @@ struct CallFrame{
     // represents a single ongoing function call
 
 
-// native functions
-
-vector<pair<string, NativeFn>> natives;
-
-struct DefineNative{
-    DefineNative(string name, NativeFn function) {
-        natives.push_back({std::move(name), function});
-    }
-};
-
-
 // vm
 
 class VM{

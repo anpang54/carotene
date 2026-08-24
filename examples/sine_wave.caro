@@ -7,7 +7,7 @@ $length = 15;
 $step = 0.75;
 
 func getPosition(x) {
-    return floor((sin(x * step) + 1) * 5);
+    return floor((math.sin(x * step) + 1) * 5);
 }
 
 repeat(length): $x{

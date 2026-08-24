@@ -78,12 +78,12 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
 #define ANY_NUMERIC {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE}
 
-#define NATIVE(cppName, caroName, ...)\
-    DefineNative N_##cppName(caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
+#define NATIVE(cppName, module, caroName, ...)\
+    DefineNative N_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
     // every native function has the same C++ function signature soo
 
 #define NATIVE_ROUNDING(name)\
-    NATIVE(name, #name, {\
+    NATIVE(name, "", #name, {\
         p({\
             {ANY_NUMERIC, true}\
         });\
@@ -91,7 +91,7 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
     })
 
 #define NATIVE_MATH(name)\
-    NATIVE(math_##name, #name, {\
+    NATIVE(math_##name, "math", #name, {\
         p({\
             {ANY_NUMERIC, true}\
         });\

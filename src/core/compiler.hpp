@@ -83,6 +83,8 @@ class Compiler{
         bool hadError = false;
         bool panicMode = false;    // suppresses other errors
 
+        inline static set<string> usedModules;
+
         Chunk* currentChunk() {
             return &cur().function->chunk;
         }
@@ -349,7 +351,9 @@ class Compiler{
         }
 
         void statement() {
-            if(match(TOKEN_FOR)) {
+            if(match(TOKEN_USE)) {
+                useStatement();
+            } else if(match(TOKEN_FOR)) {
                 forStatement();
             } else if(match(TOKEN_REPEAT)) {
                 repeatStatement();
@@ -368,6 +372,21 @@ class Compiler{
             } else {
                 expressionStatement();
             }
+        }
+
+        void useStatement() {
+
+            consume(TOKEN_IDENTIFIER, "Expect module name after 'use'.");
+
+            string name = this->previous.start;
+            if(!modules.contains(name)) {
+                error("Module " + name + " doesn't exist.");
+            } else {
+                this->usedModules.insert(name);
+            }
+
+            consume(TOKEN_SEMICOLON, "Expect ';' after module name.");
+
         }
 
         void forStatement() {
@@ -800,7 +819,16 @@ class Compiler{
         // variables
 
         void makeVariable(bool canAssign) {
+
+            // module function
+            if(check(TOKEN_DOT) && modules.contains(this->previous.start)) {
+                moduleFunction();
+                return;
+            }
+
+            // actual variable
             namedVariable(this->previous, canAssign);
+
         }
         void namedVariable(Token name, bool canAssign) {
 
@@ -821,6 +849,24 @@ class Compiler{
             } else {
                 emitBytes(getOp, (uint8_t)arg);
             }
+
+        }
+
+        void moduleFunction() {
+
+            string module = this->previous.start;
+
+            advance();    // eat .
+            consume(TOKEN_IDENTIFIER, "Expect function name after '.'.");
+            string name = module + '.' + this->previous.start;
+
+            if(!this->usedModules.contains(module)) {
+                error("Module " + module + " hasn't been included");
+            } else if(!nativeNames.contains(name)) {
+                error(name + "() doesn't exist.");
+            }
+
+            emitBytes(OP_GET_GLOBAL, makeConstant(CaroObj(copyString(name))));
 
         }
 

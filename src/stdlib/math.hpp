@@ -8,12 +8,12 @@
 #include <cmath>
 #include <cstdlib>
 
-#include "../core/common.hpp"
+#include "natives.hpp"
 
 
-// once namespaces are actually added, these'll be math.sqrt, math.cbrt, etc.
+// functions
 
-NATIVE(math_sqrt, "sqrt", {
+NATIVE(math_sqrt, "math", "sqrt", {
     p({
         {ANY_NUMERIC, true}
     });

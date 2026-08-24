@@ -4,8 +4,13 @@
 
 // includes
 
+#include <set>
+#include <utility>
+
 #include "common.hpp"
 #include "chunk.hpp"
+
+using std::set, std::pair;
 
 
 // objects
@@ -74,6 +79,18 @@ typedef Value (*NativeFn)(VM* vm, vector<Value> args);
 
 struct ObjNative: Obj{
     NativeFn function;
+};
+
+vector<pair<string, NativeFn>> natives;
+set<string> modules;
+set<string> nativeNames;
+
+struct DefineNative{
+    DefineNative(string module, string name, NativeFn function) {
+        if(!module.empty()) modules.insert(std::move(module));
+        nativeNames.insert(name);
+        natives.push_back({std::move(name), function});
+    }
 };
 
 bool isNative(Value value) {

@@ -30,6 +30,7 @@ typedef enum {
     TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
 
     // keywords
+    TOKEN_USE, TOKEN_INCLUDE,
     TOKEN_FUNC, TOKEN_RETURN,
     TOKEN_CLASS, TOKEN_THIS, TOKEN_SUPER,
     TOKEN_IF, TOKEN_ELSE,
@@ -169,7 +170,14 @@ class Scanner{
 
              // case 'h':
 
-                case 'i': return checkKeyword(1, 1, "f", TOKEN_IF);
+                case 'i':
+                    if(this->current - this->start > 1) {
+                        switch(this->source[this->start + 1]) {
+                            case 'f': return checkKeyword(2, 0, "", TOKEN_IF);
+                            case 'n': return checkKeyword(2, 5, "clude", TOKEN_INCLUDE);
+                        }
+                    }
+                    break;
 
              // case 'j':
 
@@ -215,7 +223,7 @@ class Scanner{
                     }
                     break;
 
-             // case 'u':
+                case 'u': return checkKeyword(1, 2, "se", TOKEN_USE);
 
              // case 'v':
 

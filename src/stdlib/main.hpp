@@ -12,7 +12,7 @@
 
 // general
 
-NATIVE(print, "print", {
+NATIVE(print, "", "print", {
     p({
         {{},          true },
         {{TYPE_BOOL}, false}
@@ -24,7 +24,7 @@ NATIVE(print, "print", {
     return CaroNull;
 });
 
-NATIVE(sh, "sh", {
+NATIVE(sh, "", "sh", {
     p({
         {{TYPE_OBJ}, true}
     });
@@ -32,7 +32,7 @@ NATIVE(sh, "sh", {
     return CaroInt(output);
 });
 
-NATIVE(clock, "clock", {
+NATIVE(clock, "", "clock", {
     p({});
     return CaroDouble((double)clock() / CLOCKS_PER_SEC);
 });
@@ -41,7 +41,7 @@ NATIVE(clock, "clock", {
 
 // basic math
 
-NATIVE(abs, "abs", {
+NATIVE(abs, "", "abs", {
     p({
         {ANY_NUMERIC, true}
     });
