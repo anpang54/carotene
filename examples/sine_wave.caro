@@ -1,0 +1,22 @@
+
+
+// Graphs a vertical sine wave.
+
+
+$length = 15;
+$step = 0.75;
+
+func getPosition(x) {
+    return floor((sin(x * step) + 1) * 5);
+}
+
+repeat(length): $x{
+    print(" " * (getPosition(x) + 5), false);
+    if(getPosition(x + 1) == getPosition(x)) {
+        print("|");
+    } else if(getPosition(x + 1) < getPosition(x)) {
+        print("/");
+    } else {
+        print("\");
+    }
+}

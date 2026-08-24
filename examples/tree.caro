@@ -1,0 +1,21 @@
+
+
+// Prints a tree.
+
+
+$lines = 7;
+$body;
+
+func print_line(filled, char) {
+    print(" " * (lines - filled), false);
+    print(char * ((filled + 1) * 2), false);
+    print("");
+}
+
+print("");
+repeat(lines): $n{
+    print_line(n, "*");
+}
+repeat(2) {
+    print_line(1, "|");
+}
