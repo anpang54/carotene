@@ -4,16 +4,21 @@
 
 // includes
 
+#include <chrono>
+#include <thread>
+
 #include <cmath>
 #include <cstdlib>
 
 #include "natives.hpp"
 
+namespace chrono = std::chrono;
+
 
 // general
 
 NATIVE(print, "", "print", {
-    p({
+    params({
         {{},          true },
         {{TYPE_BOOL}, false}
     });
@@ -25,24 +30,39 @@ NATIVE(print, "", "print", {
 });
 
 NATIVE(sh, "", "sh", {
-    p({
+    params({
         {{TYPE_OBJ}, true}
     });
     int output = std::system(asString(args[0])->str.c_str());
     return CaroInt(output);
 });
 
+NATIVE(wait, "", "wait", {
+    params({
+        {ANY_NUMERIC, true}
+    });
+    std::this_thread::sleep_for(chrono::duration<double>(asNumberToDouble(args[0])));
+    return CaroNull;
+});
+NATIVE(wait_ms, "", "wait_ms", {
+    params({
+        {ANY_NUMERIC, true}
+    });
+    std::this_thread::sleep_for(chrono::duration<double, std::milli>(asNumberToDouble(args[0])));
+    return CaroNull;
+});
+
 NATIVE(clock, "", "clock", {
-    p({});
+    params({});
     return CaroDouble((double)clock() / CLOCKS_PER_SEC);
 });
-    // will probably delete once done with crafting interpreteres
+    // will probably delete once done with crafting interpreters
 
 
 // basic math
 
 NATIVE(abs, "", "abs", {
-    p({
+    params({
         {ANY_NUMERIC, true}
     });
     return mapNumber(args[0], [](auto x) -> decltype(x) {
@@ -56,6 +76,14 @@ NATIVE(abs, "", "abs", {
         }
     });
 });
+
+#define NATIVE_ROUNDING(name)\
+    NATIVE(name, "", #name, {\
+        params({\
+            {ANY_NUMERIC, true}\
+        });\
+        return mapFloat(args[0], [](auto&&... a) { return std::name(decltype(a)(a)...); });\
+    })
 
 NATIVE_ROUNDING(floor);
 NATIVE_ROUNDING(ceil);

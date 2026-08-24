@@ -13,8 +13,16 @@
 
 // functions
 
+#define NATIVE_MATH(name)\
+    NATIVE(math_##name, "math", #name, {\
+        params({\
+            {ANY_NUMERIC, true}\
+        });\
+        return toFloat(args[0], [](auto&&... a) { return std::name(decltype(a)(a)...); });\
+    })
+
 NATIVE(math_sqrt, "math", "sqrt", {
-    p({
+    params({
         {ANY_NUMERIC, true}
     });
     if(asNumberToDouble(args[0]) < 0) {

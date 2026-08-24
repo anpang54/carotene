@@ -66,7 +66,7 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
 // macros to help shorten stuff
 
-#define p(...)\
+#define params(...)\
     do{\
         string checkResult = checkParameters(__VA_ARGS__, args);\
         if(!checkResult.empty()) {\
@@ -74,7 +74,8 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
             return CaroNull;\
         }\
     } while(false)
-        // variadic so that the braced parameter list can be passed in as one argument
+    // can't be named p() cuz else it'll eat up functions that start with p
+    // variadic so that the braced parameter list can be passed in as one argument
 
 #define ANY_NUMERIC {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE}
 
@@ -82,25 +83,13 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
     DefineNative N_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
     // every native function has the same C++ function signature soo
 
-#define NATIVE_ROUNDING(name)\
-    NATIVE(name, "", #name, {\
-        p({\
-            {ANY_NUMERIC, true}\
-        });\
-        return mapFloat(args[0], [](auto&&... a) { return std::name(decltype(a)(a)...); });\
-    })
-
-#define NATIVE_MATH(name)\
-    NATIVE(math_##name, "math", #name, {\
-        p({\
-            {ANY_NUMERIC, true}\
-        });\
-        return toFloat(args[0], [](auto&&... a) { return std::name(decltype(a)(a)...); });\
-    })
-
 
 // include all the libraries
 
 #include "main.hpp"
+
+#include "hash.hpp"
 #include "math.hpp"
+#include "random.hpp"
+#include "time.hpp"
 
