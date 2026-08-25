@@ -17,6 +17,25 @@ namespace chrono = std::chrono;
 
 // general
 
+NATIVE(name, "", "name", {
+    if(vm->appName.empty()) {
+        vm->runtimeError("This app doesn't have a name.");
+    }
+    return CaroObj(copyString(vm->appName));
+});
+NATIVE(desc, "", "desc", {
+    if(vm->appDesc.empty()) {
+        vm->runtimeError("This app doesn't have a description.");
+    }
+    return CaroObj(copyString(vm->appDesc));
+});
+NATIVE(version, "", "version", {
+    if(vm->appVersion.empty()) {
+        vm->runtimeError("This app doesn't have a version.");
+    }
+    return CaroObj(copyString(vm->appVersion));
+});
+
 NATIVE(print, "", "print", {
     params({
         {{},          true },

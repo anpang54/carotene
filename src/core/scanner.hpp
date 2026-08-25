@@ -30,6 +30,7 @@ typedef enum {
     TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
 
     // keywords
+    TOKEN_NAME, TOKEN_DESC, TOKEN_VERSION,
     TOKEN_USE, TOKEN_INCLUDE,
     TOKEN_FUNC, TOKEN_RETURN,
     TOKEN_CLASS, TOKEN_THIS, TOKEN_SUPER,
@@ -207,6 +208,16 @@ class Scanner{
                 case 's':
                     if(this->current - this->start > 1) {
                         switch(this->source[this->start + 1]) {
+                            case 'e':
+                                if(this->current - this->start > 4) {
+                                    switch(this->source[this->start + 4]) {
+                                        case 'd': return checkKeyword(2, 6, "t_desc", TOKEN_DESC);
+                                        case 'n': return checkKeyword(2, 6, "t_name", TOKEN_NAME);
+                                        case 'v': return checkKeyword(2, 9, "t_version", TOKEN_VERSION);
+                                        // they can't be "name" and "desc" cuz those are common variable names and also collide with name() and desc()
+                                    }
+                                }
+                                break;
                             case 'm': return checkKeyword(2, 2, "th", TOKEN_SMTH);
                             case 'u': return checkKeyword(2, 3, "per", TOKEN_SUPER);
                         }

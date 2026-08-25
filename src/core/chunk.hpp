@@ -11,6 +11,11 @@
 
 enum OpCode{
 
+    // app info
+    OP_NAME,
+    OP_DESC,
+    OP_VERSION,
+
     // values
     OP_CONSTANT,
     OP_NULL,
@@ -130,6 +135,13 @@ class Chunk{
             uint8_t instruction = this->code[offset];
 
             switch(instruction) {
+
+                case OP_NAME:
+                    return constantInstruction("OP_NAME", offset);
+                case OP_DESC:
+                    return constantInstruction("OP_DESC", offset);
+                case OP_VERSION:
+                    return constantInstruction("OP_VERSION", offset);
 
                 case OP_CONSTANT:
                     return constantInstruction("OP_CONSTANT", offset);

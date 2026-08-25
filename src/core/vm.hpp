@@ -50,6 +50,8 @@ class VM{
         CallFrame* frame = nullptr;
         bool hadError = false;
 
+        string appName, appDesc, appVersion;
+        
 
         // native functions
 
@@ -343,6 +345,19 @@ class VM{
                 // run the instruction
                 OpCode instruction;
                 switch(instruction = (OpCode)readByte()) {
+
+                    case OP_NAME: {
+                        appName = asString(frame->function->chunk.constants[readByte()])->str;
+                        break;
+                    }
+                    case OP_DESC: {
+                        appDesc = asString(frame->function->chunk.constants[readByte()])->str;
+                        break;
+                    }
+                    case OP_VERSION: {
+                        appVersion = asString(frame->function->chunk.constants[readByte()])->str;
+                        break;
+                    }
 
                     case OP_CONSTANT: {
                         Value constant = frame->function->chunk.constants[readByte()];

@@ -351,7 +351,13 @@ class Compiler{
         }
 
         void statement() {
-            if(match(TOKEN_USE)) {
+            if(match(TOKEN_NAME)) {
+                nameStatement();
+            } else if(match(TOKEN_DESC)) {
+                descStatement();
+            } else if(match(TOKEN_VERSION)) {
+                versionStatement();
+            } else if(match(TOKEN_USE)) {
                 useStatement();
             } else if(match(TOKEN_FOR)) {
                 forStatement();
@@ -372,6 +378,40 @@ class Compiler{
             } else {
                 expressionStatement();
             }
+        }
+
+        void nameStatement() {
+
+            consume(TOKEN_STRING, "Expect app name after 'set_name'.");
+            if(this->panicMode) return;
+
+            string name = this->previous.start.substr(1, this->previous.length - 2);
+            emitBytes(OP_NAME, makeConstant(CaroObj(copyString(name))));
+
+            consume(TOKEN_SEMICOLON, "Expect ';' after app name.");
+
+        }
+        void descStatement() {
+
+            consume(TOKEN_STRING, "Expect app description after 'set_desc'.");
+            if(this->panicMode) return;
+
+            string desc = this->previous.start.substr(1, this->previous.length - 2);
+            emitBytes(OP_DESC, makeConstant(CaroObj(copyString(desc))));
+
+            consume(TOKEN_SEMICOLON, "Expect ';' after app description.");
+
+        }
+        void versionStatement() {
+
+            consume(TOKEN_STRING, "Expect app version after 'set_version'.");
+            if(this->panicMode) return;
+
+            string version = this->previous.start.substr(1, this->previous.length - 2);
+            emitBytes(OP_VERSION, makeConstant(CaroObj(copyString(version))));
+
+            consume(TOKEN_SEMICOLON, "Expect ';' after app version.");
+
         }
 
         void useStatement() {
@@ -948,6 +988,11 @@ inline ParseRule rules[] = {
     [TOKEN_NUMBER]        = { &Compiler::parseNumber,  NULL,                  PREC_NONE       },
 
     // keywords
+    [TOKEN_NAME]          = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_DESC]          = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_VERSION]       = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_USE]           = { NULL,                    NULL,                  PREC_NONE       },
+    [TOKEN_INCLUDE]       = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_FUNC]          = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_RETURN]        = { NULL,                    NULL,                  PREC_NONE       },
     [TOKEN_CLASS]         = { NULL,                    NULL,                  PREC_NONE       },
