@@ -101,13 +101,6 @@ class VM{
 
         // helpers
 
-        uint8_t readByte() {
-            return *frame->ip++;
-        }
-        uint16_t readShort() {
-            return (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]));
-        }
-
         void push(Value value) {
             *this->stackTop++ = value;
         }
@@ -335,6 +328,17 @@ class VM{
 
             frame = &this->frames.back();
 
+            // cache for performance
+            uint8_t* ip        = frame->ip;
+            Value*   slots     = frame->slots;
+            Value*   constants = frame->function->chunk.constants.data();
+
+            // functions replaced with macros
+            #define READ_BYTE()  (*ip++)
+            #define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
+            #define SYNC()       (frame->ip = ip)
+            #define LOAD_FRAME() (frame = &this->frames.back(), ip = frame->ip, slots = frame->slots, constants = frame->function->chunk.constants.data())
+
             for (;;){
 
                 // debug trace execution
@@ -348,36 +352,36 @@ class VM{
                     }
                     cout << '\n';
 
-                    frame->function->chunk.disassembleInstruction((int)(frame->ip - frame->function->chunk.code.data()));
+                    frame->function->chunk.disassembleInstruction((int)(ip - frame->function->chunk.code.data()));
 
                 }
 
                 // run the instruction
                 OpCode instruction;
-                switch(instruction = (OpCode)readByte()) {
+                switch(instruction = (OpCode)READ_BYTE()) {
 
                     case OP_NAME: {
-                        appName = asString(frame->function->chunk.constants[readByte()])->str;
+                        appName = asString(constants[READ_BYTE()])->str;
                         break;
                     }
                     case OP_DESC: {
-                        appDesc = asString(frame->function->chunk.constants[readByte()])->str;
+                        appDesc = asString(constants[READ_BYTE()])->str;
                         break;
                     }
                     case OP_VERSION: {
-                        appVersion = asString(frame->function->chunk.constants[readByte()])->str;
+                        appVersion = asString(constants[READ_BYTE()])->str;
                         break;
                     }
 
                     case OP_CONSTANT: {
-                        Value constant = frame->function->chunk.constants[readByte()];
+                        Value constant = constants[READ_BYTE()];
                         push(constant);
                         break;
                     }
 
-                    #define unary()          if(unaryOperation()          == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
-                    #define numberBinary(op) if(numberBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
-                    #define stringBinary(op) if(stringBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
+                    #define unary()          SYNC(); if(unaryOperation()          == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
+                    #define numberBinary(op) SYNC(); if(numberBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
+                    #define stringBinary(op) SYNC(); if(stringBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
                     
                     case OP_ADD: case OP_SUBTRACT: {
                         if(isString(peek(0)) && isString(peek(1))) {
@@ -387,6 +391,7 @@ class VM{
                             numberBinary(instruction);
                             break;
                         } else {
+                            SYNC();
                             runtimeError("Operands must be numbers or strings.");
                             return INTERPRET_RUNTIME_ERROR;
                         }
@@ -402,6 +407,7 @@ class VM{
                             numberBinary(instruction);
                             break;
                         } else {
+                            SYNC();
                             runtimeError("Operands must be numbers or strings.");
                             return INTERPRET_RUNTIME_ERROR;
                         }
@@ -440,15 +446,16 @@ class VM{
                     case OP_FALSE: push(CaroBool(false)); break;
 
                     case OP_DEFINE_GLOBAL: {
-                        ObjString* name = asString(frame->function->chunk.constants[readByte()]);
+                        ObjString* name = asString(constants[READ_BYTE()]);
                         this->globals[name->str] = peek(0);
                         --this->stackTop;
                         break;
                     }
                     case OP_GET_GLOBAL: {
-                        ObjString* name = asString(frame->function->chunk.constants[readByte()]);
+                        ObjString* name = asString(constants[READ_BYTE()]);
                         auto found = this->globals.find(name->str);
                         if(found == this->globals.end()) {
+                            SYNC();
                             runtimeError("Undefined variable '%s'.", name->str.c_str());
                             return INTERPRET_RUNTIME_ERROR;
                         }
@@ -456,9 +463,10 @@ class VM{
                         break;
                     }
                     case OP_SET_GLOBAL: {
-                        ObjString* name = asString(frame->function->chunk.constants[readByte()]);
+                        ObjString* name = asString(constants[READ_BYTE()]);
                         auto found = this->globals.find(name->str);
                         if(found == this->globals.end()) {
+                            SYNC();
                             runtimeError("Undefined variable '%s'.", name->str.c_str());
                             return INTERPRET_RUNTIME_ERROR;
                         }
@@ -467,22 +475,23 @@ class VM{
                     }
 
                     case OP_GET_LOCAL: {
-                        uint8_t slot = readByte();
-                        push(frame->slots[slot]);
+                        uint8_t slot = READ_BYTE();
+                        push(slots[slot]);
                         break;
                     }
                     case OP_SET_LOCAL: {
-                        uint8_t slot = readByte();
-                        frame->slots[slot] = peek(0);
+                        uint8_t slot = READ_BYTE();
+                        slots[slot] = peek(0);
                         break;
                     }
 
                     case OP_CALL: {
-                        int argCount = readByte();
+                        int argCount = READ_BYTE();
+                        SYNC();
                         if(!callValue(peek(argCount), argCount)) {
                             return INTERPRET_RUNTIME_ERROR;
                         }
-                        frame = &this->frames.back();
+                        LOAD_FRAME();
                         break;
                     }
                     case OP_RETURN: {
@@ -499,7 +508,7 @@ class VM{
                         this->stackTop = returnSlots;
                         push(result);
 
-                        frame = &this->frames.back();
+                        LOAD_FRAME();
 
                         break;
 
@@ -511,18 +520,18 @@ class VM{
                     }
 
                     case OP_JUMP: {
-                        uint16_t offset = readShort();
-                        frame->ip += offset;
+                        uint16_t offset = READ_SHORT();
+                        ip += offset;
                         break;
                     }
                     case OP_JUMP_IF_FALSE: {
-                        uint16_t offset = readShort();
-                        if(isFalsey(peek(0))) frame->ip += offset;
+                        uint16_t offset = READ_SHORT();
+                        if(isFalsey(peek(0))) ip += offset;
                         break;
                     }
                     case OP_LOOP: {
-                        uint16_t offset = readShort();
-                        frame->ip -= offset;
+                        uint16_t offset = READ_SHORT();
+                        ip -= offset;
                         break;
                     }
 
