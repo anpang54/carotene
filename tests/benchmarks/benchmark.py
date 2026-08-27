@@ -8,14 +8,16 @@ from random import shuffle
 results = {}
 
 languages = [
-    ("Carotene", "./caro-release", "caro"),
-    ("Lua",      "lua",            "lua" ),
-    ("Node.js",  "node",           "js"  ),
-    ("PHP",      "php",            "php" ),
-    ("Python",   "python",         "py"  )
+    ("Carotene",    "./caro-release",                      "caro"),
+    ("clox with %", "./tests/benchmarks/clox-with-modulo", "clox"),
+    ("Lua",         "luajit -j off",                       "lua" ),
+    ("Node.js",     "node --jitless",                      "js"  ),
+    ("PHP",         "php -d opcache.enable_cli=0",         "php" ),
+    ("Python",      "python",                              "py"  ),
+    ("Wren",        "wren",                                "wren")
 ]
 
-print("\nThis is a rudimentary benchmark where 5 bytecode or JIT languages start and check whether 0 - 9,999 are prime.\nOf course, you're comparing production-grade super-optimized languages written by experts with my toy language, so this means nothing.\n")
+print("\nThis is a rudimentary benchmark where a few bytecode interpreters start and check whether 0 - 9,999 are prime.\nOf course, you're comparing production-grade super-optimized languages written by experts with my toy language, so this doesn't mean much.\nNode.js, Lua, and PHP are in their non-JIT modes.\n")
 
 print("Trial ", end="", flush=True)
 
@@ -34,7 +36,8 @@ for i in range(6):
                 results[language[0]] = []
             results[language[0]].append(end)
 
-print("\n\n               min      max")
+print("\n\n                  min      max")
 
-for language, times in sorted(results.items(), key=lambda result: result[0].lower()):
-    print(f"  {language:<8}  {round((min(times)) * 1000):>4} ms  {round((max(times)) * 1000):>4} ms")
+for language, times in sorted(results.items(), key=lambda result: min(result[1])):
+    print(f"  {language:<11}  {round((min(times)) * 1000):>4} ms  {round((max(times)) * 1000):>4} ms")
+
