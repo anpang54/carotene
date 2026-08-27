@@ -98,28 +98,17 @@ Value CaroNumber(ValueType type, T v) {
     }
 }
 
-float asNumberToFloat(Value& v) {
+template<typename T>
+T asNumberTo(Value& v) {
     switch(v.type) {
-        case TYPE_BYTE  : return (float)v.as.Abyte  ;
-        case TYPE_UINT  : return (float)v.as.Auint  ;
-        case TYPE_INT   : return (float)v.as.Aint   ;
-        case TYPE_ULONG : return (float)v.as.Aulong ;
-        case TYPE_LONG  : return (float)v.as.Along  ;
-        case TYPE_FLOAT : return (float)v.as.Afloat ;
-        case TYPE_DOUBLE: return (float)v.as.Adouble;
-        default: return (float)0;    // unreachable
-    }
-}
-double asNumberToDouble(Value& v) {
-    switch(v.type) {
-        case TYPE_BYTE  : return (double)v.as.Abyte  ;
-        case TYPE_UINT  : return (double)v.as.Auint  ;
-        case TYPE_INT   : return (double)v.as.Aint   ;
-        case TYPE_ULONG : return (double)v.as.Aulong ;
-        case TYPE_LONG  : return (double)v.as.Along  ;
-        case TYPE_FLOAT : return (double)v.as.Afloat ;
-        case TYPE_DOUBLE: return (double)v.as.Adouble;
-        default: return (double)0;    // unreachable
+        case TYPE_BYTE  : return (T)v.as.Abyte  ;
+        case TYPE_UINT  : return (T)v.as.Auint  ;
+        case TYPE_INT   : return (T)v.as.Aint   ;
+        case TYPE_ULONG : return (T)v.as.Aulong ;
+        case TYPE_LONG  : return (T)v.as.Along  ;
+        case TYPE_FLOAT : return (T)v.as.Afloat ;
+        case TYPE_DOUBLE: return (T)v.as.Adouble;
+        default: return (T)0;    // unreachable
     }
 }
 string asNumberToString(Value& v) {
@@ -176,7 +165,7 @@ Value toFloat(Value& v, F f) {
     if(v.type == TYPE_FLOAT) {
         return CaroFloat(f(v.as.Afloat));
     } else {
-        return CaroDouble(f(asNumberToDouble(v)));
+        return CaroDouble(f(asNumberTo<double>(v)));
     }
 }
 

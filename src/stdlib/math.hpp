@@ -25,7 +25,7 @@ NATIVE(math_sqrt, "math", "sqrt", {
     params({
         {ANY_NUMERIC, true}
     });
-    if(asNumberToDouble(args[0]) < 0) {
+    if(asNumberTo<double>(args[0]) < 0) {
         vm->runtimeError("Seriously? Imaginary numbers?");
         return CaroNull;
     }

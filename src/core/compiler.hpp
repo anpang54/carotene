@@ -192,8 +192,8 @@ class Compiler{
             emitBytes(OP_CONSTANT, makeConstant(value));
         }
         void emitNumber(double value) {
-            emitConstant(CaroNumber(TYPE_DOUBLE, value));
-                // todo: emit something other than a double
+            emitConstant(CaroNumber(TYPE_INT, value));
+                // todo: emit a specific number type depending on the literal
         }
 
         int emitJump(uint8_t instruction) {

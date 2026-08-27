@@ -60,14 +60,14 @@ NATIVE(wait, "", "wait", {
     params({
         {ANY_NUMERIC, true}
     });
-    std::this_thread::sleep_for(chrono::duration<double>(asNumberToDouble(args[0])));
+    std::this_thread::sleep_for(chrono::duration<double>(asNumberTo<double>(args[0])));
     return CaroNull;
 });
 NATIVE(wait_ms, "", "wait_ms", {
     params({
         {ANY_NUMERIC, true}
     });
-    std::this_thread::sleep_for(chrono::duration<double, std::milli>(asNumberToDouble(args[0])));
+    std::this_thread::sleep_for(chrono::duration<double, std::milli>(asNumberTo<double>(args[0])));
     return CaroNull;
 });
 

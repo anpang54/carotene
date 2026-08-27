@@ -145,7 +145,7 @@ class VM{
                 runtimeError("Operand must be a number.");
                 return INTERPRET_RUNTIME_ERROR;
             }
-            this->stack.back() = CaroNumber(peek(0).type, -asNumberToDouble(this->stack.back()));
+            this->stack.back() = CaroNumber(peek(0).type, -asNumberTo<double>(this->stack.back()));
             return INTERPRET_OK;
         }
 
@@ -164,9 +164,9 @@ class VM{
             const ValueType type = peek(0).type;
 
             // get a and b
-            double b = asNumberToDouble(this->stack.back());
+            int b = asNumberTo<int>(this->stack.back());
             this->stack.pop_back();
-            double a = asNumberToDouble(this->stack.back());
+            int a = asNumberTo<int>(this->stack.back());
             this->stack.pop_back();
             
             // check divisiom by zero
@@ -183,7 +183,7 @@ class VM{
                 case OP_SUBTRACT:      result = CaroNumber(type, a - b);                          break;
                 case OP_MULTIPLY:      result = CaroNumber(type, a * b);                          break;
                 case OP_DIVIDE:        result = CaroNumber(type, a / b);                          break;
-                case OP_MODULO:        result = CaroNumber(type, (double)((int)a % (int)b));      break;
+                case OP_MODULO:        result = CaroNumber(type, ((int)a % (int)b));              break;
                 case OP_EXPONENTIATE:  result = CaroNumber(type, std::pow(a, b));                 break;
 
                 case OP_LESS:          result = CaroBool  (a < b);                                break;
@@ -210,14 +210,14 @@ class VM{
             if(op == OP_MULTIPLY) {
 
                 if(isNumeric(peek(0).type)) {    // number is on the right
-                    multiplier = (int)asNumberToDouble(this->stack.back());
+                    multiplier = (int)asNumberTo<double>(this->stack.back());
                     this->stack.pop_back();
                     strA = asString(this->stack.back())->str;
                     this->stack.pop_back();
                 } else if(isNumeric(peek(1).type)) {    // number is on the left
                     strA = asString(this->stack.back())->str;
                     this->stack.pop_back();
-                    multiplier = (int)asNumberToDouble(this->stack.back());
+                    multiplier = (int)asNumberTo<double>(this->stack.back());
                     this->stack.pop_back();
                 } else {
                     return INTERPRET_RUNTIME_ERROR;
