@@ -4,18 +4,20 @@
 
 // includes
 
-#include <cstdarg>
+#include <array>
 #include <unordered_map>
-#include <ctime>
 #include <utility>
 #include <algorithm>
+
+#include <cstdarg>
+#include <ctime>
 
 #include "common.hpp"
 #include "chunk.hpp"
 #include "object.hpp"
 #include "compiler.hpp"
 
-using std::pair, std::unordered_map;
+using std::array, std::pair, std::unordered_map;
 
 
 // setup
@@ -26,12 +28,14 @@ enum InterpretResult{
     INTERPRET_RUNTIME_ERROR
 };
 
-#define FRAMES_MAX 64    // there is a limit here to stop infinite recursion
+#define FRAMES_MAX  64    // there is a limit here to stop infinite recursion
+#define FRAME_SLOTS 256
+#define STACK_MAX   (FRAMES_MAX * FRAME_SLOTS)
 
 struct CallFrame{
     ObjFunction* function;
     uint8_t* ip;
-    size_t slots;
+    Value* slots;
 };
     // represents a single ongoing function call
 
@@ -44,7 +48,10 @@ class VM{
 
     
         vector<CallFrame> frames;
-        vector<Value> stack;    // it's easier to iterate over a vector
+
+        array<Value, STACK_MAX> stack;    // an array is faster than a vector
+        Value* stackTop = stack.data();
+        
         unordered_map<string, Value> globals;
     
         CallFrame* frame = nullptr;
@@ -84,7 +91,7 @@ class VM{
                 defineNative(native.first, native.second);
             }
 
-            this->stack.push_back(CaroObj(function));
+            push(CaroObj(function));
             if(!call(function, 0)) return INTERPRET_RUNTIME_ERROR;
 
             return run();
@@ -100,11 +107,20 @@ class VM{
         uint16_t readShort() {
             return (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]));
         }
-        
-        Value peek(int distance) {
-            return this->stack[this->stack.size() - 1 - distance];
-        }
 
+        void push(Value value) {
+            *this->stackTop++ = value;
+        }
+        Value pop() {
+            return *--this->stackTop;
+        }
+        Value& top() {
+            return this->stackTop[-1];
+        }
+        Value peek(int distance) {
+            return this->stackTop[-1 - distance];
+        }
+        
         void runtimeError(const char* format, ...) {
 
             va_list args;
@@ -132,7 +148,7 @@ class VM{
         }
 
         void resetStack() {
-            this->stack.clear();
+            this->stackTop = this->stack.data();    // clear
             this->frames.clear();
             this->frame = nullptr;
         }
@@ -145,7 +161,7 @@ class VM{
                 runtimeError("Operand must be a number.");
                 return INTERPRET_RUNTIME_ERROR;
             }
-            this->stack.back() = CaroNumber(peek(0).type, -asNumberTo<double>(this->stack.back()));
+            top() = CaroNumber(peek(0).type, -asNumberTo<double>(top()));
             return INTERPRET_OK;
         }
 
@@ -164,10 +180,8 @@ class VM{
             const ValueType type = peek(0).type;
 
             // get a and b
-            int b = asNumberTo<int>(this->stack.back());
-            this->stack.pop_back();
-            int a = asNumberTo<int>(this->stack.back());
-            this->stack.pop_back();
+            int b = asNumberTo<int>(pop());
+            int a = asNumberTo<int>(pop());
             
             // check divisiom by zero
             if((op == OP_DIVIDE || op == OP_MODULO) && b == 0) {
@@ -196,7 +210,7 @@ class VM{
                 default: break;
 
             }
-            this->stack.push_back(result);
+            push(result);
 
             return INTERPRET_OK;
 
@@ -210,25 +224,19 @@ class VM{
             if(op == OP_MULTIPLY) {
 
                 if(isNumeric(peek(0).type)) {    // number is on the right
-                    multiplier = (int)asNumberTo<double>(this->stack.back());
-                    this->stack.pop_back();
-                    strA = asString(this->stack.back())->str;
-                    this->stack.pop_back();
+                    multiplier = (int)asNumberTo<double>(pop());
+                    strA = asString(pop())->str;
                 } else if(isNumeric(peek(1).type)) {    // number is on the left
-                    strA = asString(this->stack.back())->str;
-                    this->stack.pop_back();
-                    multiplier = (int)asNumberTo<double>(this->stack.back());
-                    this->stack.pop_back();
+                    strA = asString(pop())->str;
+                    multiplier = (int)asNumberTo<double>(pop());
                 } else {
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
             } else {
 
-                strB = asString(this->stack.back()) -> str;
-                this->stack.pop_back();
-                strA = asString(this->stack.back()) -> str;
-                this->stack.pop_back();
+                strB = asString(pop()) -> str;
+                strA = asString(pop()) -> str;
 
             }
 
@@ -262,7 +270,7 @@ class VM{
                     
             }
             
-            this->stack.push_back(CaroObj(copyString(result)));
+            push(CaroObj(copyString(result)));
 
             return INTERPRET_OK;
 
@@ -280,16 +288,18 @@ class VM{
             }
 
             // check stack
-            if(this->frames.size() == FRAMES_MAX) {
+            if(
+                this->frames.size() == FRAMES_MAX
+                || this->stackTop - this->stack.data() + FRAME_SLOTS > STACK_MAX
+            ) {
                 runtimeError("Stack overflow.");
                 return false;
             }
                 // user probably wrote an infinitely recursing function
-
             CallFrame* newFrame = &this->frames.emplace_back();
             newFrame->function = function;
             newFrame->ip = function->chunk.code.data();
-            newFrame->slots = this->stack.size() - argCount - 1;
+            newFrame->slots = this->stackTop - argCount - 1;
 
             return true;
 
@@ -304,10 +314,10 @@ class VM{
                     case OBJ_NATIVE: {
                         NativeFn native = asNative(callee)->function;
                         this->hadError = false;
-                        Value result = native(this, vector<Value>(this->stack.end() - argCount, this->stack.end()));
+                        Value result = native(this, vector<Value>(this->stackTop - argCount, this->stackTop));
                         if(this->hadError) return false;
-                        this->stack.resize(this->stack.size() - argCount - 1);
-                        this->stack.push_back(result);
+                        this->stackTop -= argCount + 1;
+                        push(result);
                         return true;
                     }
                     default:
@@ -331,9 +341,9 @@ class VM{
                 if(DEBUG_TRACE_EXECUTION) {
                     
                     cout << "          ";
-                    for(const Value& slot: stack) {
+                    for(Value* slot = this->stack.data(); slot < this->stackTop; ++slot) {
                         cout << "[ ";
-                        printValue(slot);
+                        printValue(*slot);
                         cout << " ]";
                     }
                     cout << '\n';
@@ -361,7 +371,7 @@ class VM{
 
                     case OP_CONSTANT: {
                         Value constant = frame->function->chunk.constants[readByte()];
-                        this->stack.push_back(constant);
+                        push(constant);
                         break;
                     }
 
@@ -403,23 +413,19 @@ class VM{
                     case OP_NEGATE:       { unary();     }
 
                     case OP_NOT:
-                        this->stack.back() = CaroBool(isFalsey(this->stack.back()));
+                        top() = CaroBool(isFalsey(top()));
                         break;
 
                     case OP_EQUAL: {
-                        Value b = this->stack.back();
-                        this->stack.pop_back();
-                        Value a = this->stack.back();
-                        this->stack.pop_back();
-                        this->stack.push_back(CaroBool(valuesEqual(a, b)));
+                        Value b = pop();
+                        Value a = pop();
+                        push(CaroBool(valuesEqual(a, b)));
                         break;
                     }
                     case OP_NOT_EQUAL: {
-                        Value b = this->stack.back();
-                        this->stack.pop_back();
-                        Value a = this->stack.back();
-                        this->stack.pop_back();
-                        this->stack.push_back(CaroBool(!valuesEqual(a, b)));
+                        Value b = pop();
+                        Value a = pop();
+                        push(CaroBool(!valuesEqual(a, b)));
                         break;
                     }
                     case OP_LESS:          { numberBinary(OP_LESS);          break; }
@@ -428,15 +434,15 @@ class VM{
                     case OP_GREATER_EQUAL: { numberBinary(OP_GREATER_EQUAL); break; }
                     case OP_SPACESHIP:     { numberBinary(OP_SPACESHIP);     break; }
 
-                    case OP_NULL:  this->stack.push_back(CaroNull);        break;
-                    case OP_SMTH:  this->stack.push_back(CaroSmth);        break;
-                    case OP_TRUE:  this->stack.push_back(CaroBool(true));  break;
-                    case OP_FALSE: this->stack.push_back(CaroBool(false)); break;
+                    case OP_NULL:  push(CaroNull);        break;
+                    case OP_SMTH:  push(CaroSmth);        break;
+                    case OP_TRUE:  push(CaroBool(true));  break;
+                    case OP_FALSE: push(CaroBool(false)); break;
 
                     case OP_DEFINE_GLOBAL: {
                         ObjString* name = asString(frame->function->chunk.constants[readByte()]);
                         this->globals[name->str] = peek(0);
-                        this->stack.pop_back();
+                        --this->stackTop;
                         break;
                     }
                     case OP_GET_GLOBAL: {
@@ -446,7 +452,7 @@ class VM{
                             runtimeError("Undefined variable '%s'.", name->str.c_str());
                             return INTERPRET_RUNTIME_ERROR;
                         }
-                        this->stack.push_back(found->second);
+                        push(found->second);
                         break;
                     }
                     case OP_SET_GLOBAL: {
@@ -462,12 +468,12 @@ class VM{
 
                     case OP_GET_LOCAL: {
                         uint8_t slot = readByte();
-                        this->stack.push_back(this->stack[frame->slots + slot]);
+                        push(frame->slots[slot]);
                         break;
                     }
                     case OP_SET_LOCAL: {
                         uint8_t slot = readByte();
-                        this->stack[frame->slots + slot] = peek(0);
+                        frame->slots[slot] = peek(0);
                         break;
                     }
 
@@ -481,19 +487,17 @@ class VM{
                     }
                     case OP_RETURN: {
 
-                        Value result = this->stack.back();
-                        this->stack.pop_back();
-
-                        size_t slots = frame->slots;
+                        Value result = pop();
+                        Value* returnSlots = frame->slots;
                         this->frames.pop_back();
-
+                        
                         if(this->frames.empty()) {
-                            this->stack.pop_back();
+                            --this->stackTop;
                             return INTERPRET_OK;
                         }
 
-                        this->stack.resize(slots);
-                        this->stack.push_back(result);
+                        this->stackTop = returnSlots;
+                        push(result);
 
                         frame = &this->frames.back();
 
@@ -502,7 +506,7 @@ class VM{
                     }
 
                     case OP_TYPEOF: {
-                        this->stack.back() = CaroObj(copyString(typeof(this->stack.back())));
+                        top() = CaroObj(copyString(typeof(top())));
                         break;
                     }
 
@@ -523,7 +527,7 @@ class VM{
                     }
 
                     case OP_POP: {
-                        this->stack.pop_back();
+                        --this->stackTop;
                         break;
                     }
 

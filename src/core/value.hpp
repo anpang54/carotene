@@ -99,7 +99,7 @@ Value CaroNumber(ValueType type, T v) {
 }
 
 template<typename T>
-T asNumberTo(Value& v) {
+T asNumberTo(const Value& v) {
     switch(v.type) {
         case TYPE_BYTE  : return (T)v.as.Abyte  ;
         case TYPE_UINT  : return (T)v.as.Auint  ;
@@ -111,7 +111,7 @@ T asNumberTo(Value& v) {
         default: return (T)0;    // unreachable
     }
 }
-string asNumberToString(Value& v) {
+string asNumberToString(const Value& v) {
     switch(v.type) {
         case TYPE_BYTE  : return to_string(v.as.Abyte  );
         case TYPE_UINT  : return to_string(v.as.Auint  );
@@ -125,7 +125,7 @@ string asNumberToString(Value& v) {
 }
 
 template<typename F>
-Value mapNumber(Value& v, F f) {
+Value mapNumber(const Value& v, F f) {
     switch(v.type) {
         case TYPE_BYTE  : return CaroByte  (f(v.as.Abyte  ));
         case TYPE_UINT  : return CaroUint  (f(v.as.Auint  ));
@@ -138,7 +138,7 @@ Value mapNumber(Value& v, F f) {
     }
 }
 template<typename F>
-Value mapNumbers(Value& a, Value& b, F f) {
+Value mapNumbers(const Value& a, const Value& b, F f) {
     switch(a.type) {
         case TYPE_BYTE  : return CaroByte  (f(a.as.Abyte  , b.as.Abyte  ));
         case TYPE_UINT  : return CaroUint  (f(a.as.Auint  , b.as.Auint  ));
