@@ -594,7 +594,24 @@ class VM{
 
                     case OP_GET_INDEX: {
 
-                        if(isArray(peek(1))) {
+                        if(isString(peek(1))) {
+
+                            if(!isNumeric(peek(0).type)) {
+                                SYNC();
+                                runtimeError("The right side must be a number.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+
+                            int64_t index = asNumberTo<int64_t>(pop());
+                            const string& str = asString(pop())->str;
+                            if(index < 0 || index >= (int64_t)str.size()) {
+                                SYNC();
+                                runtimeError("String index out of bounds.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            push(CaroObj(copyString(string(1, str[index]))));
+
+                        } else if(isArray(peek(1))) {
                             
                             if(!isNumeric(peek(0).type)) {
                                 SYNC();
@@ -640,13 +657,44 @@ class VM{
 
                     case OP_SET_INDEX: {
 
-                        if(isArray(peek(2))) {
+                        if(isString(peek(2))) {
 
                             if(!isNumeric(peek(1).type)) {
                                 SYNC();
                                 runtimeError("The right side must be a number.");
                                 return INTERPRET_RUNTIME_ERROR;
                             }
+
+                            if(!isString(peek(0))) {
+                                SYNC();
+                                runtimeError("The value to assign must be a string.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            if(asString(peek(0))->str.size() != 1) {
+                                SYNC();
+                                runtimeError("The string to assign must be a single character.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+
+                            Value value = pop();
+                            int64_t index = asNumberTo<int64_t>(pop());
+                            ObjString* str = asString(pop());
+                            if(index < 0 || index >= (int64_t)str->str.size()) {
+                                SYNC();
+                                runtimeError("String index out of bounds.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            str->str[index] = asString(value)->str[0];
+                            push(value);
+
+                        } else if(isArray(peek(2))) {
+
+                            if(!isNumeric(peek(1).type)) {
+                                SYNC();
+                                runtimeError("The right side must be a number.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+
                             Value value = pop();
                             int64_t index = asNumberTo<int64_t>(pop());
                             ObjArray* array = asArray(pop());
@@ -661,10 +709,11 @@ class VM{
                         } else if(isDict(peek(2))) {
 
                             if(!isValidKey(peek(1))) {
+                                SYNC();
                                 runtimeError("Arrays and dicts currently can't be used as dict keys.");
                                 return INTERPRET_RUNTIME_ERROR;
                             }
-                            
+
                             Value value = pop();
                             Value key = pop();
                             ObjDict* dict = asDict(pop());
