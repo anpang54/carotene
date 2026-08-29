@@ -561,6 +561,49 @@ class VM{
                         break;
                     }
 
+                    case OP_MAKE_ARRAY: {
+                        uint8_t elementCount = READ_BYTE();
+                        ObjArray* array = copyArray(vector<Value>(this->stackTop - elementCount, this->stackTop));
+                        this->stackTop -= elementCount;
+                        push(CaroObj(array));
+                        break;
+                    }
+
+                    case OP_GET_INDEX: {
+                        if(!isArray(peek(1)) || !isNumeric(peek(0).type)) {
+                            SYNC();
+                            runtimeError("The left side must be an array, and the right side must be a number.");
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                        int64_t index = asNumberTo<int64_t>(pop());
+                        ObjArray* array = asArray(pop());
+                        if(index < 0 || index >= (int64_t)array->data.size()) {
+                            SYNC();
+                            runtimeError("Array index out of bounds.");
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                        push(array->data[index]);
+                        break;
+                    }
+                    case OP_SET_INDEX: {
+                        if(!isArray(peek(2)) || !isNumeric(peek(1).type)) {
+                            SYNC();
+                            runtimeError("The left side must be an array, and the right side must be a number.");
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                        Value value = pop();
+                        int64_t index = asNumberTo<int64_t>(pop());
+                        ObjArray* array = asArray(pop());
+                        if(index < 0 || index >= (int64_t)array->data.size()) {
+                            SYNC();
+                            runtimeError("Array index out of bounds.");
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                        array->data[index] = value;
+                        push(value);
+                        break;
+                    }
+
                     case OP_CALL: {
                         int argCount = READ_BYTE();
                         SYNC();

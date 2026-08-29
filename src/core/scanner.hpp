@@ -12,8 +12,9 @@
 typedef enum {
 
     // 1 char
-    TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,
-    TOKEN_LEFT_BRACE, TOKEN_RIGHT_BRACE,
+    TOKEN_LEFT_PAREN,  TOKEN_RIGHT_PAREN,
+    TOKEN_LEFT_SQUARE, TOKEN_RIGHT_SQUARE,
+    TOKEN_LEFT_BRACE,  TOKEN_RIGHT_BRACE,
     TOKEN_DOT, TOKEN_COMMA, TOKEN_COLON, TOKEN_SEMICOLON,
     TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_SLASH, TOKEN_PERCENT, TOKEN_CARET,
     TOKEN_AMPERSAND, TOKEN_PIPE,
@@ -325,6 +326,8 @@ class Scanner{
                 // 1 char
                 case '(': return makeToken(TOKEN_LEFT_PAREN);
                 case ')': return makeToken(TOKEN_RIGHT_PAREN);
+                case '[': return makeToken(TOKEN_LEFT_SQUARE);
+                case ']': return makeToken(TOKEN_RIGHT_SQUARE);
                 case '{': return makeToken(TOKEN_LEFT_BRACE);
                 case '}': return makeToken(TOKEN_RIGHT_BRACE);
                 case '.': return makeToken(TOKEN_DOT);
