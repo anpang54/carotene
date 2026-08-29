@@ -10,7 +10,7 @@ func fibonacci(n) {
     return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-repeat(10): $i{
+repeat(10): i{
     print(fibonacci(i), false);
     print(" ", false);
 }

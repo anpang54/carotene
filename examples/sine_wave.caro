@@ -3,14 +3,16 @@
 // Graphs a vertical sine wave.
 
 
-$length = 15;
-$step = 0.75;
+use math;
+
+#length = 15;
+#step = 0.75;
 
 func getPosition(x) {
-    return floor((math.sin(x * step) + 1) * 5);
+    return floor((math.sin(x * #step) + 1) * 5);
 }
 
-repeat(length): $x{
+repeat(#length): x{
     print(" " * (getPosition(x) + 5), false);
     if(getPosition(x + 1) == getPosition(x)) {
         print("|");

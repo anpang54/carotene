@@ -46,6 +46,7 @@ enum OpCode{
 
     // variables
     OP_DEFINE_GLOBAL,
+    OP_DEFINE_CONSTANT,
     OP_GET_GLOBAL,
     OP_SET_GLOBAL,
     OP_INCREMENT_GLOBAL,
@@ -221,6 +222,9 @@ class Chunk{
 
                 case OP_DEFINE_GLOBAL:
                     return constantInstruction("OP_DEFINE_GLOBAL", offset);
+                case OP_DEFINE_CONSTANT:
+                    return constantInstruction("OP_DEFINE_CONSTANT", offset);
+                
                 case OP_GET_GLOBAL:
                     return constantInstruction("OP_GET_GLOBAL", offset);
                 case OP_SET_GLOBAL:

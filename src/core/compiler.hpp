@@ -119,6 +119,7 @@ class Compiler{
             this->scanner = Scanner(source);
 
             initCompiler(TYPE_SCRIPT);
+            beginScope();    // make the top level have its own scope
 
             this->advance();
             while(!match(TOKEN_EOF)) {
@@ -397,8 +398,12 @@ class Compiler{
         // precedence
 
         void parsePrecedence(Precedence precedence) {
-
             advance();
+            parseFromPrevious(precedence);
+        }
+        void parseFromPrevious(Precedence precedence) {
+            // like parsePrecedence, but the expression's first token is already in previous
+
             ParseFn prefixRule = getRule(this->previous.type)->prefix;
             if(prefixRule == NULL) {
                 error("Expect expression.");
@@ -527,8 +532,8 @@ class Compiler{
             consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
             if (match(TOKEN_SEMICOLON)) {
                 // no initializer
-            } else if(match(TOKEN_DOLLAR)) {    // variable
-                varDeclaration();
+            } else if(check(TOKEN_IDENTIFIER)) {
+                identifierStatement();
             } else {
                 expressionStatement();
             }
@@ -627,8 +632,8 @@ class Compiler{
 
             // consume and declare the counter variable
             if(match(TOKEN_COLON)) {
-                consume(TOKEN_DOLLAR, "Expect '$' before the variable name.");
-                consume(TOKEN_IDENTIFIER, "Expect variable name.");
+                consume(TOKEN_IDENTIFIER, "Expect variable name after ':'.");
+                if(this->previous.start[0] == '$') error("The counter variable must be local.");
                 declareVariable();
                 markInitialized();
             } else {
@@ -725,8 +730,8 @@ class Compiler{
 
             // consume and declare the counter variable
             if(match(TOKEN_COLON)) {
-                consume(TOKEN_DOLLAR, "Expect '$' before the variable name.");
-                consume(TOKEN_IDENTIFIER, "Expect variable name.");
+                consume(TOKEN_IDENTIFIER, "Expect variable name after ':'.");
+                if(this->previous.start[0] == '$') error("The counter variable must be local.");
                 declareVariable();
                 markInitialized();
             } else {
@@ -766,8 +771,8 @@ class Compiler{
 
             if(match(TOKEN_FUNC)) {
                 funcDeclaration();
-            } else if(match(TOKEN_DOLLAR)) {
-                varDeclaration();
+            } else if(check(TOKEN_IDENTIFIER)) {
+                identifierStatement();
             } else {
                 statement();
             }
@@ -777,30 +782,53 @@ class Compiler{
         }
 
         void funcDeclaration() {
-            uint8_t global = parseVariable("Expect function name.");
-            markInitialized();
+            consume(TOKEN_IDENTIFIER, "Expect function name.");
+            if(this->previous.start[0] == '$') {
+                error("Function names can't have a '$' as they are already global.");
+            } else if(this->previous.start[0] == '#') {
+                error("Function names can't have a '#' as they are already constant.");
+            }
+            uint8_t global = identifierConstant(&this->previous);
             makeFunction(TYPE_FUNCTION);
-            defineVariable(global);
+            emitBytes(OP_DEFINE_GLOBAL, global);
         }
             // functions are first-class values
 
-        void varDeclaration() {
+        void identifierStatement() {
 
-            uint8_t global = parseVariable("Expect variable name.");
+            advance();    // consume the identifier
 
-            if(match(TOKEN_EQUAL)) {
-                expression();
-            } else {
-                emitByte(OP_NULL);
+            if(
+                this->previous.start[0] != '$' && this->previous.start[0] != '#'
+                && check(TOKEN_EQUAL) && resolveLocal(&this->previous) == -1
+            ) {
+                varDeclaration();
+                return;
             }
-            consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
 
-            defineVariable(global);
+            int start = currentChunk()->code.size();
+            parseFromPrevious(PREC_ASSIGNMENT);
+            consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+            emitByte(OP_POP);
+            tryFuseIncrement(start);
+
+        }
+
+        void varDeclaration() {
             
+            declareVariable();
+            advance();    // consume =
+            expression();
+            consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+            markInitialized();
+
         }
 
         uint8_t parseVariable(string errorMessage) {
             consume(TOKEN_IDENTIFIER, errorMessage);
+            if(this->previous.start[0] == '$' || this->previous.start[0] == '#') {
+                error("Parameter names can't start with '$' or '#'");
+            }
             declareVariable();
             if(cur().scopeDepth > 0) return 0;
             return identifierConstant(&this->previous);
@@ -866,7 +894,6 @@ class Compiler{
 
                     case TOKEN_CLASS:
                     case TOKEN_FUNC:
-                    case TOKEN_DOLLAR:
                     case TOKEN_FOR:
                     case TOKEN_REPEAT:
                     case TOKEN_IF:
@@ -997,14 +1024,25 @@ class Compiler{
         void namedVariable(Token name, bool canAssign) {
 
             uint8_t getOp, setOp;
-            int arg = resolveLocal(&name);
-            if(arg != -1) {
-                getOp = OP_GET_LOCAL;
-                setOp = OP_SET_LOCAL;
-            } else {
+            int arg;
+
+            if(name.start[0] == '$' || name.start[0] == '#') {
                 arg = identifierConstant(&name);
                 getOp = OP_GET_GLOBAL;
-                setOp = OP_SET_GLOBAL;
+                setOp = name.start[0] == '#'? OP_DEFINE_CONSTANT: OP_SET_GLOBAL;
+            } else {
+                arg = resolveLocal(&name);
+                if(arg != -1) {
+                    getOp = OP_GET_LOCAL;
+                    setOp = OP_SET_LOCAL;
+                } else {
+                    if(canAssign && check(TOKEN_EQUAL)) {
+                        error("Undefined variable '" + name.start + "'.");
+                    }
+                    arg = identifierConstant(&name);
+                    getOp = OP_GET_GLOBAL;
+                    setOp = OP_SET_GLOBAL;
+                }
             }
 
             if(canAssign && match(TOKEN_EQUAL)) {
@@ -1093,7 +1131,6 @@ inline ParseRule rules[] = {
     [TOKEN_CARET]         = { NULL,                    &Compiler::makeBinary, PREC_POWER      },
     [TOKEN_AMPERSAND]     = { NULL,                    &Compiler::makeAnd,    PREC_AND        },
     [TOKEN_PIPE]          = { NULL,                    &Compiler::makeOr,     PREC_OR         },
-    [TOKEN_DOLLAR]        = { NULL,                    NULL,                  PREC_NONE       },
 
     // 1 or 2 chars
     [TOKEN_BANG]          = { &Compiler::makeUnary,    NULL,                  PREC_NONE       },

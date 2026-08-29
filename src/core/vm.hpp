@@ -451,6 +451,17 @@ class VM{
                         --this->stackTop;
                         break;
                     }
+                    case OP_DEFINE_CONSTANT: {
+                        ObjString* name = asString(constants[READ_BYTE()]);
+                        if(this->globals.contains(name->str)) {
+                            SYNC();
+                            runtimeError("You can't edit a constant.");
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                        this->globals[name->str] = peek(0);
+                        break;
+                    }
+
                     case OP_GET_GLOBAL: {
                         ObjString* name = asString(constants[READ_BYTE()]);
                         auto found = this->globals.find(name->str);
@@ -464,13 +475,7 @@ class VM{
                     }
                     case OP_SET_GLOBAL: {
                         ObjString* name = asString(constants[READ_BYTE()]);
-                        auto found = this->globals.find(name->str);
-                        if(found == this->globals.end()) {
-                            SYNC();
-                            runtimeError("Undefined variable '%s'.", name->str.c_str());
-                            return INTERPRET_RUNTIME_ERROR;
-                        }
-                        found->second = peek(0);
+                        this->globals[name->str] = peek(0);
                         break;
                     }
 

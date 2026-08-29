@@ -17,7 +17,6 @@ typedef enum {
     TOKEN_DOT, TOKEN_COMMA, TOKEN_COLON, TOKEN_SEMICOLON,
     TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_SLASH, TOKEN_PERCENT, TOKEN_CARET,
     TOKEN_AMPERSAND, TOKEN_PIPE,
-    TOKEN_DOLLAR,
 
     // 1 or 2 chars
     TOKEN_BANG,    TOKEN_BANG_EQUAL,
@@ -339,7 +338,14 @@ class Scanner{
                 case '^': return makeToken(TOKEN_CARET);
                 case '&': return makeToken(TOKEN_AMPERSAND);
                 case '|': return makeToken(TOKEN_PIPE);
-                case '$': return makeToken(TOKEN_DOLLAR);
+                case '$': {
+                    if(!isAlpha(peek())) return errorToken("Expect a name after '$'.");
+                    return scanIdentifier();
+                }
+                case '#': {
+                    if(!isAlpha(peek())) return errorToken("Expect a name after '#'.");
+                    return scanIdentifier();
+                }
 
                 // 1 or 2 chars
                 case '!': return makeToken(match('=')? TOKEN_BANG_EQUAL   : TOKEN_BANG);
