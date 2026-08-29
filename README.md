@@ -6,7 +6,7 @@
 
 A bytecode-interpreted programming language coded in C++23. It is currently functional, but doesn't have many features. It serves as a place for me to learn how to make a programming language, but the end goal is that it'll have built-in tools to make applications, both text-based and graphical.
 
-The chemical Carotene, found in carrots, turns into Retinol, which maintains eye health, so that you can see the GUI programs made with (future) Carotene. Source code files are `.caro`, and bytecode files are `.reti`.
+The chemical [Carotene](https://en.wikipedia.org/wiki/Carotene), found in carrots, turns into [Retinol](https://en.wikipedia.org/wiki/Retinol), which maintains eye health, so that you can see the GUI programs made with (future) Carotene. Source code files are `.caro`, and bytecode files are `.reti`.
 
 ## Features
 
@@ -45,7 +45,7 @@ For some examples of Carotene code, please see the `examples/` folder.
 
 Version 0.1.0 is scheduled to come out on the 31st.
 
-I made the base for this by following the *clox* section of [Robert Nystrom](https://journal.stuffwithstuff.com/)'s [Crafting Interpreters](https://craftinginterpreters.com/), a book which he generously makes completely free.
+I made the base for this by following the [*clox*](https://craftinginterpreters.com/a-bytecode-virtual-machine.html) section of [Robert Nystrom](https://journal.stuffwithstuff.com/)'s [Crafting Interpreters](https://craftinginterpreters.com/), a book which he generously makes completely free.
 
 The main difference, of course, is that Carotene uses C++ and therefore gets to use its features. Carotene also has a plethora of its own additions and changes, so much so that it is not backward compatible with clox.
 
