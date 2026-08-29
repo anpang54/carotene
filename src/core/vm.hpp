@@ -150,23 +150,24 @@ class VM{
         
         void runtimeError(const char* format, ...) {
 
+            cerr << "\033[38;5;210m";
             va_list args;
             va_start(args, format);
             vfprintf(stderr, format, args);
             va_end(args);
-            cerr << '\n';
+            cerr << "\033[0m\n";
 
             for(int i = (int)this->frames.size() - 1; i >= 0; --i) {
                 CallFrame* callFrame = &this->frames[i];
                 ObjFunction* function = callFrame->function;
                 size_t instruction = callFrame->ip - function->chunk.code.data() - 1;
-                cerr << "[line " << function->chunk.lines[instruction] << "] in ";
+                cerr << "\033[38;5;203m[line " << function->chunk.lines[instruction] << "] in ";
                 if(function->name.empty()) {
                     cerr << "script";
                 } else {
                     cerr << function->name << "()";
                 }
-                cerr << '\n';
+                cerr << "\n\033[0m";
             }
 
             resetStack();

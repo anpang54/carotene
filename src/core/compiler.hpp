@@ -155,7 +155,7 @@ class Compiler{
             if(this->panicMode) return;
             this->panicMode = true;
 
-            cerr << "[line " << token->line << "] Error";
+            cerr << "\033[38;5;203m[line " << token->line << "] Error";
 
             if(token->type == TOKEN_EOF) {
                 cerr << " at end";
@@ -165,7 +165,7 @@ class Compiler{
                 cerr << " at '" << token->start << '\'';
             }
 
-            cerr << ": " << message << '\n';
+            cerr << ": " << message << "\n\033[0m";
 
             this->hadError = true;
 

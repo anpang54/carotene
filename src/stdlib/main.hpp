@@ -75,22 +75,23 @@ NATIVE(log, "", "log", {
     });
 
     string logType = asString(args[0])->str;
-    if(!(logType == "e" || logType == "w" || logType == "i")) {
-        vm->runtimeError("The only valid log types are e, w, and i.");
+    if(!(logType == "e" || logType == "w" || logType == "o" || logType == "i")) {
+        vm->runtimeError("The only valid log types are e, w, o, and i.");
         return CaroNull;
     }
     uint8_t color;
     switch(logType.front()) {
-        case 'e': color = 91; break;
-        case 'w': color = 93; break;
-        case 'i': color = 96; break;
+        case 'e': color = 203; break;
+        case 'w': color = 221; break;
+        case 'o': color = 82;  break;
+        case 'i': color = 45;  break;
     }
     string bold = args.size() >= 3 && args[2].as.Abool? "\033[1m": "";
 
     auto now = chrono::floor<chrono::milliseconds>(chrono::system_clock::now());
     chrono::hh_mm_ss hms{now - floor<chrono::days>(now)};
     cout << format(
-                "{:s}\033[{}m[{:c}] [{:02}:{:02}:{:02}.{:03}] ",
+                "{:s}\033[38;5;{}m[{:c}] [{:02}:{:02}:{:02}.{:03}] ",
                 bold, color, logType.front(),
                 hms.hours().count(), hms.minutes().count(), hms.seconds().count(), hms.subseconds().count()
             );

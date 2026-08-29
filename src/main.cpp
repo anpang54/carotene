@@ -33,7 +33,12 @@ InterpretResult interpret(string source) {
     return result;
 }
 
+
 void repl() {
+
+    cout << "\n  \033[1m\033[38:5:208mCarotene v" << VERSION << "\033[0m (" << VERSION_DATE << ")"
+            "\n  https://github.com/anpang54/carotene\n\n";
+    #define READLINE_START "\033[1m\033[38:5:208m> \033[0m"
 
     vm.replMode = true;
 
@@ -43,20 +48,21 @@ void repl() {
         string source;
         #ifdef __linux__
             // linux uses readline
-            char* line = readline("> ");
+            char* line = readline(READLINE_START);
             if(line == nullptr) break;
             if(*line) add_history(line);
             source = line;
             free(line);
         #else
             // windows doesn't have readline so it just gets plain getline
-            cout << "> ";
+            cout << READLINE_START;
             if(!std::getline(cin, source)) break;
         #endif
 
         // interpret
         interpret(source);
 
+        cout << '\n';
     }
     
     freeObjects();
