@@ -17,7 +17,7 @@ languages = [
     ("Wren",        "wren",                                "wren")
 ]
 
-print("\nThis is a rudimentary benchmark where a few bytecode interpreters start and check whether 0 - 9,999 are prime.\nOf course, you're comparing production-grade super-optimized languages written by experts with my toy language, so this doesn't mean much.\nNode.js, Lua, and PHP are in their non-JIT modes.\n")
+print("\nThis is a rudimentary benchmark where a few bytecode interpreters start and check whether 0 - 9,999 are prime.\nNode.js, Lua, and PHP are in their non-JIT modes.\n")
 
 print("Trial ", end="", flush=True)
 

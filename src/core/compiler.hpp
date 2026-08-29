@@ -83,6 +83,8 @@ class Compiler{
         bool hadError = false;
         bool panicMode = false;    // suppresses other errors
 
+        int lastCmpOffset = -1;    // code offset of the last comparison opcode
+
         inline static set<string> usedModules;
 
         Chunk* currentChunk() {
@@ -99,6 +101,8 @@ class Compiler{
             state.function = newFunction();
             state.type = type;
             state.scopeDepth = 0;
+
+            this->lastCmpOffset = -1;    // now emitting into a different chunk
 
             if(type != TYPE_SCRIPT) state.function->name = this->previous.start;
 
@@ -204,13 +208,95 @@ class Compiler{
         }
         void emitLoop(int loopStart) {
 
+            this->lastCmpOffset = -1;
+
             emitByte(OP_LOOP);
 
             int offset = currentChunk()->code.size() - loopStart + 2;
 
             emitByte((offset >> 8) & 0xff);
             emitByte(offset & 0xff);
-            
+
+        }
+
+        struct ConditionJump{
+            int offset;
+            bool fused;
+        };
+        ConditionJump emitConditionJump() {
+            // fuse a trailing comparison into a single compare-and-jump instruction
+
+            if(this->lastCmpOffset == (int)currentChunk()->code.size() - 1) {
+
+                uint8_t fusedOp;
+                switch(currentChunk()->code.back()) {
+                    case OP_LESS:          fusedOp = OP_JUMP_IF_NOT_LESS;          break;
+                    case OP_LESS_EQUAL:    fusedOp = OP_JUMP_IF_NOT_LESS_EQUAL;    break;
+                    case OP_GREATER:       fusedOp = OP_JUMP_IF_NOT_GREATER;       break;
+                    case OP_GREATER_EQUAL: fusedOp = OP_JUMP_IF_NOT_GREATER_EQUAL; break;
+                    case OP_EQUAL:         fusedOp = OP_JUMP_IF_NOT_EQUAL;         break;
+                    case OP_NOT_EQUAL:     fusedOp = OP_JUMP_IF_EQUAL;             break;
+                    default: return {emitJump(OP_JUMP_IF_FALSE), false};    // unreachable
+                }
+
+                currentChunk()->code.pop_back();
+                currentChunk()->lines.pop_back();
+                return {emitJump(fusedOp), true};
+
+            }
+
+            return {emitJump(OP_JUMP_IF_FALSE), false};
+
+        }
+
+        bool tryFuseIncrement(int startOffset) {
+            // fuse i = i + 1 into a single increment/decrement instruction
+
+            Chunk* chunk = currentChunk();
+            if((int)chunk->code.size() - startOffset != 8) return false;
+            const uint8_t* seq = chunk->code.data() + startOffset;
+
+            // match [GET var][CONSTANT step][ADD or SUBTRACT][SET var][POP]
+            bool local  = seq[0] == OP_GET_LOCAL  && seq[5] == OP_SET_LOCAL;
+            bool global = seq[0] == OP_GET_GLOBAL && seq[5] == OP_SET_GLOBAL;
+            if(!local && !global) return false;
+            if(seq[2] != OP_CONSTANT || (seq[4] != OP_ADD && seq[4] != OP_SUBTRACT) || seq[7] != OP_POP) return false;
+
+            if(local && seq[1] != seq[6]) return false;
+            if(global && asString(chunk->constants[seq[1]])->str != asString(chunk->constants[seq[6]])->str) return false;
+
+            if(chunk->constants[seq[3]].type != TYPE_INT) return false;
+
+            uint8_t variable = seq[1];
+            uint8_t step = seq[3];
+            uint8_t op = seq[4] == OP_ADD
+                ? (local? OP_INCREMENT_LOCAL: OP_INCREMENT_GLOBAL)
+                : (local? OP_DECREMENT_LOCAL: OP_DECREMENT_GLOBAL);
+
+            // replace the 8 byte sequence with 1 instruction
+            for(int i = 0; i < 8; ++i) {
+                chunk->code.pop_back();
+                chunk->lines.pop_back();
+            }
+            emitBytes(op, variable);
+            emitByte(step);
+
+            return true;
+
+        }
+
+        void emitForLoop(uint8_t counterSlot, uint8_t limitSlot, uint8_t step, int bodyStart) {
+
+            this->lastCmpOffset = -1;
+
+            emitBytes(OP_FOR_LOOP, counterSlot);
+            emitBytes(limitSlot, step);
+
+            int offset = currentChunk()->code.size() - bodyStart + 2;
+
+            emitByte((offset >> 8) & 0xff);
+            emitByte(offset & 0xff);
+
         }
 
         void emitReturn() {
@@ -232,6 +318,11 @@ class Compiler{
                 return 0;
             }
             return (uint8_t)constant;
+        }
+
+        void emitComparison(uint8_t op) {
+            this->lastCmpOffset = currentChunk()->code.size();
+            emitByte(op);
         }
 
         void makeUnary(bool canAssign) {
@@ -270,13 +361,13 @@ class Compiler{
                 case TOKEN_PERCENT:       emitByte(OP_MODULO);        break;
                 case TOKEN_CARET:         emitByte(OP_EXPONENTIATE);  break;
 
-                case TOKEN_EQUAL_EQUAL:   emitByte(OP_EQUAL);         break;
-                case TOKEN_BANG_EQUAL:    emitByte(OP_NOT_EQUAL);     break;
-                case TOKEN_LESS:          emitByte(OP_LESS);          break;
-                case TOKEN_LESS_EQUAL:    emitByte(OP_LESS_EQUAL);    break;
-                case TOKEN_GREATER:       emitByte(OP_GREATER);       break;
-                case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL); break;
-                case TOKEN_SPACESHIP:     emitByte(OP_SPACESHIP);     break;
+                case TOKEN_EQUAL_EQUAL:   emitComparison(OP_EQUAL);         break;
+                case TOKEN_BANG_EQUAL:    emitComparison(OP_NOT_EQUAL);     break;
+                case TOKEN_LESS:          emitComparison(OP_LESS);          break;
+                case TOKEN_LESS_EQUAL:    emitComparison(OP_LESS_EQUAL);    break;
+                case TOKEN_GREATER:       emitComparison(OP_GREATER);       break;
+                case TOKEN_GREATER_EQUAL: emitComparison(OP_GREATER_EQUAL); break;
+                case TOKEN_SPACESHIP:     emitByte(OP_SPACESHIP);           break;
                 
                 default: return;    // unreachable
 
@@ -445,16 +536,32 @@ class Compiler{
             int loopStart = currentChunk()->code.size();
 
             int exitJump = -1;
+            bool exitFused = false;
+
             if(!match(TOKEN_SEMICOLON)) {
 
                 expression();
                 consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
 
                 // jump out of the loop if the condition is false
-                exitJump = emitJump(OP_JUMP_IF_FALSE);
-                emitByte(OP_POP);    // condition
+                ConditionJump condJump = emitConditionJump();
+                exitJump = condJump.offset;
+                exitFused = condJump.fused;
+                if(!exitFused) emitByte(OP_POP);
 
             }
+
+            vector<uint8_t>& code = currentChunk()->code;
+            bool condIsForLoop = exitFused
+                              && (int)code.size() - loopStart == 7
+                              && code[loopStart] == OP_GET_LOCAL
+                              && code[loopStart + 2] == OP_GET_LOCAL
+                              && code[loopStart + 4] == OP_JUMP_IF_NOT_LESS;
+            uint8_t counterSlot = condIsForLoop? code[loopStart + 1]: 0;
+            uint8_t limitSlot   = condIsForLoop? code[loopStart + 3]: 0;
+
+            bool isForLoop = false;
+            uint8_t stepConstant = 0;
 
             if(!match(TOKEN_RIGHT_PAREN)) {
 
@@ -462,20 +569,46 @@ class Compiler{
                 int incrementStart = currentChunk()->code.size();
                 expression();
                 emitByte(OP_POP);
+                bool incrementFused = tryFuseIncrement(incrementStart);
                 consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
 
-                emitLoop(loopStart);
-                loopStart = incrementStart;
-                patchJump(bodyJump);
+                isForLoop = condIsForLoop
+                         && incrementFused
+                         && code[incrementStart] == OP_INCREMENT_LOCAL
+                         && code[incrementStart + 1] == counterSlot;
+
+                if(isForLoop) {
+
+                    // remove the fused increment (3 bytes) and the body jump (3 bytes)
+                    // OP_FOR_LOOP does the increment itself, right before the body's loop-back
+                    stepConstant = code[incrementStart + 2];
+                    for(int i = 0; i < 6; ++i) {
+                        code.pop_back();
+                        currentChunk()->lines.pop_back();
+                    }
+
+                } else {
+
+                    emitLoop(loopStart);
+                    loopStart = incrementStart;
+                    patchJump(bodyJump);
+
+                }
 
             }
 
+            int bodyStart = currentChunk()->code.size();
             statement();
-            emitLoop(loopStart);
+
+            if(isForLoop) {
+                emitForLoop(counterSlot, limitSlot, stepConstant, bodyStart);
+            } else {
+                emitLoop(loopStart);
+            }
 
             if(exitJump != -1) {
                 patchJump(exitJump);
-                emitByte(OP_POP); // Condition.
+                if(!exitFused) emitByte(OP_POP);
             }
 
             endScope();
@@ -505,30 +638,20 @@ class Compiler{
             emitNumber(0);
 
             // check counter < count
-            int loopStart = currentChunk()->code.size();
             emitBytes(OP_GET_LOCAL, counterSlot);
             emitBytes(OP_GET_LOCAL, countSlot);
-            emitByte(OP_LESS);
-            int exitJump = emitJump(OP_JUMP_IF_FALSE);
-            emitByte(OP_POP);
+            int exitJump = emitJump(OP_JUMP_IF_NOT_LESS);
 
             // stuff inside the block
+            int bodyStart = currentChunk()->code.size();
             statement();
 
             // increment counter
-            emitBytes(OP_GET_LOCAL, counterSlot);
-            emitNumber(1);
-            emitByte(OP_ADD);
-            emitBytes(OP_SET_LOCAL, counterSlot);
-            emitByte(OP_POP);
-
-            // loop
-            emitLoop(loopStart);
+            emitForLoop(counterSlot, countSlot, makeConstant(CaroInt(1)), bodyStart);
             patchJump(exitJump);
-            emitByte(OP_POP);
 
             endScope();
-            
+
         }
 
         void ifStatement() {
@@ -537,26 +660,28 @@ class Compiler{
             expression();
             consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition."); 
 
-            int thenJump = emitJump(OP_JUMP_IF_FALSE);
-            emitByte(OP_POP);
+            ConditionJump thenJump = emitConditionJump();
+            if(!thenJump.fused) emitByte(OP_POP);
             statement();
 
             int elseJump = emitJump(OP_JUMP);
-            patchJump(thenJump);
-            emitByte(OP_POP);
+            patchJump(thenJump.offset);
+            if(!thenJump.fused) emitByte(OP_POP);
 
             if(match(TOKEN_ELSE)) statement();
             patchJump(elseJump);
         
         }
         void patchJump(int offset) {
-            
+
             int jump = currentChunk()->code.size() - offset - 2;
                 // -2 to adjust for the bytecode for the jump offset itself
 
             currentChunk()->code[offset] = (jump >> 8) & 0xff;
             currentChunk()->code[offset + 1] = jump & 0xff;
-        
+
+            this->lastCmpOffset = -1;
+
         }
 
         void returnStatement() {
@@ -583,14 +708,14 @@ class Compiler{
             expression();
             consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
-            int exitJump = emitJump(OP_JUMP_IF_FALSE);
-            emitByte(OP_POP);
+            ConditionJump exitJump = emitConditionJump();
+            if(!exitJump.fused) emitByte(OP_POP);
             statement();
             emitLoop(loopStart);
 
-            patchJump(exitJump);
-            emitByte(OP_POP);
-        
+            patchJump(exitJump.offset);
+            if(!exitJump.fused) emitByte(OP_POP);
+
         }
 
         void foreverStatement() {
@@ -611,16 +736,13 @@ class Compiler{
             emitNumber(0);
 
             int loopStart = currentChunk()->code.size();
-            
+
             // stuff inside the block
             statement();
 
             // increment counter
-            emitBytes(OP_GET_LOCAL, counterSlot);
-            emitNumber(1);
-            emitByte(OP_ADD);
-            emitBytes(OP_SET_LOCAL, counterSlot);
-            emitByte(OP_POP);
+            emitBytes(OP_INCREMENT_LOCAL, counterSlot);
+            emitByte(makeConstant(CaroInt(1)));
 
             // loop
             emitLoop(loopStart);
@@ -630,9 +752,11 @@ class Compiler{
         }
 
         void expressionStatement() {
+            int start = currentChunk()->code.size();
             expression();
             consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
             emitByte(OP_POP);
+            tryFuseIncrement(start);
         }
 
 

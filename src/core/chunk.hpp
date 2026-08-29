@@ -48,8 +48,12 @@ enum OpCode{
     OP_DEFINE_GLOBAL,
     OP_GET_GLOBAL,
     OP_SET_GLOBAL,
+    OP_INCREMENT_GLOBAL,
+    OP_DECREMENT_GLOBAL,
     OP_GET_LOCAL,
     OP_SET_LOCAL,
+    OP_INCREMENT_LOCAL,
+    OP_DECREMENT_LOCAL,
 
     // functions
     OP_CALL,
@@ -60,8 +64,15 @@ enum OpCode{
 
     // control flow
     OP_JUMP,
+    OP_JUMP_IF_EQUAL,
     OP_JUMP_IF_FALSE,
+    OP_JUMP_IF_NOT_LESS,
+    OP_JUMP_IF_NOT_LESS_EQUAL,
+    OP_JUMP_IF_NOT_GREATER,
+    OP_JUMP_IF_NOT_GREATER_EQUAL,
+    OP_JUMP_IF_NOT_EQUAL,
     OP_LOOP,
+    OP_FOR_LOOP,
 
     // misc
     OP_POP,
@@ -115,11 +126,32 @@ class Chunk{
             cout << format("{:<16} {:4d}\n", name, slot);
             return offset + 2; 
         }
+        int incrementInstruction(string name, bool global, int offset) {
+            uint8_t variable = this->code[offset + 1];
+            uint8_t step = this->code[offset + 2];
+            cout << format("{:<16} {:4d} '", name, variable);
+            if(global) {
+                printValue(this->constants[variable]);
+                cout << "' + '";
+            }
+            printValue(this->constants[step]);
+            cout << "'\n";
+            return offset + 3;
+        }
         int jumpInstruction(string name, int sign, int offset) {
             uint16_t jump = (uint16_t)(this->code[offset + 1] << 8);
             jump |= this->code[offset + 2];
             cout << format("{:<16} {:4d} -> {:d}\n", name, offset, offset + 3 + (sign * jump));
             return offset + 3;
+        }
+        int forLoopInstruction(string name, int offset) {
+            uint8_t counter = this->code[offset + 1];
+            uint8_t limit = this->code[offset + 2];
+            uint8_t step = this->code[offset + 3];
+            uint16_t jump = (uint16_t)(this->code[offset + 4] << 8);
+            jump |= this->code[offset + 5];
+            cout << format("{:<16} {:4d} {:4d} {:4d} -> {:d}\n", name, counter, limit, step, offset + 6 - jump);
+            return offset + 6;
         }
 
         int disassembleInstruction(int offset) {
@@ -193,12 +225,20 @@ class Chunk{
                     return constantInstruction("OP_GET_GLOBAL", offset);
                 case OP_SET_GLOBAL:
                     return constantInstruction("OP_SET_GLOBAL", offset);
+                case OP_INCREMENT_GLOBAL:
+                    return incrementInstruction("OP_INCREMENT_GLOBAL", true, offset);
+                case OP_DECREMENT_GLOBAL:
+                    return incrementInstruction("OP_DECREMENT_GLOBAL", true, offset);
 
                 case OP_GET_LOCAL:
                     return byteInstruction("OP_GET_LOCAL", offset);
                 case OP_SET_LOCAL:
                     return byteInstruction("OP_SET_LOCAL", offset);
-
+                case OP_INCREMENT_LOCAL:
+                    return incrementInstruction("OP_INCREMENT_LOCAL", false, offset);
+                case OP_DECREMENT_LOCAL:
+                    return incrementInstruction("OP_DECREMENT_LOCAL", false, offset);
+    
                 case OP_TYPEOF:
                     return simpleInstruction("OP_TYPEOF", offset);
                 
@@ -209,10 +249,25 @@ class Chunk{
 
                 case OP_JUMP:
                     return jumpInstruction("OP_JUMP", 1, offset);
+                case OP_JUMP_IF_EQUAL:
+                    return jumpInstruction("OP_JUMP_IF_EQUAL", 1, offset);
                 case OP_JUMP_IF_FALSE:
                     return jumpInstruction("OP_JUMP_IF_FALSE", 1, offset);
+                case OP_JUMP_IF_NOT_LESS:
+                    return jumpInstruction("OP_JUMP_IF_NOT_LESS", 1, offset);
+                case OP_JUMP_IF_NOT_LESS_EQUAL:
+                    return jumpInstruction("OP_JUMP_IF_NOT_LESS_EQUAL", 1, offset);
+                case OP_JUMP_IF_NOT_GREATER:
+                    return jumpInstruction("OP_JUMP_IF_NOT_GREATER", 1, offset);
+                case OP_JUMP_IF_NOT_GREATER_EQUAL:
+                    return jumpInstruction("OP_JUMP_IF_NOT_GREATER_EQUAL", 1, offset);
+                case OP_JUMP_IF_NOT_EQUAL:
+                    return jumpInstruction("OP_JUMP_IF_NOT_EQUAL", 1, offset);
+
                 case OP_LOOP:
                     return jumpInstruction("OP_LOOP", -1, offset);
+                case OP_FOR_LOOP:
+                    return forLoopInstruction("OP_FOR_LOOP", offset);
 
                 case OP_POP:
                     return simpleInstruction("OP_POP", offset);

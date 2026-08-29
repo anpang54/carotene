@@ -474,6 +474,42 @@ class VM{
                         break;
                     }
 
+                    // fused i = i + 1
+                    #define incrementError(variable) { \
+                        SYNC(); \
+                        if(isNumeric((variable).type)) { \
+                            runtimeError("Arithmetic operations between numbers of different types currently aren't supported yet."); \
+                        } else { \
+                            runtimeError("Operands must be numbers or strings."); \
+                        } \
+                        return INTERPRET_RUNTIME_ERROR; \
+                    }
+                    #define incrementLocal(op) { \
+                        uint8_t slot = READ_BYTE(); \
+                        const Value& step = constants[READ_BYTE()]; \
+                        if(slots[slot].type != TYPE_INT) incrementError(slots[slot]); \
+                        slots[slot].as.Aint op step.as.Aint; \
+                        break; \
+                    }
+                    #define incrementGlobal(op) { \
+                        ObjString* name = asString(constants[READ_BYTE()]); \
+                        const Value& step = constants[READ_BYTE()]; \
+                        auto found = this->globals.find(name->str); \
+                        if(found == this->globals.end()) { \
+                            SYNC(); \
+                            runtimeError("Undefined variable '%s'.", name->str.c_str()); \
+                            return INTERPRET_RUNTIME_ERROR; \
+                        } \
+                        if(found->second.type != TYPE_INT) incrementError(found->second); \
+                        found->second.as.Aint op step.as.Aint; \
+                        break; \
+                    }
+
+                    case OP_INCREMENT_LOCAL:  incrementLocal(+=)
+                    case OP_DECREMENT_LOCAL:  incrementLocal(-=)
+                    case OP_INCREMENT_GLOBAL: incrementGlobal(+=)
+                    case OP_DECREMENT_GLOBAL: incrementGlobal(-=)
+
                     case OP_GET_LOCAL: {
                         uint8_t slot = READ_BYTE();
                         push(slots[slot]);
@@ -533,6 +569,69 @@ class VM{
                         uint16_t offset = READ_SHORT();
                         ip -= offset;
                         break;
+                    }
+
+                    // fused comparison + jump
+                    #define jumpUnless(op) { \
+                        uint16_t offset = READ_SHORT(); \
+                        if(!isNumeric(peek(0).type) || !isNumeric(peek(1).type)) { \
+                            SYNC(); \
+                            runtimeError("Operands must be numbers."); \
+                            return INTERPRET_RUNTIME_ERROR; \
+                        } \
+                        if(peek(0).type != peek(1).type) { \
+                            SYNC(); \
+                            runtimeError("Arithmetic operations between numbers of different types currently aren't supported yet."); \
+                            return INTERPRET_RUNTIME_ERROR; \
+                        } \
+                        int b = asNumberTo<int>(pop()); \
+                        int a = asNumberTo<int>(pop()); \
+                        if(!(a op b)) ip += offset; \
+                        break; \
+                    }
+
+                    case OP_JUMP_IF_NOT_LESS:          jumpUnless(<)
+                    case OP_JUMP_IF_NOT_LESS_EQUAL:    jumpUnless(<=)
+                    case OP_JUMP_IF_NOT_GREATER:       jumpUnless(>)
+                    case OP_JUMP_IF_NOT_GREATER_EQUAL: jumpUnless(>=)
+
+                    case OP_JUMP_IF_NOT_EQUAL: {
+                        uint16_t offset = READ_SHORT();
+                        Value b = pop();
+                        Value a = pop();
+                        if(!valuesEqual(a, b)) ip += offset;
+                        break;
+                    }
+                    case OP_JUMP_IF_EQUAL: {
+                        uint16_t offset = READ_SHORT();
+                        Value b = pop();
+                        Value a = pop();
+                        if(valuesEqual(a, b)) ip += offset;
+                        break;
+                    }
+
+                    case OP_FOR_LOOP: {
+
+                        Value& counter = slots[READ_BYTE()];
+                        const Value& limit = slots[READ_BYTE()];
+                        const Value& step = constants[READ_BYTE()];
+                        uint16_t offset = READ_SHORT();
+
+                        if(counter.type != TYPE_INT || limit.type != TYPE_INT) {
+                            SYNC();
+                            if(isNumeric(counter.type) && isNumeric(limit.type)) {
+                                runtimeError("Arithmetic operations between numbers of different types currently aren't supported yet.");
+                            } else {
+                                runtimeError("Operands must be numbers or strings.");
+                            }
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+
+                        counter.as.Aint += step.as.Aint;
+                        if(counter.as.Aint < limit.as.Aint) ip -= offset;
+
+                        break;
+
                     }
 
                     case OP_POP: {
