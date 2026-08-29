@@ -27,6 +27,7 @@ typedef unsigned int uint;
 
 #define DEBUG_PRINT_CODE      false
 #define DEBUG_TRACE_EXECUTION false
+#define DEBUG_STRESS_GC       false
 
 
 // helpers

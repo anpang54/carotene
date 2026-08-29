@@ -115,7 +115,9 @@ class Compiler{
 
         }
         ObjFunction* compile(string source) {
-            
+
+            GCPause pause;
+
             this->scanner = Scanner(source);
 
             initCompiler(TYPE_SCRIPT);

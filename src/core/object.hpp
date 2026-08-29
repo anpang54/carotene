@@ -15,7 +15,19 @@ using std::set, std::pair;
 
 // objects
 
-vector<Obj*> objects;    // vector of pointers to objects for tracking allocation
+class VM;    // forward? declaration
+VM* currentVM = nullptr;
+
+vector<Obj*> objects;
+void maybeCollect();    // defined in vm.hpp
+size_t nextGC = 256;
+    // at first, the garbage collector activates when there are 256 objects, but it later dynamically changes the threshold
+bool gcPaused = false;
+
+struct GCPause{
+    GCPause()  { gcPaused = true; }
+    ~GCPause() { gcPaused = false; }
+};
 
 enum ObjType{
     OBJ_STRING,
@@ -25,6 +37,7 @@ enum ObjType{
 
 struct Obj{
     ObjType type;
+    bool marked = false;
 };
 
 
@@ -43,6 +56,7 @@ ObjString* asString(Value value) {
 }
 
 ObjString* copyString(string str) {
+    maybeCollect();
     ObjString* object = new ObjString({OBJ_STRING}, std::move(str));
     objects.push_back(object);
     return object;
@@ -65,6 +79,7 @@ ObjFunction* asFunction(Value value) {
 }
 
 ObjFunction* newFunction() {
+    maybeCollect();
     ObjFunction* function = new ObjFunction({OBJ_FUNCTION}, 0, Chunk(), "");
     objects.push_back(function);
     return function;
@@ -72,8 +87,6 @@ ObjFunction* newFunction() {
 
 
 // native functions
-
-class VM;    // forward? declaration
 
 typedef Value (*NativeFn)(VM* vm, vector<Value> args);
 
@@ -101,6 +114,7 @@ ObjNative* asNative(Value value) {
 }
 
 ObjNative* newNative(NativeFn function) {
+    maybeCollect();
     ObjNative* native = new ObjNative({OBJ_NATIVE}, function);
     objects.push_back(native);
     return native;
@@ -177,4 +191,27 @@ bool objectsEqual(Obj* a, Obj* b) {
     return false;    // should be unreachable
 }
 
+
+// GC marking
+
+// the 2 functions are dependent on each other so here's a markValue forward declaration
+void markValue(Value value);
+
+void markObject(Obj* object) {
+    
+    // mark if not already marked
+    if(object == nullptr || object->marked) return;
+    object->marked = true;
+
+    // mark function
+    if(object->type == OBJ_FUNCTION) {
+        for(Value& constant: static_cast<ObjFunction*>(object)->chunk.constants) {
+            markValue(constant);
+        }
+    }
+    
+}
+void markValue(Value value) {
+    if(value.type == TYPE_OBJ) markObject(value.as.obj);
+}
 

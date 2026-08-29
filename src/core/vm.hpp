@@ -60,6 +60,13 @@ class VM{
         string appName, appDesc, appVersion;
         
 
+        // constructor
+
+        VM() {
+            currentVM = this;
+        }
+
+
         // native functions
 
         void defineNative(string name, NativeFn function) {
@@ -77,6 +84,8 @@ class VM{
 
             this->frames.reserve(FRAMES_MAX);
 
+            push(CaroObj(function));
+
             // add script arguments
             this->globals["_args"] = CaroDouble(moreArguments.size());
                                   // todo: change to uint
@@ -91,7 +100,6 @@ class VM{
                 defineNative(native.first, native.second);
             }
 
-            push(CaroObj(function));
             if(!call(function, 0)) return INTERPRET_RUNTIME_ERROR;
 
             return run();
@@ -651,8 +659,53 @@ class VM{
         }
 
 
+        // garbage collector
+
+        void collectGarbage() {
+
+            // don't do anything if the collector is paused
+            if(gcPaused) return;
+
+            // mark roots
+            // root = any object that the VM can reach directly, so stack, globals, and call frames
+            for(Value* slot = this->stack.data(); slot < this->stackTop; ++slot) {
+                markValue(*slot);
+            }
+            for(auto& [name, value]: this->globals) {
+                markValue(value);
+            }
+            for(CallFrame& callFrame: this->frames) {
+                markObject(callFrame.function);
+            }
+
+            // sweep
+            std::erase_if(objects, [](Obj* object) {
+                if(!object->marked) {    // not marked, so goodbye
+                    freeObject(object);
+                    return true;
+                }
+                object->marked = false;    // reset for the next time we garbage collect
+                return false;
+            });
+
+            nextGC = std::max<size_t>(objects.size() * 2, 256);
+
+        }
+
+
 };
 
+
+// collect garbage if there are too many objects
+
+void maybeCollect() {
+    if((DEBUG_STRESS_GC || objects.size() >= nextGC) && currentVM != nullptr) {
+        currentVM->collectGarbage();
+    }
+}
+
+
+// load natives
 
 #include "../stdlib/natives.hpp"
 
