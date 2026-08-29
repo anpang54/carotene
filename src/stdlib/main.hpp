@@ -39,6 +39,13 @@ NATIVE(version, "", "version", {
     return CaroObj(copyString(vm->appVersion));
 });
 
+NATIVE(caro_version, "", "caro_version", {
+    return CaroObj(copyString(VERSION));
+});
+NATIVE(caro_version_date, "", "caro_version_date", {
+    return CaroObj(copyString(VERSION_DATE));
+});
+
 NATIVE(print, "", "print", {
     params({
         {{},          true },

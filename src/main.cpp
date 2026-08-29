@@ -18,12 +18,6 @@
 using std::cout, std::cin, std::cerr, std::string, std::ifstream, std::stringstream;
 
 
-// version
-
-#define VERSION      "0.1.0b"
-#define VERSION_DATE "24 Aug 2026"
-
-
 // input
 
 VM vm;
