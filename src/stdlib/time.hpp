@@ -78,7 +78,7 @@ NATIVE(time_display, "time", "display", {
         {{TYPE_BOOL}, false}
     });
 
-    auto now = chrono::system_clock::now();
+    auto now = chrono::floor<chrono::milliseconds>(chrono::system_clock::now());
     chrono::year_month_day ymd{chrono::floor<chrono::days>(now)};
     chrono::hh_mm_ss hms{now - floor<chrono::days>(now)};
 
