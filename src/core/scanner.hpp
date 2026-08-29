@@ -280,12 +280,38 @@ class Scanner{
         }
 
         Token scanNumber() {
+
+            if(this->source[this->start] == '0' && (peek() == 'b' || peek() == 'o' || peek() == 'x') && isDigitInBase(peek(), peekNext())) {
+                char baseLetter = peek();
+                advance();    // consume the letter
+                while(isDigitInBase(baseLetter, peek())) advance();
+                if(peek() == 'u') {
+                    advance();
+                    if(peek() == 'l') advance();
+                } else if(peek() == 'l') {
+                    advance();
+                }
+                return makeToken(TOKEN_NUMBER);
+            }
+
             while(isDigit(peek())) advance();
+
+            bool isDecimal = false;
             if(peek() == '.' && isDigit(peekNext())) {    // look for a decimal part
+                isDecimal = true;
                 advance();    // consume .
                 while(isDigit(peek())) advance();
             }
+
+            if(!isDecimal && peek() == 'u') {
+                advance();
+                if(peek() == 'l') advance();
+            } else if(!isDecimal && peek() == 'l' || peek() == 'f' || peek() == 'd') {
+                advance();
+            }
+
             return makeToken(TOKEN_NUMBER);
+
         }
         Token scanString() {
             while(peek() != '"' && !isAtEnd()) {

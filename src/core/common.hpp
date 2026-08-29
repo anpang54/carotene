@@ -47,6 +47,14 @@ bool isAlpha(char c) {
 bool isDigit(char c) {
     return c >= '0' && c <= '9';
 }
+bool isDigitInBase(char base, char c = '\0') {
+    switch(base) {
+        case 'b': return c == '0' || c == '1';
+        case 'o': return c >= '0' && c <= '7';
+        case 'x': return isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); 
+        default:  return isDigit(c);
+    }
+}
 
 
 // string manipulation

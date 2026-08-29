@@ -388,7 +388,59 @@ class Compiler{
         }
         
         void parseNumber(bool canAssign) {
-            emitNumber(std::stod(this->previous.start));
+
+            const string& text = this->previous.start;
+
+            // non-decimal base, int only
+            if(text.length() > 2 && text[0] == '0' && (text[1] == 'b' || text[1] == 'o' || text[1] == 'x')) {
+
+                int base = text[1] == 'b'? 2: (text[1] == 'o'? 8: 16);
+                string digits = text.substr(2);    // remove the prefix
+
+                switch(text.back()) {
+                    case 'u':
+                        emitConstant(CaroNumber(TYPE_UINT, std::stoul(digits, nullptr, base)));
+                        break;
+                    case 'l':
+                        if(text[text.length() - 2] == 'u') {
+                            emitConstant(CaroNumber(TYPE_ULONG, std::stoull(digits, nullptr, base)));
+                        }
+                        else emitConstant(CaroNumber(TYPE_LONG, std::stoll(digits, nullptr, base)));
+                        break;
+                    default:
+                        emitConstant(CaroNumber(TYPE_INT, std::stoll(digits, nullptr, base)));
+                }
+
+                return;
+            }
+
+            // decimal base, can be float
+            switch(text.back()) {
+                case 'u':
+                    emitConstant(CaroNumber(TYPE_UINT, std::stoul(text)));
+                    break;
+                case 'l':
+                    if(text[text.length() - 2] == 'u') {
+                        emitConstant(CaroNumber(TYPE_ULONG, std::stoull(text)));
+                    }
+                    else emitConstant(CaroNumber(TYPE_LONG, std::stoll(text)));
+                    break;
+                case 'f':
+                    emitConstant(CaroNumber(TYPE_FLOAT, std::stof(text)));
+                    break;
+                case 'd':
+                    emitConstant(CaroNumber(TYPE_DOUBLE, std::stod(text)));
+                    break;
+                default:
+                    if(text.find('.') != string::npos) {
+                        emitConstant(CaroNumber(TYPE_DOUBLE, std::stod(text)));
+                        // emitting a float would be more consistent with the fact that ints become 32 bit ints
+                        // but in C++ something like this becomes a double, and floats can lose precision
+                    } else {
+                        emitConstant(CaroNumber(TYPE_INT, std::stod(text)));
+                    }
+            }
+
         }
 
         void parseLiteral(bool canAssign) {
