@@ -27,16 +27,21 @@ InterpretResult interpret(string source) {
     return result;
 }
 
+void startingMessage() {
+    cout << "\n  \033[1m\033[38:5:208mCarotene v" << VERSION << "\033[0m (" << VERSION_DATE << ")"
+            "\n  https://github.com/anpang54/carotene\n";
+}
 
 void repl() {
 
-    cout << "\n  \033[1m\033[38:5:208mCarotene v" << VERSION << "\033[0m (" << VERSION_DATE << ")"
-            "\n  https://github.com/anpang54/carotene\n\n";
+    startingMessage();
     #define READLINE_START "\033[1m\033[38:5:208m> \033[0m"
 
     vm.replMode = true;
 
     for(;;) {
+
+        cout << '\n';
 
         // get line
         string source;
@@ -56,7 +61,6 @@ void repl() {
         // interpret
         interpret(source);
 
-        cout << '\n';
     }
     
     freeObjects();
@@ -121,13 +125,24 @@ int main(int argc, const char* argv[]) {
         case 'c':
         case 'r':
         case 't':
-        case 'h':
             cout << "Not implemented but the filename is " << filename << '\n';
             break;
 
+        case 'h':
+            cout << "\n"
+                    "  \033[1mcaro   \033[0m              Opens the interactive console\n"
+                    "  \033[1m       \033[0m file.caro    Runs a file\n"
+                    "  \033[1m     -c\033[0m file.caro    Compiles a file into a bytecode file\n"
+                    "  \033[1m     -r\033[0m app.reti     Runs a bytecode file\n"
+                    "  \033[1m     -t\033[0m file.caro    Same as running with no argument, but leaves a bytecode file behind\n"
+                    "  \033[1m     -h\033[0m              Shows this help menu\n"
+                    "  \033[1m     -v\033[0m              Shows the Carotene version\n"
+                    "\n"
+                    "For more information, please consult the wiki at https://github.com/anpang54/carotene/wiki.\n";
+            break;
+
         case 'v':
-            cout << "Carotene v" << VERSION << " (" << VERSION_DATE << ")\n"
-                    "https://github.com/anpang54/carotene\n";
+            startingMessage();
             break;
 
         default:
