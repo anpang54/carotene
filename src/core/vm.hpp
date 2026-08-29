@@ -185,55 +185,65 @@ class VM{
         // operators
 
         InterpretResult unaryOperation() {
+
             if(!isNumeric(peek(0).type)) {
                 runtimeError("Operand must be a number.");
                 return INTERPRET_RUNTIME_ERROR;
             }
-            top() = CaroNumber(peek(0).type, -asNumberTo<double>(top()));
+
+            if(isInt(peek(0).type) && isInt(peek(1).type)) {
+                top() = CaroNumber(peek(0).type, -asNumberTo<uint64_t>(top()));
+            } else {
+                top() = CaroNumber(peek(0).type, -asNumberTo<double>(top()));
+            }
+
             return INTERPRET_OK;
+
         }
 
-        InterpretResult numberBinaryOperation(OpCode op) {
-
-            // check type
-            if(!isNumeric(peek(0).type) || !isNumeric(peek(1).type)) {
-                runtimeError("Operands must be numbers.");
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            if(peek(0).type != peek(1).type) {
-                runtimeError("Arithmetic operations between numbers of different types currently aren't supported yet.");
-                    // todo: support
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            const ValueType type = peek(0).type;
+        template<typename T>
+        InterpretResult numberBinaryOperationAs(OpCode op) {
 
             // get a and b
-            int b = asNumberTo<int>(pop());
-            int a = asNumberTo<int>(pop());
-            
-            // check divisiom by zero
+            T b = asNumberTo<T>(pop());
+            T a = asNumberTo<T>(pop());
+
+            // check division by zero
             if((op == OP_DIVIDE || op == OP_MODULO) && b == 0) {
                 runtimeError("Division by zero.");
-                return INTERPRET_COMPILE_ERROR;
+                return INTERPRET_RUNTIME_ERROR;
             }
+
+            // wrap back into a value depending on the type
+            auto num = [](auto v) {
+                     if constexpr(std::is_same_v<T, uint8_t>) return CaroByte  (v);
+                else if constexpr(std::is_same_v<T, int32_t>) return CaroInt   (v);
+                else if constexpr(std::is_same_v<T, int64_t>) return CaroLong  (v);
+                else if constexpr(std::is_same_v<T, float>)   return CaroFloat (v);
+                else if constexpr(std::is_same_v<T, double>)  return CaroDouble(v);
+            };
 
             // do the operation
             Value result;
             switch(op) {
 
-                case OP_ADD:           result = CaroNumber(type, a + b);                          break;
-                case OP_SUBTRACT:      result = CaroNumber(type, a - b);                          break;
-                case OP_MULTIPLY:      result = CaroNumber(type, a * b);                          break;
-                case OP_DIVIDE:        result = CaroNumber(type, a / b);                          break;
-                case OP_MODULO:        result = CaroNumber(type, ((int)a % (int)b));              break;
-                case OP_EXPONENTIATE:  result = CaroNumber(type, std::pow(a, b));                 break;
+                case OP_ADD:           result = num(a + b);                         break;
+                case OP_SUBTRACT:      result = num(a - b);                         break;
+                case OP_MULTIPLY:      result = num(a * b);                         break;
+                case OP_DIVIDE:        result = num(a / b);                         break;
+                case OP_MODULO:
+                    // the only operation that's different C++ depending on the type
+                    // has to be a constexpr cuz a % b won't compile otherwise
+                    if constexpr(std::is_floating_point_v<T>) result = num(std::fmod(a, b));
+                    else                                      result = num(a % b);
+                    break;
+                case OP_EXPONENTIATE:  result = num(std::pow(a, b));                break;
 
-                case OP_LESS:          result = CaroBool  (a < b);                                break;
-                case OP_LESS_EQUAL:    result = CaroBool  (a <= b);                               break;
-                case OP_GREATER:       result = CaroBool  (a > b);                                break;
-                case OP_GREATER_EQUAL: result = CaroBool  (a >= b);                               break;
-                case OP_SPACESHIP:     result = CaroInt   (a < b? -1.0: (a > b? 1.0: 0.0));       break;
-                                                        // todo: remove decimals when adding ints
+                case OP_LESS:          result = CaroBool(a < b);                    break;
+                case OP_LESS_EQUAL:    result = CaroBool(a <= b);                   break;
+                case OP_GREATER:       result = CaroBool(a > b);                    break;
+                case OP_GREATER_EQUAL: result = CaroBool(a >= b);                   break;
+                case OP_SPACESHIP:     result = CaroInt (a < b? -1: (a > b? 1: 0)); break;
 
                 default: break;
 
@@ -241,6 +251,32 @@ class VM{
             push(result);
 
             return INTERPRET_OK;
+
+        }
+
+        InterpretResult numberBinaryOperation(OpCode op) {
+
+            // check that both operands are some sort of numeric type
+            if(!isNumeric(peek(0).type) || !isNumeric(peek(1).type)) {
+                runtimeError("Operands must be numbers.");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+
+            // do int arithmetic if both types are ints, if one or both are float then float arithmetic
+            if(isInt(peek(0).type) && isInt(peek(1).type)) {
+                if(sizeofType(peek(0).type) == 1 && sizeofType(peek(1).type) == 1) {
+                    return numberBinaryOperationAs<uint8_t>(op);
+                }
+                if(sizeofType(peek(0).type) <= 4 && sizeofType(peek(1).type) <= 4) {
+                    return numberBinaryOperationAs<int32_t>(op);
+                }
+                return numberBinaryOperationAs<int64_t>(op);
+            } else {
+                if(sizeofType(peek(0).type) <= 4 && sizeofType(peek(1).type) <= 4) {
+                    return numberBinaryOperationAs<float>(op);
+                }
+                return numberBinaryOperationAs<double>(op);
+            }
 
         }
 

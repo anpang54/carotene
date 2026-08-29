@@ -306,7 +306,7 @@ class Scanner{
             if(!isDecimal && peek() == 'u') {
                 advance();
                 if(peek() == 'l') advance();
-            } else if(!isDecimal && peek() == 'l' || peek() == 'f' || peek() == 'd') {
+            } else if((!isDecimal && (peek() == 'b' || peek() == 'l')) || peek() == 'f' || peek() == 'd') {
                 advance();
             }
 

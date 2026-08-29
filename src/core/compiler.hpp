@@ -416,6 +416,10 @@ class Compiler{
 
             // decimal base, can be float
             switch(text.back()) {
+                case 'b':
+                    emitConstant(CaroNumber(TYPE_BYTE, std::stoul(text)));
+                                                    // why does C++ not have a std::stou()???
+                    break;
                 case 'u':
                     emitConstant(CaroNumber(TYPE_UINT, std::stoul(text)));
                     break;

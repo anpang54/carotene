@@ -175,10 +175,15 @@ Value toFloat(Value& v, F f) {
 // functions
 
 bool isNumeric(ValueType type) {
-    return type == TYPE_BYTE
-        || type == TYPE_UINT  || type == TYPE_INT    || type == TYPE_ULONG || type == TYPE_LONG
-        || type == TYPE_FLOAT || type == TYPE_DOUBLE;
+    return type >= TYPE_BYTE && type <= TYPE_DOUBLE;
 }
+bool isInt(ValueType type) {
+    return type >= TYPE_BYTE && type <= TYPE_LONG;
+}
+bool isFloat(ValueType type) {
+    return type == TYPE_FLOAT || type == TYPE_DOUBLE;
+}
+
 bool isFalsey(Value value) {
     return value.type == TYPE_NULL || (value.type == TYPE_BOOL && !value.as.Abool);
 }
@@ -260,12 +265,12 @@ string typeofValue(Value value) {
     }
 }
 
-size_t sizeofValue(Value& value) {
+size_t sizeofType(ValueType type) {
 
     // result is in bytes
     // doesn't include all the wrapper stuff, only the actual value
 
-    switch(value.type) {
+    switch(type) {
 
         case TYPE_BOOL:   return 1;    // technically 1 bit but it's stored as 1 byte
         case TYPE_NULL:   return 0;
@@ -279,10 +284,15 @@ size_t sizeofValue(Value& value) {
         case TYPE_FLOAT:  return 4;
         case TYPE_DOUBLE: return 8;
 
-        case TYPE_OBJ:    return sizeofObject(value.as.obj);
-
         default:          return 0;    // should be unreachable
 
+    }
+}
+size_t sizeofValue(Value& value) {
+    if(value.type == TYPE_OBJ) {
+        return sizeofObject(value.as.obj);
+    } else {
+        return sizeofType(value.type);
     }
 }
 
