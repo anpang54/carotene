@@ -43,7 +43,7 @@ For some examples of Carotene code, please see the `examples/` folder.
 
 ## Development
 
-Version 0.1.0 is scheduled to come out on the 31st.
+Version 0.1.0 is scheduled to come out on the 30th.
 
 I made the base for this by following the [*clox*](https://craftinginterpreters.com/a-bytecode-virtual-machine.html) section of [Robert Nystrom](https://journal.stuffwithstuff.com/)'s [Crafting Interpreters](https://craftinginterpreters.com/), a book which he generously makes completely free.
 
