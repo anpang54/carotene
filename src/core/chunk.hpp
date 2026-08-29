@@ -56,8 +56,9 @@ enum OpCode{
     OP_INCREMENT_LOCAL,
     OP_DECREMENT_LOCAL,
 
-    // arrays
+    // collections
     OP_MAKE_ARRAY,
+    OP_MAKE_DICT,
     OP_GET_INDEX,
     OP_SET_INDEX,
 
@@ -251,6 +252,8 @@ class Chunk{
     
                 case OP_MAKE_ARRAY:
                     return byteInstruction("OP_MAKE_ARRAY", offset);
+                case OP_MAKE_DICT:
+                    return byteInstruction("OP_MAKE_DICT", offset);
                 case OP_GET_INDEX:
                     return simpleInstruction("OP_GET_INDEX", offset);
                 case OP_SET_INDEX:

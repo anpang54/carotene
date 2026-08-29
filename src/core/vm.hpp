@@ -562,45 +562,121 @@ class VM{
                     }
 
                     case OP_MAKE_ARRAY: {
+
                         uint8_t elementCount = READ_BYTE();
                         ObjArray* array = copyArray(vector<Value>(this->stackTop - elementCount, this->stackTop));
                         this->stackTop -= elementCount;
                         push(CaroObj(array));
+
+                        break;
+                    }
+                    case OP_MAKE_DICT: {
+
+                        uint8_t elementCount = READ_BYTE();
+                        unordered_map<Value, Value> data;
+                        data.reserve(elementCount);
+                        Value* start = this->stackTop - 2 * elementCount;
+                        for(int i = 0; i < elementCount; ++i) {
+                            if(!isValidKey(start[2 * i])) {
+                                SYNC();
+                                runtimeError("Arrays and dicts currently can't be used as dict keys.");
+                                    // todo:
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            data.insert_or_assign(start[2 * i], start[2 * i + 1]);
+                        }
+                        ObjDict* dict = copyDict(std::move(data));
+                        this->stackTop -= 2 * elementCount;
+                        push(CaroObj(dict));
+
                         break;
                     }
 
                     case OP_GET_INDEX: {
-                        if(!isArray(peek(1)) || !isNumeric(peek(0).type)) {
+
+                        if(isArray(peek(1))) {
+                            
+                            if(!isNumeric(peek(0).type)) {
+                                SYNC();
+                                runtimeError("The right side must be a number.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+
+                            int64_t index = asNumberTo<int64_t>(pop());
+                            ObjArray* array = asArray(pop());
+                            if(index < 0 || index >= (int64_t)array->data.size()) {
+                                SYNC();
+                                runtimeError("Array index out of bounds.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            push(array->data[index]);
+
+                        } else if(isDict(peek(1))) {
+
+                            if(!isValidKey(peek(0))) {
+                                SYNC();
+                                runtimeError("Arrays and dicts currently can't be used as dict keys.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+
+                            Value key = pop();
+                            ObjDict* dict = asDict(pop());
+                            auto it = dict->data.find(key);
+                            if(it == dict->data.end()) {
+                                SYNC();
+                                runtimeError("Key not found.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            push(it->second);
+
+                        } else {
                             SYNC();
-                            runtimeError("The left side must be an array, and the right side must be a number.");
+                            runtimeError("The left side must be an array or dict.");
                             return INTERPRET_RUNTIME_ERROR;
                         }
-                        int64_t index = asNumberTo<int64_t>(pop());
-                        ObjArray* array = asArray(pop());
-                        if(index < 0 || index >= (int64_t)array->data.size()) {
-                            SYNC();
-                            runtimeError("Array index out of bounds.");
-                            return INTERPRET_RUNTIME_ERROR;
-                        }
-                        push(array->data[index]);
+
                         break;
                     }
+
                     case OP_SET_INDEX: {
-                        if(!isArray(peek(2)) || !isNumeric(peek(1).type)) {
+
+                        if(isArray(peek(2))) {
+
+                            if(!isNumeric(peek(1).type)) {
+                                SYNC();
+                                runtimeError("The right side must be a number.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            Value value = pop();
+                            int64_t index = asNumberTo<int64_t>(pop());
+                            ObjArray* array = asArray(pop());
+                            if(index < 0 || index >= (int64_t)array->data.size()) {
+                                SYNC();
+                                runtimeError("Array index out of bounds.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            array->data[index] = value;
+                            push(value);
+
+                        } else if(isDict(peek(2))) {
+
+                            if(!isValidKey(peek(1))) {
+                                runtimeError("Arrays and dicts currently can't be used as dict keys.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            
+                            Value value = pop();
+                            Value key = pop();
+                            ObjDict* dict = asDict(pop());
+                            dict->data.insert_or_assign(key, value);
+                            push(value);
+
+                        } else {
                             SYNC();
-                            runtimeError("The left side must be an array, and the right side must be a number.");
+                            runtimeError("The left side must be an array or dict.");
                             return INTERPRET_RUNTIME_ERROR;
                         }
-                        Value value = pop();
-                        int64_t index = asNumberTo<int64_t>(pop());
-                        ObjArray* array = asArray(pop());
-                        if(index < 0 || index >= (int64_t)array->data.size()) {
-                            SYNC();
-                            runtimeError("Array index out of bounds.");
-                            return INTERPRET_RUNTIME_ERROR;
-                        }
-                        array->data[index] = value;
-                        push(value);
+
                         break;
                     }
 

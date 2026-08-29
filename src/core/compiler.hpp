@@ -423,6 +423,24 @@ class Compiler{
             emitBytes(OP_MAKE_ARRAY, elementCount);
         }
 
+        void parseDict(bool canAssign) {
+            uint8_t elementCount = 0;
+            if(!check(TOKEN_RIGHT_BRACE)) {
+                do{
+                    expression();    // key
+                    consume(TOKEN_COLON, "Expect ':' between key and value.");
+                    expression();    // value
+                    if(elementCount == 255) {
+                        error("A dict literal can currently only have 255 pairs.");
+                    }
+                        // todo: allow more than 255 pairs in a literal
+                    ++elementCount;
+                } while(match(TOKEN_COMMA));
+            }
+            consume(TOKEN_RIGHT_BRACE, "Expect '}' after dict contents.");
+            emitBytes(OP_MAKE_DICT, elementCount);
+        }
+
         void makeSubscript(bool canAssign) {
             expression();
             consume(TOKEN_RIGHT_SQUARE, "Expect ']' after index.");
@@ -1160,7 +1178,7 @@ inline ParseRule rules[] = {
     [TOKEN_RIGHT_PAREN]   = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_LEFT_SQUARE]   = { &Compiler::parseArray,   &Compiler::makeSubscript, PREC_CALL       },    // [ is an infix operator for indexing
     [TOKEN_RIGHT_SQUARE]  = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_LEFT_BRACE]    = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_LEFT_BRACE]    = { &Compiler::parseDict,    NULL,                     PREC_NONE       },
     [TOKEN_RIGHT_BRACE]   = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_DOT]           = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_COMMA]         = { NULL,                    NULL,                     PREC_NONE       },

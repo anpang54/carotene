@@ -32,6 +32,7 @@ struct GCPause{
 enum ObjType{
     OBJ_STRING,
     OBJ_ARRAY,
+    OBJ_DICT,
     OBJ_FUNCTION,
     OBJ_NATIVE,
 };
@@ -84,6 +85,29 @@ ObjArray* copyArray(vector<Value> data) {
     return object;
 }
 
+
+// dicts
+
+// these are unordered maps just because they're faster than ordered maps
+// if ordering becomes important in the future, a switch to std::map can be considered
+
+struct ObjDict: Obj{
+    unordered_map<Value, Value> data;
+};
+
+bool isDict(Value value) {
+    return value.type == TYPE_OBJ && value.as.obj->type == OBJ_DICT;
+}
+ObjDict* asDict(Value value) {
+    return static_cast<ObjDict*>(value.as.obj);
+}
+
+ObjDict* copyDict(unordered_map<Value, Value> data) {
+    maybeCollect();
+    ObjDict* object = new ObjDict({OBJ_DICT}, std::move(data));
+    objects.push_back(object);
+    return object;
+}
 
 
 // functions
@@ -148,18 +172,11 @@ ObjNative* newNative(NativeFn function) {
 
 void freeObject(Obj* object) {
     switch(object->type) {
-        case OBJ_STRING:
-            delete static_cast<ObjString*>(object);
-            break;
-        case OBJ_ARRAY:
-            delete static_cast<ObjArray*>(object);
-            break;
-        case OBJ_FUNCTION:
-            delete static_cast<ObjFunction*>(object);
-            break;
-        case OBJ_NATIVE:
-            delete static_cast<ObjNative*>(object);
-            break;
+        case OBJ_STRING:   delete static_cast<ObjString*>  (object); break;
+        case OBJ_ARRAY:    delete static_cast<ObjArray*>   (object); break;
+        case OBJ_DICT:     delete static_cast<ObjDict*>    (object); break;
+        case OBJ_FUNCTION: delete static_cast<ObjFunction*>(object); break;
+        case OBJ_NATIVE:   delete static_cast<ObjNative*>  (object); break;
     }
 }
 void freeObjects() {
@@ -205,6 +222,33 @@ void printObject(Obj* object) {
             break;
         }
 
+        case OBJ_DICT: {
+
+            // print {...} if a dict contains itself
+            static set<Obj*> beingPrinted;
+            if(!beingPrinted.insert(object).second) {
+                cout << "{...}";
+                break;
+            }
+
+            cout << '{';
+            unordered_map<Value, Value>& dict = static_cast<ObjDict*>(object)->data;
+            for(auto it = dict.begin(); it != dict.end(); ++it) {
+                printValue(it->first);
+                cout << ": ";
+                printValue(it->second);
+                if(std::next(it) != dict.end()) {
+                    cout << ", ";
+                }
+            }
+            cout << '}';
+
+            beingPrinted.erase(object);
+
+            break;
+
+        }
+
         case OBJ_FUNCTION: {
             ObjFunction* function = static_cast<ObjFunction*>(object);
             if(function->name.empty()) {
@@ -227,6 +271,7 @@ string typeofObject(Obj* object) {
     switch(object->type) {
         case OBJ_STRING:   return "str";
         case OBJ_ARRAY:    return "array";
+        case OBJ_DICT:     return "dict";
         case OBJ_FUNCTION: return "func";
         case OBJ_NATIVE:   return "native";
     }
@@ -241,6 +286,7 @@ bool objectsEqual(Obj* a, Obj* b) {
         case OBJ_STRING: {
             return static_cast<ObjString*>(a)->str == static_cast<ObjString*>(b)->str;
         }
+
         case OBJ_ARRAY: {
 
             vector<Value>& dataA = static_cast<ObjArray*>(a)->data;
@@ -264,6 +310,30 @@ bool objectsEqual(Obj* a, Obj* b) {
 
         }
 
+        case OBJ_DICT: {
+
+            unordered_map<Value, Value>& dataA = static_cast<ObjDict*>(a)->data;
+            unordered_map<Value, Value>& dataB = static_cast<ObjDict*>(b)->data;
+
+            if(dataA.size() != dataB.size()) return false;
+
+            static set<pair<Obj*, Obj*>> beingCompared;
+            if(!beingCompared.insert({a, b}).second) return true;
+            bool equal = true;
+            for(auto& [key, value]: dataA) {
+                auto it = dataB.find(key);
+                if(it == dataB.end() || !valuesEqual(value, it->second)) {
+                    equal = false;
+                    break;
+                }
+            }
+
+            beingCompared.erase({a, b});
+
+            return equal;
+
+        }
+
         case OBJ_FUNCTION: return a == b;
         case OBJ_NATIVE:   return a == b;    // ?
 
@@ -275,6 +345,7 @@ size_t sizeofObject(Obj* object) {
     switch(object->type) {
         case OBJ_STRING:   return static_cast<ObjString*>  (object)->str.size();
         case OBJ_ARRAY:    return static_cast<ObjArray*>   (object)->data.size();
+        case OBJ_DICT:     return static_cast<ObjDict*>    (object)->data.size();
         case OBJ_FUNCTION: return static_cast<ObjFunction*>(object)->chunk.code.size();
         case OBJ_NATIVE:   return 0;
     }
@@ -294,18 +365,48 @@ void markObject(Obj* object) {
     object->marked = true;
 
     // mark more values
-    if(object->type == OBJ_ARRAY) {
-        for(Value& item: static_cast<ObjArray*>(object)->data) {
-            markValue(item);
+    switch(object->type) {
+        case OBJ_ARRAY: {
+            for(Value& item: static_cast<ObjArray*>(object)->data) {
+                markValue(item);
+            }
+            break;
         }
-    } else if(object->type == OBJ_FUNCTION) {
-        for(Value& constant: static_cast<ObjFunction*>(object)->chunk.constants) {
-            markValue(constant);
+        case OBJ_DICT: {
+            for(auto& [key, value]: static_cast<ObjDict*>(object)->data) {
+                markValue(key);
+                markValue(value);
+            }
+            break;
         }
+        case OBJ_FUNCTION: {
+            for(Value& constant: static_cast<ObjFunction*>(object)->chunk.constants) {
+                markValue(constant);
+            }
+        }
+        default: break;
     }
-    
+
 }
 void markValue(Value value) {
     if(value.type == TYPE_OBJ) markObject(value.as.obj);
 }
 
+
+// hash
+
+bool isValidKey(Value value) {
+    return !(isArray(value) || isDict(value));
+}
+
+size_t hashObject(Obj* object) {
+    switch(object->type) {
+        case OBJ_STRING: {
+            return hash<string>{}(static_cast<ObjString*>(object)->str);
+        }
+        case OBJ_FUNCTION: case OBJ_NATIVE: {
+            return hash<Obj*>{}(object);
+        }
+        default: return 2763;
+    }
+}

@@ -17,6 +17,7 @@ void   printObject (Obj* object);
 string typeofObject(Obj* object);
 bool   objectsEqual(Obj* a, Obj* b);
 size_t sizeofObject(Obj* object);
+size_t hashObject  (Obj* object);
 
 
 
@@ -284,3 +285,48 @@ size_t sizeofValue(Value& value) {
 
     }
 }
+
+
+// hash for use in dict keys
+
+size_t hashValue(const Value& value) {
+
+    size_t h;
+
+    switch(value.type) {
+
+        case TYPE_NULL:   h = 69;                   break;
+        case TYPE_SMTH:   h = 420;                  break;
+        case TYPE_BOOL:   h = value.as.Abool? 6: 7; break;
+
+        case TYPE_BYTE:   h = hash<uint8_t> {}(value.as.Abyte ); break;
+        case TYPE_UINT:   h = hash<uint32_t>{}(value.as.Auint ); break;
+        case TYPE_INT:    h = hash<int32_t> {}(value.as.Aint  ); break;
+        case TYPE_ULONG:  h = hash<uint64_t>{}(value.as.Aulong); break;
+        case TYPE_LONG:   h = hash<int64_t> {}(value.as.Along ); break;
+        case TYPE_FLOAT:  h = hash<float>   {}(value.as.Afloat  == 0? 0.0f: value.as.Afloat ); break;
+        case TYPE_DOUBLE: h = hash<double>  {}(value.as.Adouble == 0? 0.0 : value.as.Adouble); break;
+
+        case TYPE_OBJ:    h = hashObject(value.as.obj); break;
+
+        default: h = 0; break;    // should be unreachable
+
+    }
+
+    return h;
+
+}
+
+
+// override operators
+
+bool operator==(const Value& a, const Value& b) {
+    return valuesEqual(a, b);
+}
+
+template<>
+struct hash<Value>{
+    size_t operator()(const Value& value) const {
+        return hashValue(value);
+    }
+};
