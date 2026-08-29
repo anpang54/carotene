@@ -37,7 +37,7 @@ typedef enum {
     TOKEN_FOR, TOKEN_WHILE, TOKEN_REPEAT, TOKEN_FOREVER,
     TOKEN_TRUE, TOKEN_FALSE,
     TOKEN_NULL, TOKEN_SMTH,
-    TOKEN_TYPEOF,
+    TOKEN_TYPEOF, TOKEN_SIZEOF,
 
     // misc
     TOKEN_ERROR, TOKEN_EOF
@@ -217,6 +217,7 @@ class Scanner{
                                     }
                                 }
                                 break;
+                            case 'i': return checkKeyword(2, 4, "zeof", TOKEN_SIZEOF);
                             case 'm': return checkKeyword(2, 2, "th", TOKEN_SMTH);
                             case 'u': return checkKeyword(2, 3, "per", TOKEN_SUPER);
                         }

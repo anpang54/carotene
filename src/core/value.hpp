@@ -16,6 +16,7 @@ struct Obj;
 void   printObject (Obj* object);
 string typeofObject(Obj* object);
 bool   objectsEqual(Obj* a, Obj* b);
+size_t sizeofObject(Obj* object);
 
 
 
@@ -250,10 +251,36 @@ string typeofType(ValueType type) {
 
     }
 }
-string typeof(Value value) {
+string typeofValue(Value value) {
     if(value.type == TYPE_OBJ) {
         return typeofObject(value.as.obj);
     } else {
         return typeofType(value.type);
+    }
+}
+
+size_t sizeofValue(Value& value) {
+
+    // result is in bytes
+    // doesn't include all the wrapper stuff, only the actual value
+
+    switch(value.type) {
+
+        case TYPE_BOOL:   return 1;    // technically 1 bit but it's stored as 1 byte
+        case TYPE_NULL:   return 0;
+        case TYPE_SMTH:   return 0;
+
+        case TYPE_BYTE:   return 1;
+        case TYPE_UINT:   return 4;
+        case TYPE_INT:    return 4;
+        case TYPE_ULONG:  return 8;
+        case TYPE_LONG:   return 8;
+        case TYPE_FLOAT:  return 4;
+        case TYPE_DOUBLE: return 8;
+
+        case TYPE_OBJ:    return sizeofObject(value.as.obj);
+
+        default:          return 0;    // should be unreachable
+
     }
 }

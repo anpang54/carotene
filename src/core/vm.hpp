@@ -53,8 +53,10 @@ class VM{
         Value* stackTop = stack.data();
         
         unordered_map<string, Value> globals;
-    
+        vector<Local> replLocals;
+        
         CallFrame* frame = nullptr;
+        bool replMode = false;
         bool hadError = false;
 
         string appName, appDesc, appVersion;
@@ -78,13 +80,21 @@ class VM{
 
         InterpretResult interpret(string source) {
 
+            size_t savedReplLocals = this->replLocals.size();
+
             Compiler compiler;
-            ObjFunction* function = compiler.compile(source);
+            ObjFunction* function = compiler.compile(source, this->replMode? &this->replLocals: nullptr);
             if(function == NULL) return INTERPRET_COMPILE_ERROR;
 
             this->frames.reserve(FRAMES_MAX);
 
-            push(CaroObj(function));
+            // reuse the persistent top-level frame
+            bool reuseFrame = this->replMode && this->stackTop != this->stack.data();
+            if(reuseFrame) {
+                this->stack[0] = CaroObj(function);
+            } else {
+                push(CaroObj(function));
+            }
 
             // add script arguments
             this->globals["_args"] = CaroDouble(moreArguments.size());
@@ -100,9 +110,25 @@ class VM{
                 defineNative(native.first, native.second);
             }
 
-            if(!call(function, 0)) return INTERPRET_RUNTIME_ERROR;
+            // actually reuse
+            if(reuseFrame) {
+                CallFrame* newFrame = &this->frames.emplace_back();
+                newFrame->function = function;
+                newFrame->ip = function->chunk.code.data();
+                newFrame->slots = this->stack.data();
+            } else if(!call(function, 0)) {
+                return INTERPRET_RUNTIME_ERROR;
+            }
 
-            return run();
+            InterpretResult result = run();
+
+            // runtime error in repl
+            if(this->replMode && result == INTERPRET_RUNTIME_ERROR) {
+                this->replLocals.resize(savedReplLocals);
+                this->stackTop = this->stack.data() + savedReplLocals + 1;
+            }
+
+            return result;
 
         }
 
@@ -550,7 +576,8 @@ class VM{
                         this->frames.pop_back();
                         
                         if(this->frames.empty()) {
-                            --this->stackTop;
+                            // repl: leave the script function and top-level locals on the stack for the next line
+                            if(!this->replMode) --this->stackTop;
                             return INTERPRET_OK;
                         }
 
@@ -564,7 +591,11 @@ class VM{
                     }
 
                     case OP_TYPEOF: {
-                        top() = CaroObj(copyString(typeof(top())));
+                        top() = CaroObj(copyString(typeofValue(top())));
+                        break;
+                    }
+                    case OP_SIZEOF: {
+                        top() = CaroUlong(sizeofValue(top()));
                         break;
                     }
 

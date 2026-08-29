@@ -34,6 +34,9 @@ InterpretResult interpret(string source) {
 }
 
 void repl() {
+
+    vm.replMode = true;
+
     for(;;) {
 
         // get line
@@ -55,7 +58,9 @@ void repl() {
         interpret(source);
 
     }
+    
     freeObjects();
+
 }
 
 void runFile(string path) {

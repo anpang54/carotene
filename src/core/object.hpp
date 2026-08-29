@@ -191,6 +191,15 @@ bool objectsEqual(Obj* a, Obj* b) {
     return false;    // should be unreachable
 }
 
+size_t sizeofObject(Obj* object) {
+    switch(object->type) {
+        case OBJ_STRING:   return static_cast<ObjString*>(object)->str.size();
+        case OBJ_FUNCTION: return static_cast<ObjFunction*>(object)->chunk.code.size();
+        case OBJ_NATIVE:   return 0;
+    }
+    return 0;    // should be unreachable
+}
+
 
 // GC marking
 

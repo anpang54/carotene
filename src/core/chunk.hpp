@@ -62,6 +62,7 @@ enum OpCode{
 
     // specific functions
     OP_TYPEOF,
+    OP_SIZEOF,
 
     // control flow
     OP_JUMP,
@@ -245,7 +246,9 @@ class Chunk{
     
                 case OP_TYPEOF:
                     return simpleInstruction("OP_TYPEOF", offset);
-                
+                case OP_SIZEOF:
+                    return simpleInstruction("OP_SIZEOF", offset);
+
                 case OP_CALL:
                     return byteInstruction("OP_CALL", offset);
                 case OP_RETURN:

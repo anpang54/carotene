@@ -114,7 +114,7 @@ class Compiler{
 
 
         }
-        ObjFunction* compile(string source) {
+        ObjFunction* compile(string source, vector<Local>* replLocals = nullptr) {
 
             GCPause pause;
 
@@ -123,10 +123,24 @@ class Compiler{
             initCompiler(TYPE_SCRIPT);
             beginScope();    // make the top level have its own scope
 
+            // put the previous line's locals into this compiler so that the repl is continuous
+            if(replLocals != nullptr) {
+                for(const Local& local: *replLocals) {
+                    cur().locals.push_back(local);
+                    ++cur().localCount;
+                }
+            }
+
             this->advance();
             while(!match(TOKEN_EOF)) {
                 this->declaration();
             }
+
+            // save this compiler's locals for the next one
+            if(replLocals != nullptr && !this->hadError) {
+                *replLocals = vector<Local>(cur().locals.begin() + 1, cur().locals.end());
+            }
+
             ObjFunction* function = this->endCompiler();
 
             return this->hadError? NULL: function;
@@ -332,15 +346,10 @@ class Compiler{
             TokenType operatorType = this->previous.type;
             parsePrecedence(PREC_UNARY);    // compile the operand
             switch (operatorType) {    // emit the operator instruction
-                case TOKEN_MINUS:
-                    emitByte(OP_NEGATE);
-                    break;
-                case TOKEN_BANG:
-                    emitByte(OP_NOT);
-                    break;
-                case TOKEN_TYPEOF:
-                    emitByte(OP_TYPEOF);
-                    break;
+                case TOKEN_MINUS:  emitByte(OP_NEGATE); break;
+                case TOKEN_BANG:   emitByte(OP_NOT);    break;
+                case TOKEN_TYPEOF: emitByte(OP_TYPEOF); break;
+                case TOKEN_SIZEOF: emitByte(OP_SIZEOF); break;
                 default: return;    // unreachable.
             }
         }
@@ -901,6 +910,7 @@ class Compiler{
                     case TOKEN_IF:
                     case TOKEN_WHILE:
                     case TOKEN_TYPEOF:
+                    case TOKEN_SIZEOF:
                     case TOKEN_RETURN:
                         return;
 
@@ -1172,6 +1182,7 @@ inline ParseRule rules[] = {
     [TOKEN_NULL]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_SMTH]          = { &Compiler::parseLiteral, NULL,                  PREC_NONE       },
     [TOKEN_TYPEOF]        = { &Compiler::makeUnary,    NULL,                  PREC_NONE       },
+    [TOKEN_SIZEOF]        = { &Compiler::makeUnary,    NULL,                  PREC_NONE       },
 
     // misc
     [TOKEN_ERROR]         = { NULL,                    NULL,                  PREC_NONE       },

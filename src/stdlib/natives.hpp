@@ -52,7 +52,7 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
             return format(
                 "Parameter {:d} is the wrong type. It should be {:s}, but {:s} was given.",
-                i + 1, acceptedTypes, typeof(args[i])
+                i + 1, acceptedTypes, typeofValue(args[i])
             );
 
         }
