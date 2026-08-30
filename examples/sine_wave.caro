@@ -5,20 +5,25 @@
 
 use math;
 
-#length = 15;
-#step = 0.75;
+#length = 75;
 
-func getPosition(x) {
-    return floor((math.sin(x * #step) + 1) * 5);
+lines = [" " * #length, " " * #length, " " * #length, "-" * #length, " " * #length, " " * #length, " " * #length];
+
+func getSin(x) {
+    return round((math.sin(x / 4d) + 1) * 3);
+}
+repeat(#length): x{
+    y = getSin(x);
+    if(getSin(x + 1) < y) {
+        lines[y][x] = "/";
+    } else if(getSin(x + 1) > y) {
+        lines[y][x] = "\";
+    } else {
+        lines[y][x] = "-";
+    }
 }
 
-repeat(#length): x{
-    print(" " * (getPosition(x) + 5), false);
-    if(getPosition(x + 1) == getPosition(x)) {
-        print("|");
-    } else if(getPosition(x + 1) < getPosition(x)) {
-        print("/");
-    } else {
-        print("\");
-    }
+print("");
+repeat(7): line{
+    print(lines[line]);
 }
