@@ -86,6 +86,20 @@ class VM{
             ObjFunction* function = compiler.compile(source, this->replMode? &this->replLocals: nullptr);
             if(function == NULL) return INTERPRET_COMPILE_ERROR;
 
+            InterpretResult result = interpretBytecode(function);
+
+            // runtime error in repl
+            if(this->replMode && result == INTERPRET_RUNTIME_ERROR) {
+                this->replLocals.resize(savedReplLocals);
+                this->stackTop = this->stack.data() + savedReplLocals + 1;
+            }
+
+            return result;
+
+        }
+
+        InterpretResult interpretBytecode(ObjFunction* function) {
+
             this->frames.reserve(FRAMES_MAX);
 
             // reuse the persistent top-level frame
@@ -119,15 +133,7 @@ class VM{
                 return INTERPRET_RUNTIME_ERROR;
             }
 
-            InterpretResult result = run();
-
-            // runtime error in repl
-            if(this->replMode && result == INTERPRET_RUNTIME_ERROR) {
-                this->replLocals.resize(savedReplLocals);
-                this->stackTop = this->stack.data() + savedReplLocals + 1;
-            }
-
-            return result;
+            return run();
 
         }
 

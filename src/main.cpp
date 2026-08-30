@@ -1,6 +1,6 @@
 
 
-// includes
+// INCLUDES
 
 #include <fstream>
 #include <sstream>
@@ -14,23 +14,22 @@
 #include "core/chunk.hpp"
 #include "core/vm.hpp"
 #include "core/compiler.hpp"
+#include "core/serialize.hpp"
 
-using std::cout, std::cin, std::cerr, std::string, std::ifstream, std::stringstream;
+using std::ifstream, std::ofstream, std::stringstream;
 
 
-// input
+// INPUT/OUTPUT
 
 VM vm;
-
-InterpretResult interpret(string source) {
-    InterpretResult result = vm.interpret(source);
-    return result;
-}
 
 void startingMessage() {
     cout << "\n  \033[1m\033[38:5:208mCarotene v" << VERSION << "\033[0m (" << VERSION_DATE << ")"
             "\n  https://github.com/anpang54/carotene\n";
 }
+
+
+// repl
 
 void repl() {
 
@@ -59,7 +58,7 @@ void repl() {
         #endif
 
         // interpret
-        interpret(source);
+        vm.interpret(source);
 
     }
     
@@ -67,25 +66,77 @@ void repl() {
 
 }
 
-void runFile(string path) {
 
-    ifstream file(path);
+// read/write
 
+string readFile(string filename) {
+
+    ifstream file(filename);
     if(!file.is_open()) {
-        cerr << "Couldn't open the file!\n";
-        exit(0);
+        cliError("Couldn't open the file!");
+    }
+
+    stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+vector<uint8_t> readFileBytes(string filename) {
+
+    ifstream file(filename, std::ios::binary);
+    if(!file.is_open()) {
+        cliError("Couldn't open the file!");
     }
 
     stringstream buffer;
     buffer << file.rdbuf();
     string content = buffer.str();
+    return vector<uint8_t>(content.begin(), content.end());
 
-    interpret(content);
+}
+
+void writeFileBytes(string filename, vector<uint8_t> content) {
+
+    ofstream file(filename, std::ios::binary);
+    if(!file.is_open()) {
+        cliError("Couldn't open the file!");
+        return;
+    }
+
+    file.write(reinterpret_cast<const char*>(content.data()), content.size());
 
 }
 
 
-// main
+// COMPILE/RUN
+
+string compile(string filename) {
+
+    Compiler compiler;
+    ObjFunction* function = compiler.compile(readFile(filename));
+    if(function == nullptr) exit(1);
+
+    string outname = filename.substr(0, filename.find_last_of('.')) + ".reti";
+    writeFileBytes(outname, serializeApp(function, outname));
+
+    freeObjects();
+
+    cout << "Compiled to " + outname + "!\n";
+    return outname;
+
+}
+
+void run(string filename) {
+
+    ObjFunction* function = deserializeApp(readFileBytes(filename));
+    vm.interpretBytecode(function);
+
+    freeObjects();
+
+}
+
+
+// MAIN
 
 int main(int argc, const char* argv[]) {
     
@@ -118,16 +169,21 @@ int main(int argc, const char* argv[]) {
     // do something
     switch(option) {
 
+        // compile/run
         case ' ':
-            runFile(filename);
+            vm.interpret(readFile(filename));
             break;
-
         case 'c':
+            compile(filename);
+            break;
         case 'r':
+            run(filename);
+            break;
         case 't':
-            cout << "Not implemented but the filename is " << filename << '\n';
+            run(compile(filename));
             break;
 
+        // help
         case 'h':
             cout << "\n"
                     "  \033[1mcaro   \033[0m              Opens the interactive console\n"
@@ -141,12 +197,13 @@ int main(int argc, const char* argv[]) {
                     "For more information, please consult the wiki at https://github.com/anpang54/carotene/wiki.\n";
             break;
 
+        // version
         case 'v':
             startingMessage();
             break;
 
         default:
-            cout << "Invalid option -" << option << ".\n";
+            cliError("Invalid option -" + string(1, option) + ".");
 
     }
 

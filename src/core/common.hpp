@@ -56,6 +56,11 @@ bool isDigitInBase(char base, char c = '\0') {
     }
 }
 
+void cliError(string message) {
+    cerr << "\033[38;5;203m" << message << "\033[0m\n";
+    exit(1);
+}
+
 
 // string manipulation
 
@@ -84,5 +89,4 @@ int replace(string& str, const string& from, const string& to, int maxReplacemen
 
 }
     // derived from https://stackoverflow.com/a/3418285
-
 
