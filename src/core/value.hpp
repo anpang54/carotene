@@ -189,27 +189,29 @@ bool isFalsey(Value value) {
 }
 
 bool valuesEqual(Value a, Value b) {
-    if (a.type != b.type) return false;
-    switch(a.type) {
 
-        case TYPE_BOOL:   return a.as.Abool == b.as.Abool;
-        case TYPE_NULL:   return true;
-        case TYPE_SMTH:   return true;
-        case TYPE_OBJ:    return objectsEqual(a.as.obj, b.as.obj);
-
-        default:
-            switch(a.type) {
-                case TYPE_BYTE:   return a.as.Abyte   == b.as.Abyte;
-                case TYPE_UINT:   return a.as.Auint   == b.as.Auint;
-                case TYPE_INT:    return a.as.Aint    == b.as.Aint;
-                case TYPE_ULONG:  return a.as.Aulong  == b.as.Aulong;
-                case TYPE_LONG:   return a.as.Along   == b.as.Along;
-                case TYPE_FLOAT:  return a.as.Afloat  == b.as.Afloat;
-                case TYPE_DOUBLE: return a.as.Adouble == b.as.Adouble;
-                default:          return false;    // unreachable
-            }
-
+    // same type, neither is numeric
+    if(a.type == b.type && !isNumeric(a.type)) {
+        switch(a.type) {
+            case TYPE_BOOL:   return a.as.Abool == b.as.Abool;
+            case TYPE_NULL:   return true;
+            case TYPE_SMTH:   return true;
+            case TYPE_OBJ:    return objectsEqual(a.as.obj, b.as.obj);
+            default:          return false;
+        }
     }
+
+    // different type, but numeric
+    if(isNumeric(a.type) && isNumeric(b.type)) {
+        if(isFloat(a.type) || isFloat(b.type)) {
+            return asNumberTo<double>(a) == asNumberTo<double>(b);
+        } else {
+            return asNumberTo<int64_t>(a) == asNumberTo<int64_t>(b);
+        }
+    }
+
+    return false;
+
 }
 
 void printValue(Value value) {
@@ -309,13 +311,15 @@ size_t hashValue(const Value& value) {
         case TYPE_SMTH:   h = 420;                  break;
         case TYPE_BOOL:   h = value.as.Abool? 6: 7; break;
 
-        case TYPE_BYTE:   h = hash<uint8_t> {}(value.as.Abyte ); break;
-        case TYPE_UINT:   h = hash<uint32_t>{}(value.as.Auint ); break;
-        case TYPE_INT:    h = hash<int32_t> {}(value.as.Aint  ); break;
-        case TYPE_ULONG:  h = hash<uint64_t>{}(value.as.Aulong); break;
-        case TYPE_LONG:   h = hash<int64_t> {}(value.as.Along ); break;
-        case TYPE_FLOAT:  h = hash<float>   {}(value.as.Afloat  == 0? 0.0f: value.as.Afloat ); break;
-        case TYPE_DOUBLE: h = hash<double>  {}(value.as.Adouble == 0? 0.0 : value.as.Adouble); break;
+        case TYPE_BYTE: case TYPE_UINT: case TYPE_INT: case TYPE_ULONG: case TYPE_LONG: {
+            h = hash<int64_t>{}(asNumberTo<int64_t>(value)); break;
+        }
+        case TYPE_FLOAT: case TYPE_DOUBLE: {
+            double number = asNumberTo<double>(value);
+            if(number == 0) number = 0.0;    // -0.0 = 0.0
+            h = hash<double>{}(number);
+            break;
+        }
 
         case TYPE_OBJ:    h = hashObject(value.as.obj); break;
 
