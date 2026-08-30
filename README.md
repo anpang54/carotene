@@ -25,13 +25,15 @@ And a lot more is coming.
 
 ## Getting started
 
-Carotene can currently on:
-- Windows 10+
-- Linux from 2019 or later
-- Haiku R1/beta4+
+Carotene can run on:
+- Windows 10+, on x86_64
+- macOS, on Apple Silicon [(see note)](https://github.com/anpang54/carotene/wiki/Compatibility#macos)
+- Linux from 2019 or later, on x86_64
+- Haiku R1/beta4+, on x86_64
 - Web, via [WebAssembly](https://webassembly.org/)
 
-on x86_64. See more at [Compatibility](https://github.com/anpang54/carotene/wiki/Compatibility).
+See more at [Compatibility](https://github.com/anpang54/carotene/wiki/Compatibility).
+
 Binaries are provided in [Releases](https://github.com/anpang54/carotene/releases).
 
 The build script uses `zig c++`, and is written in Carotene itself. Therefore, to compile Carotene, run:
