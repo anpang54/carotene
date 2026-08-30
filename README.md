@@ -12,7 +12,7 @@ The chemical [Carotene](https://en.wikipedia.org/wiki/Carotene), found in carrot
 
 ## Features
 
-As of 29 August 2026, Carotene has:
+Carotene currently has:
 - A working tokenizer, compiler, and VM, accessible by loading a file or using the REPL
 - Functions
 - Variables, scoped and global, as well as constants
@@ -45,8 +45,6 @@ For some examples of Carotene code, please see the `examples/` folder.
 
 ## Development
 
-Version 0.1.0 is scheduled to come out on the 30th.
-
 I made the base for this by following the [*clox*](https://craftinginterpreters.com/a-bytecode-virtual-machine.html) section of [Robert Nystrom](https://journal.stuffwithstuff.com/)'s [Crafting Interpreters](https://craftinginterpreters.com/), a book which he generously makes completely free.
 
 The main difference, of course, is that Carotene uses C++ and therefore gets to use its features. Carotene also has a plethora of its own additions and changes, so much so that it is not backward compatible with clox.
@@ -55,17 +53,17 @@ The vast majority of the code is either adapted from Crafting Interpreters or wr
 
 ## Performance
 
-Carotene is decently fast.
+Carotene is moderately fast, about 2x faster than CPython.
 
-A benchmark, available at `tests/benchmarks/benchmark.py`, yields the following results on my PC:
+A benchmark, available at `tests/benchmarks/benchmark.py`, yields the following results for Carotene v0.1.0 on my PC:
 ```
 Node.js, Lua, and PHP are in their non-JIT modes.
                   min      max
-  Lua            27 ms    29 ms
-  PHP            39 ms    42 ms
-  Carotene       60 ms    61 ms
-  Node.js        79 ms   100 ms
-  Python        145 ms   152 ms
-  Wren          146 ms   172 ms
-  clox with %   164 ms   206 ms
+  Lua            26 ms    28 ms
+  PHP            38 ms    44 ms
+  Carotene       75 ms    82 ms
+  Node.js        80 ms   103 ms
+  Python        145 ms   147 ms
+  Wren          147 ms   166 ms
+  clox with %   159 ms   216 ms
 ```
