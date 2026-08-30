@@ -97,8 +97,7 @@ class VM{
             }
 
             // add script arguments
-            this->globals["_args"] = CaroDouble(moreArguments.size());
-                                  // todo: change to uint
+            this->globals["_args"] = CaroUint(moreArguments.size());
             for(uint i = 0; i < moreArguments.size(); ++i) {
                 this->globals["_" + to_string(i + 1)] = CaroObj(copyString(moreArguments[i]));
                 // yes, indexes are supposed to start at 0
@@ -288,11 +287,20 @@ class VM{
             if(op == OP_MULTIPLY) {
 
                 if(isNumeric(peek(0).type)) {    // number is on the right
-                    multiplier = (int)asNumberTo<double>(pop());
+                    multiplier = asNumberTo<int>(pop());
                     strA = asString(pop())->str;
                 } else if(isNumeric(peek(1).type)) {    // number is on the left
                     strA = asString(pop())->str;
-                    multiplier = (int)asNumberTo<double>(pop());
+                    multiplier = asNumberTo<int>(pop());
+                } else {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+            } else if(op == OP_DIVIDE || op == OP_MODULO) {
+
+                if(isNumeric(peek(0).type) && isString(peek(1))) {
+                    multiplier = asNumberTo<int>(pop());
+                    strA = asString(pop())->str;
                 } else {
                     return INTERPRET_RUNTIME_ERROR;
                 }
@@ -305,16 +313,16 @@ class VM{
             }
 
             // do the operation
-            string result;
             switch(op) {
 
                 case OP_ADD: {    // concatenates a and b
-                    result = strA + strB;
+                    push(CaroObj(copyString(strA + strB)));
                     break;
                 }
                 case OP_SUBTRACT: {    // removes all occurrences of b in a
-                    result = strA;
+                    string result = strA;
                     replace(result, strB, "");
+                    push(CaroObj(copyString(result)));
                     break;
                 }
 
@@ -323,18 +331,43 @@ class VM{
                         runtimeError("Strings can only be duplicated a positive amount of times.");
                         return INTERPRET_RUNTIME_ERROR;
                     }
+                    string result;
                     result.reserve(strA.length() * multiplier);
                     for(int i = 0; i < multiplier; ++i) {
                         result += strA;
                     }
+                    push(CaroObj(copyString(result)));
+                    break;
+                }
+
+                case OP_DIVIDE: {    // divides a into b parts, with the remainder excluded
+                    if(multiplier <= 0) {
+                        runtimeError("Strings can only be divided a positive amount of times.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+                    int eachPartLength = strA.length() / multiplier;
+                    vector<Value> result;
+                    result.reserve(multiplier);
+                    for(int i = 0; i < multiplier; ++i) {
+                        result.push_back(CaroObj(copyString(strA.substr(i * eachPartLength, eachPartLength))));
+                    }
+                    push(CaroObj(copyArray(result)));
+                    break;
+                }
+
+                case OP_MODULO: {    // gets that remainder
+                    if(multiplier <= 0) {
+                        runtimeError("Strings can only be divided a positive amount of times.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+                    int eachPartLength = strA.length() / multiplier;
+                    push(CaroObj(copyString(strA.substr(eachPartLength * multiplier))));
                     break;
                 }
 
                 default: break;
-                    
+                
             }
-            
-            push(CaroObj(copyString(result)));
 
             return INTERPRET_OK;
 
@@ -467,7 +500,7 @@ class VM{
                             return INTERPRET_RUNTIME_ERROR;
                         }
                     }
-                    case OP_MULTIPLY: {
+                    case OP_MULTIPLY: case OP_DIVIDE: case OP_MODULO: {
                         if(
                             (isNumeric(peek(0).type) && isString(peek(1))) ||
                             (isNumeric(peek(1).type) && isString(peek(0)))
@@ -483,8 +516,6 @@ class VM{
                             return INTERPRET_RUNTIME_ERROR;
                         }
                     }
-                    case OP_DIVIDE:       { numberBinary(OP_DIVIDE);       }
-                    case OP_MODULO:       { numberBinary(OP_MODULO);       }
                     case OP_EXPONENTIATE: { numberBinary(OP_EXPONENTIATE); }
 
                     case OP_NEGATE:       { unary();     }

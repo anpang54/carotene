@@ -6,7 +6,7 @@ platform = null;
 release = null;
 valid = true;
 
-if(_args == 0) {
+if(_args == 0u) {
     platform = "linux";
     release = false;
 } else {
