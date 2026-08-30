@@ -50,6 +50,7 @@ if(valid) {
     if(release) {
         command = command + release_only;
         message = message + " release!";
+        output = "builds/" + output;
     } else {
         message = message + " debug!";
     }
