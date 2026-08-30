@@ -26,10 +26,10 @@ And a lot more is coming.
 ## Getting started
 
 Carotene can run on:
-- Windows 10+, on x86_64
-- macOS, on Apple Silicon [(see note)](https://github.com/anpang54/carotene/wiki/Compatibility#macos)
+- Windows 10+ on x86_64
+- macOS on Apple Silicon [(see note)](https://github.com/anpang54/carotene/wiki/Compatibility#macos)
 - Linux from 2019 or later, on x86_64
-- Haiku R1/beta4+, on x86_64
+- Haiku R1/beta4+ on x86_64
 - Web, via [WebAssembly](https://webassembly.org/)
 
 See more at [Compatibility](https://github.com/anpang54/carotene/wiki/Compatibility).
