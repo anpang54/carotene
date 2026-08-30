@@ -19,6 +19,7 @@
 enum Precedence{
     PREC_NONE,
     PREC_ASSIGNMENT,  // =
+    PREC_TERNARY,     // c? t: f
     PREC_OR,          // |
     PREC_AND,         // &
     PREC_EQUALITY,    // == !=
@@ -1072,6 +1073,26 @@ class Compiler{
         
         }
 
+        void makeTernary(bool canAssign) {
+
+            ConditionJump thenJump = emitConditionJump();
+            if(!thenJump.fused) emitByte(OP_POP);
+
+            parsePrecedence(PREC_TERNARY);    // if true
+            int endJump = emitJump(OP_JUMP);
+
+            patchJump(thenJump.offset);
+            if(!thenJump.fused) emitByte(OP_POP);
+
+            if(match(TOKEN_COLON)) {
+                parsePrecedence(PREC_TERNARY);    // if false
+            } else {
+                emitByte(OP_NULL);    // false = null
+            }
+
+            patchJump(endJump);
+
+        }
 
         // functions
 
@@ -1240,6 +1261,7 @@ inline ParseRule rules[] = {
     [TOKEN_COMMA]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_COLON]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_SEMICOLON]     = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_QUESTION]      = { NULL,                    &Compiler::makeTernary,   PREC_TERNARY    },
     [TOKEN_PLUS]          = { NULL,                    &Compiler::makeBinary,    PREC_TERM       },
     [TOKEN_MINUS]         = { &Compiler::makeUnary,    &Compiler::makeBinary,    PREC_TERM       },
     [TOKEN_STAR]          = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
