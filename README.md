@@ -2,6 +2,8 @@
 | [README](https://github.com/anpang54/carotene?tab=readme-ov-file) | [Source code](https://github.com/anpang54/carotene/tree/main/src) | [Releases](https://github.com/anpang54/carotene/releases) | [Documentation](https://github.com/anpang54/carotene/wiki)
 | - | - | - | - |
 
+<img src="https://raw.githubusercontent.com/anpang54/carotene/refs/heads/main/assets/carrot.svg" align="right" alt="Carrot" width="200">
+
 # Carotene
 
 A bytecode-interpreted programming language coded in C++23. It is currently functional, but doesn't have many features. It serves as a place for me to learn how to make a programming language, but the end goal is that it'll have built-in tools to make applications, both text-based and graphical.
