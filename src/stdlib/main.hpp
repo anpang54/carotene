@@ -20,21 +20,21 @@ namespace ranges = std::ranges;
 
 // general
 
-NATIVE(name, "", "name", {
+NATIVE(main_name, "", "name", {
     if(vm->appName.empty()) {
         vm->runtimeError("This app doesn't have a name.");
         return CaroNull;
     }
     return CaroObj(copyString(vm->appName));
 });
-NATIVE(desc, "", "desc", {
+NATIVE(main_desc, "", "desc", {
     if(vm->appDesc.empty()) {
         vm->runtimeError("This app doesn't have a description.");
         return CaroNull;
     }
     return CaroObj(copyString(vm->appDesc));
 });
-NATIVE(version, "", "version", {
+NATIVE(main_version, "", "version", {
     if(vm->appVersion.empty()) {
         vm->runtimeError("This app doesn't have a version.");
         return CaroNull;
@@ -42,28 +42,28 @@ NATIVE(version, "", "version", {
     return CaroObj(copyString(vm->appVersion));
 });
 
-NATIVE(caro_version, "", "caro_version", {
+NATIVE(main_caro_version, "", "caro_version", {
     return CaroObj(copyString(VERSION));
 });
-NATIVE(caro_version_date, "", "caro_version_date", {
+NATIVE(main_caro_version_date, "", "caro_version_date", {
     return CaroObj(copyString(VERSION_DATE));
 });
 
-NATIVE(print, "", "print", {
+NATIVE(main_print, "", "print", {
     params({
         {{},          true },
         {{TYPE_BOOL}, false}
     });
 
     printValue(args[0]);
-    if(args.size() < 2 || !isFalsey(args[1])) {
+    if(args.size() < 2 || !isFalsy(args[1])) {
         cout << '\n';
     }
     return CaroNull;
 
 });
 
-NATIVE(input, "", "input", {
+NATIVE(main_input, "", "input", {
     params({
         {{TYPE_OBJ}, false},
     });
@@ -77,7 +77,7 @@ NATIVE(input, "", "input", {
 
 });
 
-NATIVE(log, "", "log", {
+NATIVE(main_log, "", "log", {
     params({
         {{TYPE_OBJ},  true },
         {{},          true },
@@ -112,7 +112,7 @@ NATIVE(log, "", "log", {
 
 });
 
-NATIVE(sh, "", "sh", {
+NATIVE(main_sh, "", "sh", {
     params({
         {{TYPE_OBJ}, true}
     });
@@ -122,7 +122,7 @@ NATIVE(sh, "", "sh", {
 
 });
 
-NATIVE(wait, "", "wait", {
+NATIVE(main_wait, "", "wait", {
     params({
         {ANY_NUMERIC, true}
     });
@@ -130,7 +130,7 @@ NATIVE(wait, "", "wait", {
     return CaroNull;
 
 });
-NATIVE(wait_ms, "", "wait_ms", {
+NATIVE(main_wait_ms, "", "wait_ms", {
     params({
         {ANY_NUMERIC, true}
     });
@@ -138,7 +138,14 @@ NATIVE(wait_ms, "", "wait_ms", {
     return CaroNull;
 });
 
-NATIVE(clock, "", "clock", {
+NATIVE(main_exit, "", "exit", {
+    params({
+        {{TYPE_BOOL}, false}
+    });
+    exit(args.size() == 0 || isFalsy(args[0])? 0: 1);
+});
+
+NATIVE(main_clock, "", "clock", {
     params({});
     return CaroDouble((double)clock() / CLOCKS_PER_SEC);
 });
@@ -147,7 +154,7 @@ NATIVE(clock, "", "clock", {
 
 // basic math
 
-NATIVE(abs, "", "abs", {
+NATIVE(main_abs, "", "abs", {
     params({
         {ANY_NUMERIC, true}
     });
@@ -166,7 +173,7 @@ NATIVE(abs, "", "abs", {
 });
 
 #define NATIVE_ROUNDING(name)\
-    NATIVE(name, "", #name, {\
+    NATIVE(main_##name, "", #name, {\
         params({\
             {ANY_NUMERIC, true}\
         });\
@@ -178,7 +185,7 @@ NATIVE_ROUNDING(ceil);
 NATIVE_ROUNDING(round);
 
 #define NATIVE_ARRAY_STAT(name, ...)\
-    NATIVE(name, "", #name, {\
+    NATIVE(main_##name, "", #name, {\
         params({\
             {{TYPE_OBJ}, true}\
         });\

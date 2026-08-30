@@ -527,7 +527,7 @@ class VM{
                     case OP_NEGATE:       { unary();     }
 
                     case OP_NOT:
-                        top() = CaroBool(isFalsey(top()));
+                        top() = CaroBool(isFalsy(top()));
                         break;
 
                     case OP_EQUAL: {
@@ -848,7 +848,7 @@ class VM{
                     }
                     case OP_JUMP_IF_FALSE: {
                         uint16_t offset = READ_SHORT();
-                        if(isFalsey(peek(0))) ip += offset;
+                        if(isFalsy(peek(0))) ip += offset;
                         break;
                     }
                     case OP_LOOP: {

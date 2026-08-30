@@ -278,6 +278,17 @@ string typeofObject(Obj* object) {
     return "unknown";    // should be unreachable
 }
 
+bool isTruthyObject(Obj* object) {
+    switch(object->type) {
+        case OBJ_STRING:   return !static_cast<ObjString*>(object)->str .empty();
+        case OBJ_ARRAY:    return !static_cast<ObjArray*> (object)->data.empty();
+        case OBJ_DICT:     return !static_cast<ObjDict*>  (object)->data.empty();
+        case OBJ_FUNCTION: return true;
+        case OBJ_NATIVE:   return true;
+        default:           return false;
+    }
+}
+
 bool objectsEqual(Obj* a, Obj* b) {
     if(a == b) return true;
     if(a->type != b->type) return false;

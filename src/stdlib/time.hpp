@@ -83,7 +83,7 @@ NATIVE(time_display, "time", "display", {
     chrono::hh_mm_ss hms{now - floor<chrono::days>(now)};
 
     string display;
-    if(args.empty() || isFalsey(args[0])) {
+    if(args.empty() || isFalsy(args[0])) {
         display = format(
             "{:04}/{:02}/{:02} {:02}:{:02}:{:02}",
             (int32_t)ymd.year(), (uint32_t)ymd.month(), (uint32_t)ymd.day(), hms.hours().count(), hms.minutes().count(), hms.seconds().count()

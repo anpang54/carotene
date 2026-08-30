@@ -6,18 +6,21 @@
 
 #include <type_traits>
 
+#include <cmath>
+
 #include "common.hpp"
 
 
-// forward declarations
+// forward declarations for object functions
 
 struct Obj;
 
-void   printObject (Obj* object);
-string typeofObject(Obj* object);
-bool   objectsEqual(Obj* a, Obj* b);
-size_t sizeofObject(Obj* object);
-size_t hashObject  (Obj* object);
+void   printObject   (Obj* object);
+string typeofObject  (Obj* object);
+bool   isTruthyObject(Obj* object);
+bool   objectsEqual  (Obj* a, Obj* b);
+size_t sizeofObject  (Obj* object);
+size_t hashObject    (Obj* object);
 
 
 
@@ -184,8 +187,24 @@ bool isFloat(ValueType type) {
     return type == TYPE_FLOAT || type == TYPE_DOUBLE;
 }
 
-bool isFalsey(Value value) {
-    return value.type == TYPE_NULL || (value.type == TYPE_BOOL && !value.as.Abool);
+bool isTruthy(Value value) {
+    if(isNumeric(value.type)) {
+        if(isFloat(value.type) && std::isnan(asNumberTo<double>(value))) {
+            return false;
+        }
+        return asNumberTo<double>(value) != 0;
+    }
+    switch(value.type) {
+        case TYPE_NULL: return false;
+        case TYPE_SMTH: return true;
+        case TYPE_BOOL: return value.as.Abool;
+        case TYPE_OBJ:  return isTruthyObject(value.as.obj);
+        default: return false;
+
+    }
+}
+bool isFalsy(Value value) {
+    return !isTruthy(value);
 }
 
 bool valuesEqual(Value a, Value b) {
