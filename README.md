@@ -25,13 +25,13 @@ And a lot more is coming.
 
 ## Getting started
 
-Carotene can run on:
+Carotene can currently on:
 - Windows 10+
-- Linux with glibc 2.28+, which is pretty much any Linux from late 2019 or later
+- Linux from 2019 or later
+- Haiku R1/beta4+
 - Web, via [WebAssembly](https://webassembly.org/)
 
-For Windows and Linux, it runs on x86_64 (ie. most Intel/AMD CPUs). More build targets will be added later on.
-
+on x86_64. See more at [Compatibility](https://github.com/anpang54/carotene/wiki/Compatibility).
 Binaries are provided in [Releases](https://github.com/anpang54/carotene/releases).
 
 The build script uses `zig c++`, and is written in Carotene itself. Therefore, to compile Carotene, run:

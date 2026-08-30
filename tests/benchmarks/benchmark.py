@@ -8,13 +8,13 @@ from random import shuffle
 results = {}
 
 languages = [
-    ("Carotene",    "./caro-release",                      "caro"),
-    ("clox with %", "./tests/benchmarks/clox-with-modulo", "clox"),
-    ("Lua",         "luajit -j off",                       "lua" ),
-    ("Node.js",     "node --jitless",                      "js"  ),
-    ("PHP",         "php -d opcache.enable_cli=0",         "php" ),
-    ("Python",      "python",                              "py"  ),
-    ("Wren",        "wren",                                "wren")
+    ("Carotene",    "builds/caro-release",               "caro"),
+    ("clox with %", "tests/benchmarks/clox-with-modulo", "clox"),
+    ("Lua",         "luajit -j off",                     "lua" ),
+    ("Node.js",     "node --jitless",                    "js"  ),
+    ("PHP",         "php -d opcache.enable_cli=0",       "php" ),
+    ("Python",      "python",                            "py"  ),
+    ("Wren",        "wren",                              "wren")
 ]
 
 print("\nThis is a rudimentary benchmark where a few bytecode interpreters start and check whether 0 - 9,999 are prime.\nNode.js, Lua, and PHP are in their non-JIT modes.\n")

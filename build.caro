@@ -10,7 +10,7 @@ if(_args == 0u) {
     platform = "linux";
     release = false;
 } else {
-    if(_1 == "windows" | _1 == "linux" | _1 == "web") {
+    if(_1 == "windows" | _1 == "linux" | _1 == "haiku" | _1 == "web") {
         platform = _1;
         release = true;
     } else {
@@ -23,17 +23,20 @@ if(_args == 0u) {
 if(valid) {
 
 
-    // Make command
+    // Command parts
 
-    common       = "src/main.cpp -std=c++23 -Wno-c99-designator ";
+    common       = "src/main.cpp -std=c++23 ";
+
     windows_only = "-target x86_64-windows-gnu ";
     linux_only   = "-target x86_64-linux-gnu.2.28 -idirafter /usr/include -L/usr/lib -lreadline ";
     web_only     = "-sALLOW_MEMORY_GROWTH -sSTACK_SIZE=8388608 -sEXIT_RUNTIME ";
                                        // = 8mb, because linux threads get 8mb
+    
+    clang_only   = "-Wno-c99-designator ";
     release_only = "-O2 -g0 -s ";
     
-    // We compile with Zig, which in turn runs Clang, because it allows us to specify a glibc version.
-    // Clang support for C++26 is still rather incomplete, so this uses C++23.
+
+    // Make command
 
     output = "caro";
     message = "Built for";
@@ -43,18 +46,26 @@ if(valid) {
     }
 
     command = "";
+
+    // For Windows and Linux, we compile with Zig, which in turn runs Clang, because it allows us to specify a glibc version.
+    // Clang support for C++26 is still rather incomplete, so this uses C++23.
+
     if(platform == "windows") {
-        command = "zig c++ " + common + windows_only;
+        command = "zig c++ " + common + clang_only + windows_only;
         output = output + ".exe";
         message = message + " Windows";
+    } else if(platform == "linux") {
+        command = "zig c++ " + common + clang_only + linux_only;
+        message = message + " Linux";
+    } else if(platform == "haiku") {
+        command = "~/haiku-cross/haiku/generated/cross-tools-x86_64/bin/x86_64-unknown-haiku-g++ " + common;
+        output = output + "-haiku";
+        message = message + " Haiku";
     } else if(platform == "web") {
-        command = "/usr/lib/emscripten/em++ " + common + web_only;
+        command = "/usr/lib/emscripten/em++ " + common + clang_only + web_only;
         release_only = "-O2 -g0 ";
         output = "web/" + output + ".html";
         message = message + " web";
-    } else {
-        command = "zig c++ " + common + linux_only;
-        message = message + " Linux";
     }
 
     if(release) {

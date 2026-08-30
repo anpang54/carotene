@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include <format>
 
 #include <cstdbool>
 #include <cstddef>
@@ -20,7 +21,7 @@
 
 // version
 
-#define VERSION      "0.1.0d"
+#define VERSION      "0.1.1a"
 #define VERSION_DATE "30 Aug 2026"
 
 

@@ -1019,6 +1019,7 @@ class Compiler{
                         return;
 
                     default:    // do nothing.
+                        break;
                 }
                 advance();
             }

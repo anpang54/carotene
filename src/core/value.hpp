@@ -350,7 +350,7 @@ bool operator==(const Value& a, const Value& b) {
 }
 
 template<>
-struct hash<Value>{
+struct std::hash<Value>{
     size_t operator()(const Value& value) const {
         return hashValue(value);
     }
