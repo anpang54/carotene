@@ -18,7 +18,7 @@ constexpr char MAGIC_NUMBER[] = "\x7f" "reti";
                              // 7f 72 65 74 69 00
                              // 7f because ELF is cool
                              // also if you open a .reti file in a text editor it's gonna know something's up
-const uint8_t BYTECODE_FORMAT = 0x02;
+const uint16_t BYTECODE_FORMAT = 0x0002;
 
 
 // SERIALIZE
@@ -122,11 +122,8 @@ vector<uint8_t> serializeApp(ObjFunction* function, const string& path) {
     // 0 - 5: magic number
     w.buffer.insert(w.buffer.end(), MAGIC_NUMBER, MAGIC_NUMBER + sizeof(MAGIC_NUMBER));
 
-    // 6: bytecode version
-    w.writeUint8(BYTECODE_FORMAT);
-
-    // 7: unused, may become a flag in the future
-    w.writeUint8(0x00);
+    // 6 - 7: bytecode version
+    w.writeUint16(BYTECODE_FORMAT);
 
     serializeFunction(w, function);
     
@@ -249,18 +246,20 @@ ObjFunction* deserializeApp(vector<uint8_t> buffer) {
     }
 
     r.position = 6;
-    uint8_t version = r.readUint8();
+    uint16_t version = r.readUint16();
     if(version != BYTECODE_FORMAT) {
         cliError("This .reti file was compiled in a very different version, rendering it incompatible with this version of Carotene.");
         exit(1);
     }
 
-    r.readUint8();    // unused flag byte
-
     GCPause pause;
     ObjFunction* function = deserializeFunction(r);
 
-    if(r.position != r.data.size()) exit(1);
+    if(r.position != r.data.size()) {
+        cliError("There's trailing data after the bytecode.");    
+        exit(1);
+    }
+
     return function;
 
 }
