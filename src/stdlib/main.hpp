@@ -55,6 +55,19 @@ NATIVE(main_print, "", "print", {
         {{TYPE_BOOL}, false}
     });
 
+    #ifdef __EMSCRIPTEN__
+        if(isString(args[0]) && asString(args[0])->fString) {
+            auto [text, cssRules] = formatString(asString(args[0])->str);
+            string js = "console.log(\"" + escapeJS(text) + "\"";
+            for(const string& rule: cssRules) {
+                js += ", \"" + escapeJS(rule) + "\"";
+            }
+            js += ")";
+            runJS(js);
+            return CaroNull;
+        }
+    #endif
+
     cout << printValue(args[0]);
     if(args.size() < 2 || !isFalsy(args[1])) {
         cout << '\n';
@@ -69,7 +82,7 @@ NATIVE(main_input, "", "input", {
     });
 
     if(args.size() >= 1) {
-        cout << asString(args[0])->str;
+        cout << printValue(args[0]);
     }
     string result;
     std::getline(cin, result);

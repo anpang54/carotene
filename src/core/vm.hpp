@@ -290,13 +290,21 @@ class VM{
             // get a and b
             string strA, strB;
             int multiplier;
+
+            bool fString = false;
+            auto popString = [&]() {
+                ObjString* str = asString(pop());
+                fString = fString || str->fString;
+                return str->str;
+            };
+
             if(op == OP_MULTIPLY) {
 
                 if(isNumeric(peek(0).type)) {    // number is on the right
                     multiplier = asNumberTo<int>(pop());
-                    strA = asString(pop())->str;
+                    strA = popString();
                 } else if(isNumeric(peek(1).type)) {    // number is on the left
-                    strA = asString(pop())->str;
+                    strA = popString();
                     multiplier = asNumberTo<int>(pop());
                 } else {
                     return INTERPRET_RUNTIME_ERROR;
@@ -306,15 +314,15 @@ class VM{
 
                 if(isNumeric(peek(0).type) && isString(peek(1))) {
                     multiplier = asNumberTo<int>(pop());
-                    strA = asString(pop())->str;
+                    strA = popString();
                 } else {
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
             } else {
 
-                strB = asString(pop()) -> str;
-                strA = asString(pop()) -> str;
+                strB = popString();
+                strA = popString();
 
             }
 
@@ -322,13 +330,13 @@ class VM{
             switch(op) {
 
                 case OP_ADD: {    // concatenates a and b
-                    push(CaroObj(copyString(strA + strB)));
+                    push(CaroObj(copyString(strA + strB, fString)));
                     break;
                 }
                 case OP_SUBTRACT: {    // removes all occurrences of b in a
                     string result = strA;
                     replace(result, strB, "");
-                    push(CaroObj(copyString(result)));
+                    push(CaroObj(copyString(result, fString)));
                     break;
                 }
 
@@ -342,7 +350,7 @@ class VM{
                     for(int i = 0; i < multiplier; ++i) {
                         result += strA;
                     }
-                    push(CaroObj(copyString(result)));
+                    push(CaroObj(copyString(result, fString)));
                     break;
                 }
 
@@ -355,7 +363,7 @@ class VM{
                     vector<Value> result;
                     result.reserve(multiplier);
                     for(int i = 0; i < multiplier; ++i) {
-                        result.push_back(CaroObj(copyString(strA.substr(i * eachPartLength, eachPartLength))));
+                        result.push_back(CaroObj(copyString(strA.substr(i * eachPartLength, eachPartLength), fString)));
                     }
                     push(CaroObj(copyArray(result)));
                     break;
@@ -367,7 +375,7 @@ class VM{
                         return INTERPRET_RUNTIME_ERROR;
                     }
                     int eachPartLength = strA.length() / multiplier;
-                    push(CaroObj(copyString(strA.substr(eachPartLength * multiplier))));
+                    push(CaroObj(copyString(strA.substr(eachPartLength * multiplier), fString)));
                     break;
                 }
 

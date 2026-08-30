@@ -15,6 +15,7 @@ File structure:
   - `serialize.hpp` - Bytecode serialization
   - `value.hpp` - Types and normal objects
   - `object.hpp` - Heap-allocated objects
+  - `format.hpp` - Formatting for `f""` strings
 - `stdlib/`
   - `natives.hpp` - Parameter checking and helper macros
   - `main.hpp` - The functions that don't have a module

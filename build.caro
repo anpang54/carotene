@@ -59,7 +59,9 @@ if(valid) {
 
     } else if(platform == "linux") {
         command = "zig c++ " + common + clang_only + linux_only;
-        output = output + "-linux";
+        if(release) {
+            output = output + "-linux";
+        }
         message = message + " Linux";
 
     } else if(platform == "haiku") {

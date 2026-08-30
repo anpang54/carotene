@@ -32,3 +32,6 @@ if(discriminant > 0) {
     print("No real solution", false);
 }
 print("");
+
+print(f"[b]Bold[] [i]Italic[] [b][i]Both[] [i]Inverse[] [#ff0000]R[#00ff00]G[#0000ff]B[] [#00ffff]C[#ff00ff]M[#ffff00]Y[#000000]K[]");
+

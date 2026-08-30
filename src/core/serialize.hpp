@@ -18,7 +18,7 @@ constexpr char MAGIC_NUMBER[] = "\x7f" "reti";
                              // 7f 72 65 74 69 00
                              // 7f because ELF is cool
                              // also if you open a .reti file in a text editor it's gonna know something's up
-const uint8_t BYTECODE_FORMAT = 0x01;
+const uint8_t BYTECODE_FORMAT = 0x02;
 
 
 // SERIALIZE
@@ -73,6 +73,7 @@ void serializeValue(Writer& w, Value& value) {
             w.writeUint8(obj->type);
             switch(obj->type) {
                 case OBJ_STRING:
+                    w.writeUint8(static_cast<ObjString*>(obj)->fString);
                     w.writeString(static_cast<ObjString*>(obj)->str);
                     break;
                 case OBJ_FUNCTION:
@@ -190,7 +191,10 @@ Value deserializeValue(Reader& r) {
         case TYPE_OBJ: {
             uint8_t objType = r.readUint8();
             switch(objType) {
-                case OBJ_STRING:   return CaroObj(copyString(r.readString()));
+                case OBJ_STRING: {
+                    bool fString = r.readUint8();
+                    return CaroObj(copyString(r.readString(), fString));
+                }
                 case OBJ_FUNCTION: return CaroObj(deserializeFunction(r));
                 default: break;    // unreachable
             }

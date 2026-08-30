@@ -28,7 +28,7 @@ typedef enum {
     TOKEN_SPACESHIP,
 
     // literals
-    TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
+    TOKEN_IDENTIFIER, TOKEN_NUMBER, TOKEN_STRING, TOKEN_FSTRING,
 
     // keywords
     TOKEN_NAME, TOKEN_DESC, TOKEN_VERSION,
@@ -314,14 +314,14 @@ class Scanner{
             return makeToken(TOKEN_NUMBER);
 
         }
-        Token scanString() {
+        Token scanString(bool fString = false) {
             while(peek() != '"' && !isAtEnd()) {
                 if(peek() == '\n') this->line++;
                 advance();
             }
             if(isAtEnd()) return errorToken("Unterminated string.");
             advance();    // closing quote
-            return makeToken(TOKEN_STRING);
+            return makeToken(fString? TOKEN_FSTRING: TOKEN_STRING);
         }
         Token scanIdentifier() {
             while(isAlpha(peek()) || isDigit(peek())) advance();
@@ -345,6 +345,10 @@ class Scanner{
 
             char c = advance();
             
+            if(c == 'f' && peek() == '"') {
+                advance();    // consume "
+                return scanString(true);
+            }
             if(isAlpha(c)) return scanIdentifier();
             if(isDigit(c)) return scanNumber();
 

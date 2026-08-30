@@ -9,6 +9,7 @@
 
 #include "common.hpp"
 #include "chunk.hpp"
+#include "format.hpp"
 
 using std::set, std::pair;
 
@@ -47,6 +48,7 @@ struct Obj{
 
 struct ObjString: Obj{
     string str;
+    bool fString = false;
 };
     // just a wrapper around an std::string
 
@@ -57,9 +59,9 @@ ObjString* asString(Value value) {
     return static_cast<ObjString*>(value.as.obj);
 }
 
-ObjString* copyString(string str) {
+ObjString* copyString(string str, bool fString = false) {
     maybeCollect();
-    ObjString* object = new ObjString({OBJ_STRING}, std::move(str));
+    ObjString* object = new ObjString({OBJ_STRING}, std::move(str), fString);
     objects.push_back(object);
     return object;
 }
@@ -194,7 +196,11 @@ string printObject(Obj* object) {
     switch(object->type) {
 
         case OBJ_STRING: {
-            return static_cast<ObjString*>(object)->str;
+            ObjString* str = static_cast<ObjString*>(object);
+            if(str->fString) {
+                return formatString(str->str).first;
+            }
+            return str->str;
         }
 
         case OBJ_ARRAY: {

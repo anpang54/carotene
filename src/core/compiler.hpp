@@ -463,6 +463,11 @@ class Compiler{
                 CaroObj(copyString(this->previous.start.substr(1, this->previous.length - 2)))
             );
         }
+        void parseFString(bool canAssign) {
+            emitConstant(
+                CaroObj(copyString(this->previous.start.substr(2, this->previous.length - 3), true))
+            );
+        }
 
         void parseArray(bool canAssign) {
             uint8_t elementCount = 0;
@@ -1286,6 +1291,7 @@ inline ParseRule rules[] = {
     // literals
     [TOKEN_IDENTIFIER]    = { &Compiler::makeVariable, NULL,                     PREC_NONE       },
     [TOKEN_STRING]        = { &Compiler::parseString,  NULL,                     PREC_NONE       },
+    [TOKEN_FSTRING]       = { &Compiler::parseFString, NULL,                     PREC_NONE       },
     [TOKEN_NUMBER]        = { &Compiler::parseNumber,  NULL,                     PREC_NONE       },
 
     // keywords
