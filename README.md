@@ -1,8 +1,8 @@
 
+<img src="https://raw.githubusercontent.com/anpang54/carotene/refs/heads/main/assets/carrot.svg" align="right" alt="Carrot" width="175">
+
 | [README](https://github.com/anpang54/carotene?tab=readme-ov-file) | [Source code](https://github.com/anpang54/carotene/tree/main/src) | [Releases](https://github.com/anpang54/carotene/releases) | [Documentation](https://github.com/anpang54/carotene/wiki)
 | - | - | - | - |
-
-<img src="https://raw.githubusercontent.com/anpang54/carotene/refs/heads/main/assets/carrot.svg" align="right" alt="Carrot" width="200">
 
 # Carotene
 
