@@ -124,9 +124,7 @@ class Chunk{
         }
         int constantInstruction(string name, int offset) {
             uint8_t constant = this->code[offset + 1];
-            cout << format("{:<16} {:4d} '", name, constant);
-            printValue(this->constants[constant]);
-            cout << "'\n";
+            cout << format("{:<16} {:4d} '", name, constant) << printValue(this->constants[constant]) << "'\n";
             return offset + 2;
         }
         int byteInstruction(string name, int offset) {
@@ -139,11 +137,9 @@ class Chunk{
             uint8_t step = this->code[offset + 2];
             cout << format("{:<16} {:4d} '", name, variable);
             if(global) {
-                printValue(this->constants[variable]);
-                cout << "' + '";
+                cout << printValue(this->constants[variable]) << "' + '";
             }
-            printValue(this->constants[step]);
-            cout << "'\n";
+            cout << printValue(this->constants[step]) << "'\n";
             return offset + 3;
         }
         int jumpInstruction(string name, int sign, int offset) {

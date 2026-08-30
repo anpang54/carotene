@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Carotene web example</title>
+    </head>
+    <body>
+        <div style="padding: 4em; font-family: sans-serif">
+            <p>
+                This is the Carotene web example.
+            </p>
+            <p>
+                Check the DevTools console!
+            </p>
+        </div>
+        <script>
+            var Module = {
+                preRun: [() => {
+                    addRunDependency("main.caro");
+                    fetch("main.caro")
+                        .then(response => response.text())
+                        .then(code => {
+                            FS.writeFile("main.caro", code);
+                            removeRunDependency("main.caro");
+                        });
+                }],
+                arguments: ["main.caro"],
+            };
+        </script>
+        <script src="../../builds/web/caro-release.js"></script>
+    </body>
+</html>

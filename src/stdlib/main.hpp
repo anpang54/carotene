@@ -55,7 +55,7 @@ NATIVE(main_print, "", "print", {
         {{TYPE_BOOL}, false}
     });
 
-    printValue(args[0]);
+    cout << printValue(args[0]);
     if(args.size() < 2 || !isFalsy(args[1])) {
         cout << '\n';
     }
@@ -84,29 +84,50 @@ NATIVE(main_log, "", "log", {
         {{TYPE_BOOL}, false}
     });
 
+    // check type
     string logType = asString(args[0])->str;
     if(!(logType == "e" || logType == "w" || logType == "o" || logType == "i")) {
         vm->runtimeError("The only valid log types are e, w, o, and i.");
         return CaroNull;
     }
-    uint8_t color;
-    switch(logType.front()) {
-        case 'e': color = 203; break;
-        case 'w': color = 221; break;
-        case 'o': color = 82;  break;
-        case 'i': color = 45;  break;
-    }
-    string bold = args.size() >= 3 && args[2].as.Abool? "\033[1m": "";
 
+    // get main text
     auto now = chrono::floor<chrono::milliseconds>(chrono::system_clock::now());
     chrono::hh_mm_ss hms{now - floor<chrono::days>(now)};
-    cout << format(
-                "{:s}\033[38;5;{}m[{:c}] [{:02}:{:02}:{:02}.{:03}] ",
-                bold, color, logType.front(),
-                hms.hours().count(), hms.minutes().count(), hms.seconds().count(), hms.subseconds().count()
-            );
-    printValue(args[1]);
-    cout << "\033[0m\n";
+    string mainText = format(
+                          "[{:c}] [{:02}:{:02}:{:02}.{:03}] ",
+                          logType.front(), hms.hours().count(), hms.minutes().count(), hms.seconds().count(), hms.subseconds().count()
+                      );
+
+    // format
+    string color;
+    bool bold = args.size() >= 3 && isTruthy(args[2]);
+    #ifdef __EMSCRIPTEN__
+
+        // format for devtools console using CSS
+        switch(logType.front()) {
+            case 'e': color = "#ff5f5f"; break;
+            case 'w': color = "#ffd75f"; break;
+            case 'o': color = "#5fff00"; break;
+            case 'i': color = "#00d7ff"; break;
+            // hex codes are from https://color-palette.hexdocs.pm/ansi_color_codes.html
+            // has the # so that vscode gives a fancy color box
+        }
+        string css = "color: " + color + (bold? "; font-weight: bold": "");
+        runJS("console.log(\"%c" + mainText + printValue(args[1]) + "\", \"" + css + "\")");
+
+    #else
+
+        // format for terminals using ANSI escape codes
+        switch(logType.front()) {
+            case 'e': color = "203"; break;
+            case 'w': color = "221"; break;
+            case 'o': color = "82";  break;
+            case 'i': color = "45";  break;
+        }
+        cout << "\033[38;5;" << color << "m" << (bold? "\033[1m": "") << mainText << printValue(args[1]) << "\033[0m\n";
+
+    #endif
 
     return CaroNull;
 
@@ -117,8 +138,27 @@ NATIVE(main_sh, "", "sh", {
         {{TYPE_OBJ}, true}
     });
 
-    int output = std::system(asString(args[0])->str.c_str());
-    return CaroInt(output);
+    #ifdef __EMSCRIPTEN__
+        vm->runtimeError("sh() is only available on non-web platforms.");
+        return CaroNull;
+    #else
+        int output = std::system(asString(args[0])->str.c_str());
+        return CaroInt(output);
+    #endif
+
+});
+NATIVE(main_js, "", "js", {
+    params({
+        {{TYPE_OBJ}, true}
+    });
+
+    #ifdef __EMSCRIPTEN__
+        string result = runJS(asString(args[0])->str);
+        return CaroObj(copyString(result));
+    #else
+        vm->runtimeError("js() is only available on web.");
+        return CaroNull;
+    #endif
 
 });
 

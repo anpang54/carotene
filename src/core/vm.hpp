@@ -456,9 +456,7 @@ class VM{
                     
                     cout << "          ";
                     for(Value* slot = this->stack.data(); slot < this->stackTop; ++slot) {
-                        cout << "[ ";
-                        printValue(*slot);
-                        cout << " ]";
+                        cout << "[ " << printValue(*slot) << " ]";
                     }
                     cout << '\n';
 

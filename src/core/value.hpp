@@ -15,7 +15,7 @@
 
 struct Obj;
 
-void   printObject   (Obj* object);
+string printObject   (Obj* object);
 string typeofObject  (Obj* object);
 bool   isTruthyObject(Obj* object);
 bool   objectsEqual  (Obj* a, Obj* b);
@@ -233,27 +233,19 @@ bool valuesEqual(Value a, Value b) {
 
 }
 
-void printValue(Value value) {
+string printValue(Value value) {
     switch(value.type) {
 
-        case TYPE_BOOL:
-            cout << (value.as.Abool? "true": "false");
-            break;
-        case TYPE_NULL:
-            cout << "null";
-            break;
-        case TYPE_SMTH:
-            cout << "smth";
-            break;
-        case TYPE_OBJ:
-            printObject(value.as.obj);
-            break;
+        case TYPE_BOOL: return value.as.Abool? "true": "false";
+        case TYPE_NULL: return "null";
+        case TYPE_SMTH: return "smth";
+        case TYPE_OBJ:  return printObject(value.as.obj);
 
         default:
             if(isNumeric(value.type)) {
-                cout << asNumberToString(value);
+                return asNumberToString(value);
             } else {
-                cout << "unknown";    // should be unreachable
+                return "unknown";    // should be unreachable
             }
 
     }

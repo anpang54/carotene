@@ -189,82 +189,88 @@ void freeObjects() {
 
 // object functions that were separated from value functions
 
-void printObject(Obj* object) {
+string printObject(Obj* object) {
+    
     switch(object->type) {
 
         case OBJ_STRING: {
-            cout << static_cast<ObjString*>(object)->str;
-            break;
+            return static_cast<ObjString*>(object)->str;
         }
 
         case OBJ_ARRAY: {
 
+            string printed = "";
+
             // print [...] if an array contains itself
             static set<Obj*> beingPrinted;
             if(!beingPrinted.insert(object).second) {
-                cout << "[...]";
+                printed += "[...]";
                 break;
             }
 
-            cout << '[';
+            printed += "[";
             vector<Value>& array = static_cast<ObjArray*>(object)->data;
             for(auto it = array.begin(); it != array.end(); ++it) {
                 const auto& type = *it;
-                printValue(type);
+                printed += printValue(type);
                 if(std::next(it) != array.end()) {
-                    cout << ", ";
+                    printed += ", ";
                 }
             }
-            cout << ']';
+            printed += "]";
 
             beingPrinted.erase(object);
 
-            break;
+            return printed;
+
         }
 
         case OBJ_DICT: {
 
+            string printed = "";
+
             // print {...} if a dict contains itself
             static set<Obj*> beingPrinted;
             if(!beingPrinted.insert(object).second) {
-                cout << "{...}";
+                printed += "{...}";
                 break;
             }
 
-            cout << '{';
+            printed += "{";
             unordered_map<Value, Value>& dict = static_cast<ObjDict*>(object)->data;
             for(auto it = dict.begin(); it != dict.end(); ++it) {
-                printValue(it->first);
-                cout << ": ";
-                printValue(it->second);
+                printed += printValue(it->first);
+                printed += ": ";
+                printed += printValue(it->second);
                 if(std::next(it) != dict.end()) {
-                    cout << ", ";
+                    printed += ", ";
                 }
             }
-            cout << '}';
+            printed += "}";
 
             beingPrinted.erase(object);
 
-            break;
+            return printed;
 
         }
 
         case OBJ_FUNCTION: {
             ObjFunction* function = static_cast<ObjFunction*>(object);
             if(function->name.empty()) {
-                cout << "<script>";
-            } else {
-                cout << "<func " << function->name << '>';
+                return "<script>";
             }
-            break;
+            return "<func " + function->name + ">";
         }
 
         case OBJ_NATIVE: {
-            cout << "<native func>";
+            return "<native func>";
             break;
         }
 
     }
+
+    return "unknown";    // should be unreachable
+
 }
 
 string typeofObject(Obj* object) {

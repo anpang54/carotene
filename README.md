@@ -25,9 +25,14 @@ And a lot more is coming.
 
 ## Getting started
 
-Carotene can run on Windows 10+ or Linux with glibc 2.28+ (pretty much anything from 2019 or later), on x86_64 (ie. most Intel/AMD CPUs). More build targets will be added later on.
+Carotene can run on:
+- Windows 10+
+- Linux with glibc 2.28+, which is pretty much any Linux from late 2019 or later
+- Web, via [WebAssembly](https://webassembly.org/)
 
-Binaries are provided at `caro-release` (Linux) and `caro-release.exe` (Windows). In the examples below, append `.exe` like that if you are on Windows.
+For Windows and Linux, it runs on x86_64 (ie. most Intel/AMD CPUs). More build targets will be added later on.
+
+Binaries are provided in [Releases](https://github.com/anpang54/carotene/releases).
 
 The build script uses `zig c++`, and is written in Carotene itself. Therefore, to compile Carotene, run:
 ```

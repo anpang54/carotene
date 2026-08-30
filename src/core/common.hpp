@@ -13,6 +13,10 @@
 #include <cstddef>
 #include <cstdint>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 
 // version
 
@@ -60,6 +64,17 @@ void cliError(string message) {
     cerr << "\033[38;5;203m" << message << "\033[0m\n";
     exit(1);
 }
+
+string runJS(string code) {
+    #ifdef __EMSCRIPTEN__
+        const char* output = emscripten_run_script_string(code.c_str());
+        return output;
+    #else
+        cliError("Carotene isn't running on web.");
+        return "";
+    #endif
+}
+    // wrapper around emscripten_run_script_string() because that's a very long name and it only works with C strings
 
 
 // string manipulation
