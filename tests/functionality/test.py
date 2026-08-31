@@ -18,7 +18,7 @@ def test(name):
     with open(f"tests/functionality/{name}", "r") as file:
         source = file.read()
 
-    expected = f"{"\n".join(result.strip() for result in findall(r"//(.*)", source))}\n"
+    expected = f"{"\n".join(result.strip() for result in findall(r"//(?!!)(.*)", source))}\n"
 
     output = run(["./caro", f"tests/functionality/{name}"], capture_output=True, text=True).stdout
 

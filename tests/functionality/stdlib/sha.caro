@@ -1,0 +1,8 @@
+
+use hash;
+
+#string = "C₄₀H₅₆";
+
+print(hash.sha256(#string));    // 1f00fb96cb250f2710f6b01760da6761d75763ee13ab5f9e760e72f0a46d3b4e
+print(hash.sha384(#string));    // a2cf98b5f13db9bbac7a718e4bfcb63514641080ef5c9e53c62d711522d09deb4a9fa6f2b1d59ea60cca15f18d990857
+print(hash.sha512(#string));    // a0d0d1a94bdffb3a8d8e2962970cb095874c2bb7a02fef379647a048009ee4f751652c29e06511a63e1f39b03ffc5e142078de56f605fd1b4b33998a31c09efe

@@ -1,13 +1,15 @@
 
 local = 1;
 $global = 2;
+#constant = 3;
 
 func set_variables() {
-    local = 3;
-    $global = 4;
+    local = 4;
+    $global = 5;
+    print(#constant);    // 3
 }
 
 set_variables();
 
 print(local);      // 1
-print($global);    // 4
+print($global);    // 5
