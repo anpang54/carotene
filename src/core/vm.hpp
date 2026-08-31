@@ -268,7 +268,7 @@ class VM{
             }
 
             // do int arithmetic if both types are ints, if one or both are float then float arithmetic
-            if(isInt(peek(0).type) && isInt(peek(1).type)) {
+            if((isInt(peek(0).type) && isInt(peek(1).type)) && op != OP_DIVIDE) {
                 if(sizeofType(peek(0).type) == 1 && sizeofType(peek(1).type) == 1) {
                     return numberBinaryOperationAs<uint8_t>(op);
                 }

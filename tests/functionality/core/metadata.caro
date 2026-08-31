@@ -1,0 +1,8 @@
+
+set_name    "Name";
+set_desc    "Desc";
+set_version "Version";
+
+print(name());       // Name
+print(desc());       // Desc
+print(version());    // Version

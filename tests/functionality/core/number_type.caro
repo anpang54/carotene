@@ -1,0 +1,34 @@
+
+print(typeof(31b        ));    // byte
+print(typeof(31u        ));    // uint
+print(typeof(31         ));    // int
+print(typeof(31ul       ));    // ulong
+print(typeof(31l        ));    // long
+print(typeof(31f        ));    // float
+print(typeof(31.0f      ));    // float
+print(typeof(31d        ));    // double
+print(typeof(31.0       ));    // double
+
+print(typeof(1b   + 2b  ));    // byte
+print(typeof(1    + 2   ));    // int
+print(typeof(1l   + 2   ));    // long
+print(typeof(1u   + 2   ));    // int
+print(typeof(1    + 2f  ));    // float
+print(typeof(0.1f + 0.2f));    // float
+print(typeof(0.1  + 0.2 ));    // double
+
+print(typeof(5    - 0.14));    // double
+
+print(typeof(2    * 8   ));    // int
+print(typeof(2l   * 2u  ));    // long
+print(typeof(2    * 5.5 ));    // double
+
+print(typeof(6    / 2   ));    // float
+print(typeof(6l   / 2l  ));    // double
+print(typeof(6    / 0.1 ));    // double
+
+print(typeof(5    % 2   ));    // int
+print(typeof(16.1 % 4   ));    // double
+
+print(typeof(2    ^ 15  ));    // int
+print(typeof(1.97 ^ 15  ));    // double
