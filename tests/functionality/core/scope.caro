@@ -1,0 +1,13 @@
+
+local = 1;
+$global = 2;
+
+func set_variables() {
+    local = 3;
+    $global = 4;
+}
+
+set_variables();
+
+print(local);      // 1
+print($global);    // 4

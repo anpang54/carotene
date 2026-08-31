@@ -1,0 +1,17 @@
+
+a = 1.25;
+b = 4.75;
+c = 1.25;
+
+print(a == b);    // false
+print(a != b);    // true
+
+print(a <  b);    // true
+print(a <= b);    // true
+print(a <  c);    // false
+print(a <= c);    // true
+
+print(a >  b);    // false
+print(a >= b);    // false
+print(a >  c);    // false
+print(a >= c);    // true

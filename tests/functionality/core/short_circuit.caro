@@ -1,0 +1,13 @@
+
+func a() {
+    print("a() called");
+    return true;
+}
+func b() {
+    print("b() called");
+    return true;
+}
+
+if(a() | b()) {    // a() called
+    print("Condition returned true");    // Condition returned true
+}
