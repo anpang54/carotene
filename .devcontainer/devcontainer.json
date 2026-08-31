@@ -1,0 +1,13 @@
+{
+    "name": "Zig",
+    "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu",
+    "postCreateCommand": "chmod +x .devcontainer/install_zig.sh && /bin/bash .devcontainer/install_zig.sh && git config --local include.path ../.gitconfig",
+    "customizations": {
+        "vscode": {
+            "extensions": [],
+            "settings": {
+                "zig.zigPath": "/usr/local/bin/zig"
+            }
+        }
+    }
+}
