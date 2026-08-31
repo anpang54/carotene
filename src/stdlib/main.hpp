@@ -148,15 +148,33 @@ NATIVE(main_log, "", "log", {
 
 NATIVE(main_sh, "", "sh", {
     params({
-        {{TYPE_OBJ}, true}
+        {{TYPE_OBJ},  true },
+        {{TYPE_BOOL}, false}
     });
 
     #ifdef __EMSCRIPTEN__
         vm->runtimeError("sh() is only available on non-web platforms.");
         return CaroNull;
     #else
-        int output = std::system(asString(args[0])->str.c_str());
-        return CaroInt(output);
+
+        FILE* outputFile = popen(asString(args[0])->str.c_str(), "r");
+        if(!outputFile) {
+            vm->runtimeError("Command failed.");
+            return CaroNull;
+        }
+
+        string outputText;
+        char buffer[256];
+        bool autoPrint = args.size() >= 2 && isTruthy(args[1]);
+        while(fgets(buffer, sizeof(buffer), outputFile)) {
+            if(autoPrint) cout << buffer << std::flush;
+            outputText += buffer;
+        }
+
+        pclose(outputFile);
+
+        return CaroObj(copyString(outputText));
+
     #endif
 
 });
