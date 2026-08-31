@@ -1,0 +1,10 @@
+
+use time;
+
+start = time.timestamp_ms();
+wait_ms(10);
+end = time.timestamp_ms() - start;
+
+if(end >= 10 & end <= 15) {    //! a bit of tolerance for lag
+    print(true);    // true
+}

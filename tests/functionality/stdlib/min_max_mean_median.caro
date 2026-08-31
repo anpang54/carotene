@@ -1,0 +1,8 @@
+
+#data = [1, 8, 7, 4, 2, 3];
+
+print(min(#data));       // 1.000000
+print(max(#data));       // 8.000000
+print(mean(#data));      // 4.166667
+print(median(#data));    // 3.500000
+    //! all of them return doubles for now
