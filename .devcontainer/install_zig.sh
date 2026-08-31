@@ -1,21 +1,13 @@
 #!/bin/bash
+set -euo pipefail
 
-# https://github.com/NangiDev/zig-codespace-template
-
-# Fetch the latest stable Zig version from GitHub API
 ZIG_VERSION=$(curl -s https://api.github.com/repos/ziglang/zig/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+ZIG_DOWNLOAD_URL="https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
 
-# Define the download URL
-ZIG_DOWNLOAD_URL="https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
+sudo mkdir -p /usr/local/zig
+curl -fsSL "$ZIG_DOWNLOAD_URL" | sudo tar -xJ -C /usr/local/zig --strip-components=1
+sudo ln -sf /usr/local/zig/zig /usr/local/bin/zig
 
-# Create a temporary directory for the download
-TEMP_DIR=$(mktemp -d)
-
-# Download and extract Zig
-curl -L $ZIG_DOWNLOAD_URL | tar -xJ -C $TEMP_DIR --strip-components=1
-
-# Move the Zig binary to /usr/local/bin
-sudo ln -s $TEMP_DIR/zig /usr/local/bin/zig
-
-# Verify installation
 zig version
+
+# Based on https://github.com/NangiDev/zig-codespace-template

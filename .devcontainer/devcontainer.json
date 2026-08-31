@@ -1,6 +1,6 @@
 {
     "name": "Zig",
-    "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu",
+    "image": "mcr.microsoft.com/devcontainers/base:trixie",
     "postCreateCommand": "chmod +x .devcontainer/install_zig.sh && /bin/bash .devcontainer/install_zig.sh && git config --local include.path ../.gitconfig",
     "customizations": {
         "vscode": {
