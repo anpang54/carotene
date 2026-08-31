@@ -10,7 +10,7 @@ if(_args == 0u) {
     platform = "linux";
     release = false;
 } else {
-    if(_1 == "windows" | _1 == "macos" | _1 == "linux" | _1 == "haiku" | _1 == "web") {
+    if(_1 == "windows" | _1 == "macos" | _1 == "linux" | _1 == "freebsd" | _1 == "haiku" | _1 == "web") {
         platform = _1;
         release = true;
     } else {
@@ -30,6 +30,7 @@ if(valid) {
     windows_only = "-target x86_64-windows-gnu ";
     mac_only     = "-target aarch64-macos -Wno-nullability-completeness ";
     linux_only   = "-target x86_64-linux-gnu.2.28 -idirafter /usr/include -L/usr/lib -lreadline ";
+    freebsd_only = "-target x86_64-freebsd -Wno-nullability-completeness ";
     web_only     = "-sALLOW_MEMORY_GROWTH -sSTACK_SIZE=8388608 -sEXIT_RUNTIME ";
                                        // = 8mb, because linux threads get 8mb
     
@@ -63,6 +64,11 @@ if(valid) {
             output = output + "-linux";
         }
         message = message + " Linux";
+
+    } else if(platform == "freebsd") {
+        command = "zig c++ " + common + clang_only + freebsd_only;
+        output = output + "-freebsd";
+        message = message + " FreeBSD";
 
     } else if(platform == "haiku") {
         command = "~/haiku-cross/haiku/generated/cross-tools-x86_64/bin/x86_64-unknown-haiku-g++ " + common;
