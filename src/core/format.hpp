@@ -29,16 +29,18 @@ const unordered_map<string, pair<string, string>> codes = {
 
 // hex color tags like [#123abc]
 
+bool isFontSizeTag(const string& tag) {
+    for(const char& c: tag) {
+        if(!(isDigit(c) || c == '.')) return false;
+    }
+    return true;
+}
+
 bool isHexColorTag(const string& tag) {
-
-    // no # or wrong length
-    if(tag.length() != 7 || tag[0] != '#') { return false; }
-
-    // check each char
-    for(int i = 1; i < 7; ++i) {
+    if(tag.length() != 7 || tag[0] != '#') return false;    // no # or wrong length
+    for(int i = 1; i < 7; ++i) { // check each char
         if(!isDigitInBase('x', tag[i])) return false;
     }
-
     return true;
 }
 
@@ -104,6 +106,16 @@ pair<string, vector<string>> formatString(string str) {
                     }
                 #else
                     result += codes.at(tag).first;
+                #endif
+
+            } else if(isFontSizeTag(tag)) {
+
+                // font size tag
+                #ifdef __EMSCRIPTEN__
+                    result += "%c";
+                    cssRules.push_back((cssRules.empty()? "": cssRules.back()) + "font-size: " + tag + "em;");
+                #else
+                    result += "";    // not available on terminals
                 #endif
 
             } else if(isHexColorTag(tag)) {

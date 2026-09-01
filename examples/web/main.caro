@@ -33,5 +33,5 @@ if(discriminant > 0) {
 }
 print("");
 
-print(f"[b]Bold[] [i]Italic[] [b][i]Both[] [i]Inverse[] [#ff0000]R[#00ff00]G[#0000ff]B[] [#00ffff]C[#ff00ff]M[#ffff00]Y[#000000]K[]");
+print(f"[b]Bold[] [i]Italic[] [b][i]Both[] [i]Inverse[] [#ff0000]R[#00ff00]G[#0000ff]B[] [#00ffff]C[#ff00ff]M[#ffff00]Y[#000000]K[] [1.5]Big[] [1]Normal[] [0.67]Small[]");
 
