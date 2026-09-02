@@ -568,7 +568,9 @@ class Compiler{
         }
 
         void statement() {
-            if(match(TOKEN_NAME)) {
+            if(match(TOKEN_SEMICOLON)) {
+                // another semicolon, therefore this is an empty statement, therefore do nothing
+            } else if(match(TOKEN_NAME)) {
                 nameStatement();
             } else if(match(TOKEN_DESC)) {
                 descStatement();
