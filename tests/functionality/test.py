@@ -3,8 +3,10 @@
 # impotrs
 
 from pathlib import Path
-from re import findall
+from re import findall, sub
 from subprocess import run
+
+ANSI = r"\033\[[0-9;:]*[A-Za-z]"
 
 
 # test
@@ -21,6 +23,7 @@ def test(name):
     expected = f"{"\n".join(result.strip() for result in findall(r"//(?!!)(.*)", source))}\n"
 
     output = run(["./caro", f"tests/functionality/{name}"], capture_output=True, text=True).stdout
+    output = sub(ANSI, "", output)    # strip formatting escape codes so tests compare visible text only
 
     if output == expected:
         print(f"  ✅  {name}")

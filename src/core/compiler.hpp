@@ -464,10 +464,67 @@ class Compiler{
                 CaroObj(copyString(this->previous.start.substr(1, this->previous.length - 2)))
             );
         }
+
         void parseFString(bool canAssign) {
-            emitConstant(
-                CaroObj(copyString(this->previous.start.substr(2, this->previous.length - 3), true))
-            );
+            // parses an f-string with interpolation into strings and OP_INTERPOLATE
+
+            string text = this->previous.start.substr(2, this->previous.length - 3);
+            uint8_t pieceCount = 0;
+            size_t i = 0;
+
+            while(i < text.size()) {
+
+                // find {
+                size_t openingBrace = text.find('{', i);
+                if(openingBrace != i) {
+                    emitConstant(CaroObj(copyString(text.substr(i, openingBrace - i), true)));
+                    ++pieceCount;
+                }
+                if(openingBrace == string::npos) break;
+
+                // find }
+                size_t closingBrace = openingBrace + 1;
+                int depth = 1;
+                bool inQuotes = false;
+                while(closingBrace < text.size() && depth > 0) {
+                    char c = text[closingBrace];
+                    if(c == '"')                   inQuotes = !inQuotes;
+                    else if(!inQuotes && c == '{') ++depth;
+                    else if(!inQuotes && c == '}') --depth;
+                    if(depth > 0) ++closingBrace;
+                }
+                if(depth > 0) {
+                    error("Unterminated '{' in F-string.");
+                    return;
+                }
+
+                compileEmbedded(text.substr(openingBrace + 1, closingBrace - openingBrace - 1));
+                ++pieceCount;
+                i = closingBrace + 1;
+
+            }
+
+            emitBytes(OP_INTERPOLATE, pieceCount);
+
+        }
+
+        void compileEmbedded(string source) {
+            // compiles an expression in an f-string {}
+
+            Scanner savedScanner  = this->scanner;
+            Token   savedCurrent  = this->current;
+            Token   savedPrevious = this->previous;
+
+            this->scanner = Scanner(source);
+            this->scanner.line = savedPrevious.line;
+            advance();
+            expression();
+            consume(TOKEN_EOF, "There can only be 1 expression here.");
+
+            this->scanner = savedScanner;
+            this->current = savedCurrent;
+            this->previous = savedPrevious;
+
         }
 
         void parseArray(bool canAssign) {

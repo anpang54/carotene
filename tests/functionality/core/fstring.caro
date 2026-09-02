@@ -1,0 +1,18 @@
+
+local = "Local";
+coexist = "coexist";
+a = 7;
+b = 12;
+
+func double(x) {
+    return x * 2;
+}
+
+print(f"This is a {local}");                            // This is a Local
+print(f"{local}{local}");                               // LocalLocal
+print(f"Answer: {(a / b) + b}");                        // Answer: 12.583333
+print(f"b > a: {b > a}");                               // b > a: true
+print(f"{b > a? "ja": "nein"}");                        // ja
+print(f"{double(b)}");                                  // 24
+print(f"[b]Formatting [i]can {coexist}{"!" * 5}[]");    // Formatting can coexist!!!!!
+

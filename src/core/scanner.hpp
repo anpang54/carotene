@@ -315,13 +315,24 @@ class Scanner{
 
         }
         Token scanString(bool fString = false) {
-            while(peek() != '"' && !isAtEnd()) {
-                if(peek() == '\n') this->line++;
+
+            int depth = 0;
+            bool inQuotes = false;
+            while(!isAtEnd()) {
+                char c = peek();
+                if(c == '\n')                             this->line++;
+                else if(c == '"' && depth == 0)           break;
+                else if(c == '"')                         inQuotes = !inQuotes;
+                else if(fString && !inQuotes && c == '{') ++depth;
+                else if(fString && !inQuotes && c == '}') --depth;
                 advance();
             }
+
             if(isAtEnd()) return errorToken("Unterminated string.");
             advance();    // closing quote
+
             return makeToken(fString? TOKEN_FSTRING: TOKEN_STRING);
+
         }
         Token scanIdentifier() {
             while(isAlpha(peek()) || isDigit(peek())) advance();

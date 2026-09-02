@@ -582,6 +582,26 @@ class VM{
                     case OP_TRUE:  push(CaroBool(true));  break;
                     case OP_FALSE: push(CaroBool(false)); break;
 
+                    case OP_INTERPOLATE: {
+
+                        uint8_t pieceCount = READ_BYTE();
+                        string result;
+                        for(Value* piece = this->stackTop - pieceCount; piece < this->stackTop; ++piece) {
+                            if(isString(*piece) && asString(*piece)->fString) {
+                                result += asString(*piece)->str;
+                            } else {
+                                for(char c: printValue(*piece)) {
+                                    if(c == '[' || c == ']') result.push_back('\\');
+                                    result.push_back(c);
+                                }
+                            }
+                        }
+                        this->stackTop -= pieceCount;
+                        push(CaroObj(copyString(result, true)));
+
+                        break;
+                    }
+
                     case OP_DEFINE_GLOBAL: {
                         ObjString* name = asString(constants[READ_BYTE()]);
                         this->globals[name->str] = peek(0);
