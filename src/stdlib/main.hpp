@@ -193,6 +193,13 @@ NATIVE(main_js, "", "js", {
 
 });
 
+NATIVE(main_eval, "", "eval", {
+    params({
+        {{TYPE_OBJ}, true}
+    });
+    return vm->eval(asString(args[0])->str);
+});
+
 NATIVE(main_wait, "", "wait", {
     params({
         {ANY_NUMERIC, true}

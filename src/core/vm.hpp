@@ -137,6 +137,27 @@ class VM{
 
         }
 
+        Value eval(const string& source) {
+
+            Compiler compiler;
+            compiler.inEval = true;
+
+            ObjFunction* function = compiler.compile(source);
+            if(function == NULL) {
+                runtimeError("Couldn't compile.");
+                return CaroNull;
+            }
+
+            size_t depth = this->frames.size();
+            push(CaroObj(function));
+            if(!call(function, 0)) return CaroNull;
+
+            Value result = CaroNull;
+            if(run(depth, &result) != INTERPRET_OK) return CaroNull;
+            return result;
+
+        }
+
 
         // helpers
 
@@ -442,7 +463,9 @@ class VM{
 
         // run
 
-        InterpretResult run() {
+        InterpretResult run(size_t exitDepth = 0, Value* result = nullptr) {
+            // runs until the call frames unwind back to exitDepth
+            // the top level uses 0, while eval() uses the depth it was called from so that it returns to the native
 
             frame = &this->frames.back();
 
@@ -819,18 +842,19 @@ class VM{
                     }
                     case OP_RETURN: {
 
-                        Value result = pop();
+                        Value returned = pop();
                         Value* returnSlots = frame->slots;
                         this->frames.pop_back();
-                        
-                        if(this->frames.empty()) {
+
+                        if(this->frames.size() == exitDepth) {
                             // repl: leave the script function and top-level locals on the stack for the next line
-                            if(!this->replMode) --this->stackTop;
+                            if(!(this->replMode && exitDepth == 0)) this->stackTop = returnSlots;
+                            if(result != nullptr) *result = returned;
                             return INTERPRET_OK;
                         }
 
                         this->stackTop = returnSlots;
-                        push(result);
+                        push(returned);
 
                         LOAD_FRAME();
 
