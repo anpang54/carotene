@@ -1,0 +1,6 @@
+
+eval("print(123)");    // 123
+eval("print(456); print(789);");    // 456
+                                    // 789
+$global = 1;
+eval("print($global)");    // 1

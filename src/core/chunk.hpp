@@ -22,6 +22,7 @@ enum OpCode{
     OP_SMTH,
     OP_TRUE,
     OP_FALSE,
+    OP_INTERPOLATE,
 
     // arithmetic
     OP_ADD,
@@ -222,7 +223,9 @@ class Chunk{
                     return simpleInstruction("OP_TRUE", offset);
                 case OP_FALSE:
                     return simpleInstruction("OP_FALSE", offset);
-
+                case OP_INTERPOLATE:
+                    return byteInstruction("OP_INTERPOLATE", offset);
+                    
                 case OP_DEFINE_GLOBAL:
                     return constantInstruction("OP_DEFINE_GLOBAL", offset);
                 case OP_DEFINE_CONSTANT:
