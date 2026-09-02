@@ -83,6 +83,7 @@ class Compiler{
 
         bool hadError = false;
         bool panicMode = false;    // suppresses other errors
+        bool inEval = false;       // affects finishExpression()
 
         int lastCmpOffset = -1;    // code offset of the last comparison opcode
 
@@ -879,9 +880,26 @@ class Compiler{
         void expressionStatement() {
             int start = currentChunk()->code.size();
             expression();
-            consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+            finishExpression(start);
+        }
+
+        void finishExpression(int start) {
+            // expression compiled, consume ; and pop the value
+
+            if(this->inEval) {
+                bool hadSemicolon = match(TOKEN_SEMICOLON);    // semicolon is optional here
+                if(check(TOKEN_EOF)) {
+                    emitByte(OP_RETURN);
+                    return;
+                }
+                if(!hadSemicolon) errorAtCurrent("Expect ';' after expression.");
+            } else {
+                consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+            }
+
             emitByte(OP_POP);
             tryFuseIncrement(start);
+
         }
 
 
@@ -928,9 +946,7 @@ class Compiler{
 
             int start = currentChunk()->code.size();
             parseFromPrevious(PREC_ASSIGNMENT);
-            consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
-            emitByte(OP_POP);
-            tryFuseIncrement(start);
+            finishExpression(start);
 
         }
 
