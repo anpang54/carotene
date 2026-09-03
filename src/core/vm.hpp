@@ -118,9 +118,12 @@ class VM{
                 // but in C argv[0] is the name of the file and argv[1] is the first argument, so we're gonna match that
             }
             
-            // add native functions
-            for(const pair<string, NativeFn>& native: natives) {
+            // add natives
+            for(const pair<string, NativeFn>& native: nativeFunctions) {
                 defineNative(native.first, native.second);
+            }
+            for(const pair<string, NativeConst>& native: nativeConstants) {
+                this->globals[native.first] = native.second();
             }
 
             // actually reuse

@@ -137,21 +137,30 @@ ObjFunction* newFunction() {
 
 // native functions
 
-typedef Value (*NativeFn)(VM* vm, vector<Value> args);
+typedef Value (*NativeFn)   (VM* vm, vector<Value> args);
+typedef Value (*NativeConst)();
 
 struct ObjNative: Obj{
     NativeFn function;
 };
 
-vector<pair<string, NativeFn>> natives;
+vector<pair<string, NativeFn   >> nativeFunctions;
+vector<pair<string, NativeConst>> nativeConstants;
 set<string> modules;
 set<string> nativeNames;
 
-struct DefineNative{
-    DefineNative(string module, string name, NativeFn function) {
+struct DefineNativeFunction{
+    DefineNativeFunction(string module, string name, NativeFn function) {
         if(!module.empty()) modules.insert(std::move(module));
         nativeNames.insert(name);
-        natives.push_back({std::move(name), function});
+        nativeFunctions.push_back({std::move(name), function});
+    }
+};
+struct DefineNativeConstant{
+    DefineNativeConstant(string module, string name, NativeConst value) {
+        if(!module.empty()) modules.insert(std::move(module));
+        nativeNames.insert(name);
+        nativeConstants.push_back({std::move(name), value});
     }
 };
 
