@@ -1,4 +1,6 @@
 
+use fs;
+
 
 // Get arguments
 
@@ -10,7 +12,14 @@ if(_args == 0u) {
     platform = "linux";
     release = false;
 } else {
-    if(_1 == "windows" | _1 == "macos" | _1 == "linux" | _1 == "freebsd" | _1 == "haiku" | _1 == "web") {
+    if(_1 == "all") {
+        sh("./caro build.caro windows");
+        sh("./caro build.caro macos");
+        sh("./caro build.caro linux");
+        sh("./caro build.caro freebsd");
+        sh("./caro build.caro haiku");
+        sh("./caro build.caro web");
+    } else if(_1 == "windows" | _1 == "macos" | _1 == "linux" | _1 == "freebsd" | _1 == "haiku" | _1 == "web") {
         platform = _1;
         release = true;
     } else {
@@ -76,6 +85,9 @@ if(valid) {
         message = message + " Haiku";
 
     } else if(platform == "web") {
+        if(!fs.exists("builds/web")) {
+            fs.create_folder("builds/web");
+        }
         command = "/usr/lib/emscripten/em++ " + common + clang_only + web_only;
         release_only = "-O2 -g0 ";
         output = "web/" + output + ".html";
