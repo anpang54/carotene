@@ -19,6 +19,7 @@ if(_args == 0u) {
         sh("./caro build.caro freebsd");
         sh("./caro build.caro haiku");
         sh("./caro build.caro web");
+        exit();
     } else if(_1 == "windows" | _1 == "macos" | _1 == "linux" | _1 == "freebsd" | _1 == "haiku" | _1 == "web") {
         platform = _1;
         release = true;
