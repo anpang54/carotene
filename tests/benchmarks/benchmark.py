@@ -8,10 +8,10 @@ from random import shuffle
 results = {}
 
 languages = [
-    ("Carotene",    "builds/caro-release",               "caro"),
+    ("Carotene",    "builds/caro-linux"  ,               "caro"),
     ("clox with %", "tests/benchmarks/clox-with-modulo", "clox"),
     ("Lua",         "luajit -j off",                     "lua" ),
-    ("Node.js",     "node --jitless",                    "js"  ),
+    ("Node.js",     "node --jitless --no-expose-wasm",   "js"  ),
     ("PHP",         "php -d opcache.enable_cli=0",       "php" ),
     ("Python",      "python",                            "py"  ),
     ("Wren",        "wren",                              "wren")
