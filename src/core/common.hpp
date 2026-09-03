@@ -21,7 +21,7 @@
 
 // version
 
-#define VERSION      "0.1.1c"
+#define VERSION      "0.1.1"
 #define VERSION_DATE "3 Sep 2026"
 
 
