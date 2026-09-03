@@ -1365,9 +1365,9 @@ inline ParseRule rules[] = {
 
     // literals
     [TOKEN_IDENTIFIER]    = { &Compiler::makeVariable, NULL,                     PREC_NONE       },
+    [TOKEN_NUMBER]        = { &Compiler::parseNumber,  NULL,                     PREC_NONE       },
     [TOKEN_STRING]        = { &Compiler::parseString,  NULL,                     PREC_NONE       },
     [TOKEN_FSTRING]       = { &Compiler::parseFString, NULL,                     PREC_NONE       },
-    [TOKEN_NUMBER]        = { &Compiler::parseNumber,  NULL,                     PREC_NONE       },
 
     // keywords
     [TOKEN_NAME]          = { NULL,                    NULL,                     PREC_NONE       },

@@ -24,7 +24,7 @@ using std::ifstream, std::ofstream, std::stringstream;
 VM vm;
 
 void startingMessage() {
-    cout << "\n  \033[1m\033[38:5:208mCarotene v" << VERSION << "\033[0m (" << VERSION_DATE << ")"
+    cout << "\n  \033[1m\033[38;5;208mCarotene v" << VERSION << "\033[0m (" << VERSION_DATE << ")"
             "\n  https://github.com/anpang54/carotene\n";
 }
 
