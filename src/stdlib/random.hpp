@@ -12,7 +12,7 @@
 
 // functions
 
-NATIVE(random_int, "random", "int", {
+nFunc(random_int, "random", "int", {
     params({
         {{ANY_NUMERIC}, true},
         {{ANY_NUMERIC}, true}
@@ -22,7 +22,7 @@ NATIVE(random_int, "random", "int", {
     std::uniform_int_distribution<int32_t> distribution((int32_t)asNumberTo<double>(args[0]), (int32_t)asNumberTo<double>(args[1]));
     return CaroInt(distribution(generator));
 });
-NATIVE(random_long, "random", "long", {
+nFunc(random_long, "random", "long", {
     params({
         {{ANY_NUMERIC}, true},
         {{ANY_NUMERIC}, true}
@@ -33,7 +33,7 @@ NATIVE(random_long, "random", "long", {
     return CaroLong(distribution(generator));
 });
 
-NATIVE(random_float, "random", "float", {
+nFunc(random_float, "random", "float", {
     params({
         {{ANY_NUMERIC}, true},
         {{ANY_NUMERIC}, true}
@@ -43,7 +43,7 @@ NATIVE(random_float, "random", "float", {
     std::uniform_real_distribution<float> distribution((float)asNumberTo<double>(args[0]), (float)asNumberTo<double>(args[1]));
     return CaroFloat(distribution(generator));
 });
-NATIVE(random_double, "random", "double", {
+nFunc(random_double, "random", "double", {
     params({
         {{ANY_NUMERIC}, true},
         {{ANY_NUMERIC}, true}

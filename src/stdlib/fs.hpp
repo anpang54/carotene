@@ -38,7 +38,7 @@ using std::ios, std::ifstream, std::ofstream, std::stringstream, std::error_code
 
 // read/write
 
-NATIVE(fs_read, "fs", "read", {
+nFunc(fs_read, "fs", "read", {
     params({
         {{TYPE_OBJ}, true}
     });
@@ -61,7 +61,7 @@ NATIVE(fs_read, "fs", "read", {
 
 });
 
-NATIVE(fs_write, "fs", "write", {
+nFunc(fs_write, "fs", "write", {
     params({
         {{TYPE_OBJ}, true},
         {{TYPE_OBJ}, true}
@@ -84,7 +84,7 @@ NATIVE(fs_write, "fs", "write", {
 
 });
 
-NATIVE(fs_append, "fs", "append", {
+nFunc(fs_append, "fs", "append", {
     params({
         {{TYPE_OBJ}, true},
         {{TYPE_OBJ}, true}
@@ -110,7 +110,7 @@ NATIVE(fs_append, "fs", "append", {
 
 // other operations
 
-NATIVE(fs_create_folder, "fs", "create_folder", {
+nFunc(fs_create_folder, "fs", "create_folder", {
     params({
         {{TYPE_OBJ}, true}
     });
@@ -122,7 +122,7 @@ NATIVE(fs_create_folder, "fs", "create_folder", {
 
 });
 
-NATIVE(fs_symlink, "fs", "symlink", {
+nFunc(fs_symlink, "fs", "symlink", {
     params({
         {{TYPE_OBJ}, true},
         {{TYPE_OBJ}, true}
@@ -143,7 +143,7 @@ NATIVE(fs_symlink, "fs", "symlink", {
 
 });
 
-NATIVE(fs_copy, "fs", "copy", {
+nFunc(fs_copy, "fs", "copy", {
     params({
         {{TYPE_OBJ }, true },
         {{TYPE_OBJ }, true },
@@ -158,7 +158,7 @@ NATIVE(fs_copy, "fs", "copy", {
 
 });
 
-NATIVE(fs_rename, "fs", "rename", {
+nFunc(fs_rename, "fs", "rename", {
     params({
         {{TYPE_OBJ}, true},
         {{TYPE_OBJ}, true}
@@ -171,7 +171,7 @@ NATIVE(fs_rename, "fs", "rename", {
 
 });
 
-NATIVE(fs_delete, "fs", "delete", {
+nFunc(fs_delete, "fs", "delete", {
     params({
         {{TYPE_OBJ }, true },
         {{TYPE_BOOL}, false}
@@ -195,7 +195,7 @@ NATIVE(fs_delete, "fs", "delete", {
 
 // get file info
 
-NATIVE(fs_exists, "fs", "exists", {
+nFunc(fs_exists, "fs", "exists", {
     params({
         {{TYPE_OBJ}, true}
     });
@@ -207,7 +207,7 @@ NATIVE(fs_exists, "fs", "exists", {
 
 });
 
-NATIVE(fs_size, "fs", "size", {
+nFunc(fs_size, "fs", "size", {
     params({
         {{TYPE_OBJ}, true}
     });
@@ -219,7 +219,7 @@ NATIVE(fs_size, "fs", "size", {
 
 });
 
-NATIVE(fs_type, "fs", "type", {
+nFunc(fs_type, "fs", "type", {
     params({
         {{TYPE_OBJ}, true}
     });
@@ -247,7 +247,7 @@ NATIVE(fs_type, "fs", "type", {
 
 });
 
-NATIVE(fs_target, "fs", "target", {
+nFunc(fs_target, "fs", "target", {
     params({
         {{TYPE_OBJ}, true}
     });

@@ -81,9 +81,11 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
 #define ANY_NUMERIC {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE}
 
-#define NATIVE(cppName, module, caroName, ...)\
-    DefineNative N_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
+#define nFunc(cppName, module, caroName, ...)\
+    DefineNativeFunction nFunc_##cppName (module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
     // every native function has the same C++ function signature soo
+#define nConst(cppName, module, caroName, ...)\
+    DefineNativeConstant nConst_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, []() -> Value __VA_ARGS__)
 
 
 // include all the libraries

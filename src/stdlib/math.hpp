@@ -7,21 +7,26 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <numbers>
+#include <limits>
 
 #include "natives.hpp"
+
+namespace numbers = std::numbers;
+using std::numeric_limits;
 
 
 // functions
 
-#define NATIVE_MATH(name)\
-    NATIVE(math_##name, "math", #name, {\
+#define nMath(name)\
+    nFunc(math_##name, "math", #name, {\
         params({\
             {ANY_NUMERIC, true}\
         });\
         return toFloat(args[0], [](auto&&... a) { return std::name(decltype(a)(a)...); });\
     })
 
-NATIVE(math_sqrt, "math", "sqrt", {
+nFunc(math_sqrt, "math", "sqrt", {
     params({
         {ANY_NUMERIC, true}
     });
@@ -31,12 +36,38 @@ NATIVE(math_sqrt, "math", "sqrt", {
     }
     return toFloat(args[0], [](auto&&... a) { return std::sqrt(decltype(a)(a)...); });
 });
-NATIVE_MATH(cbrt);
+nMath(cbrt);
 
-NATIVE_MATH(sin);
-NATIVE_MATH(cos);
-NATIVE_MATH(tan);
+nMath(sin);
+nMath(cos);
+nMath(tan);
 
-NATIVE_MATH(asin);
-NATIVE_MATH(acos);
-NATIVE_MATH(atan);
+nMath(asin);
+nMath(acos);
+nMath(atan);
+
+
+// constants
+
+nConst(math_inf, "math", "inf", { return CaroDouble(INFINITY);        });
+nConst(math_nan, "math", "nan", { return CaroDouble(std::nan(""));    });
+
+nConst(math_pi,  "math", "pi",  { return CaroDouble(numbers::pi);     });
+nConst(math_tau, "math", "tau", { return CaroDouble(numbers::pi * 2); });
+nConst(math_e,   "math", "e",   { return CaroDouble(numbers::e);      });
+nConst(math_phi, "math", "phi", { return CaroDouble(numbers::phi);    });
+
+nConst(math_int_min,        "math", "int_min",        { return CaroInt   (numeric_limits< int32_t>::min());     });
+nConst(math_int_max,        "math", "int_max",        { return CaroInt   (numeric_limits< int32_t>::max());     });
+nConst(math_uint_min,       "math", "uint_min",       { return CaroUint  (numeric_limits<uint32_t>::min());     });
+nConst(math_uint_max,       "math", "uint_max",       { return CaroUint  (numeric_limits<uint32_t>::max());     });
+nConst(math_long_min,       "math", "long_min",       { return CaroLong  (numeric_limits< int64_t>::min());     });
+nConst(math_long_max,       "math", "long_max",       { return CaroLong  (numeric_limits< int64_t>::max());     });
+nConst(math_ulong_min,      "math", "ulong_min",      { return CaroUlong (numeric_limits<uint64_t>::min());     });
+nConst(math_ulong_max,      "math", "ulong_max",      { return CaroUlong (numeric_limits<uint64_t>::max());     });
+nConst(math_float_min,      "math", "float_min",      { return CaroFloat (numeric_limits<float   >::lowest());  });
+nConst(math_float_max,      "math", "float_max",      { return CaroFloat (numeric_limits<float   >::max());     });
+nConst(math_float_epsilon,  "math", "float_epsilon",  { return CaroFloat (numeric_limits<float   >::epsilon()); });
+nConst(math_double_min,     "math", "double_min",     { return CaroDouble(numeric_limits<double  >::lowest());  });
+nConst(math_double_max,     "math", "double_max",     { return CaroDouble(numeric_limits<double  >::max());     });
+nConst(math_double_epsilon, "math", "double_epsilon", { return CaroDouble(numeric_limits<double  >::epsilon()); });

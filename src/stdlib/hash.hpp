@@ -17,7 +17,7 @@
 
 // functions
 
-NATIVE(hash_xxhash, "hash", "xxhash", {
+nFunc(hash_xxhash, "hash", "xxhash", {
     params({
         {{TYPE_OBJ}, true}
     });
@@ -26,21 +26,21 @@ NATIVE(hash_xxhash, "hash", "xxhash", {
     return CaroObj(copyString(format("{:016x}", hashed)));
 });
 
-NATIVE(hash_sha256, "hash", "sha256", {
+nFunc(hash_sha256, "hash", "sha256", {
     params({
         {{TYPE_OBJ}, true}
     });
     SHA256 hasher;
     return CaroObj(copyString(hasher.hash(asString(args[0])->str)));
 });
-NATIVE(hash_sha384, "hash", "sha384", {
+nFunc(hash_sha384, "hash", "sha384", {
     params({
         {{TYPE_OBJ}, true}
     });
     SHA384 hasher;
     return CaroObj(copyString(hasher.hash(asString(args[0])->str)));
 });
-NATIVE(hash_sha512, "hash", "sha512", {
+nFunc(hash_sha512, "hash", "sha512", {
     params({
         {{TYPE_OBJ}, true}
     });

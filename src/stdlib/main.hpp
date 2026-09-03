@@ -20,21 +20,21 @@ namespace ranges = std::ranges;
 
 // general
 
-NATIVE(main_name, "", "name", {
+nFunc(main_name, "", "name", {
     if(vm->appName.empty()) {
         vm->runtimeError("This app doesn't have a name.");
         return CaroNull;
     }
     return CaroObj(copyString(vm->appName));
 });
-NATIVE(main_desc, "", "desc", {
+nFunc(main_desc, "", "desc", {
     if(vm->appDesc.empty()) {
         vm->runtimeError("This app doesn't have a description.");
         return CaroNull;
     }
     return CaroObj(copyString(vm->appDesc));
 });
-NATIVE(main_version, "", "version", {
+nFunc(main_version, "", "version", {
     if(vm->appVersion.empty()) {
         vm->runtimeError("This app doesn't have a version.");
         return CaroNull;
@@ -42,14 +42,14 @@ NATIVE(main_version, "", "version", {
     return CaroObj(copyString(vm->appVersion));
 });
 
-NATIVE(main_caro_version, "", "caro_version", {
+nFunc(main_caro_version, "", "caro_version", {
     return CaroObj(copyString(VERSION));
 });
-NATIVE(main_caro_version_date, "", "caro_version_date", {
+nFunc(main_caro_version_date, "", "caro_version_date", {
     return CaroObj(copyString(VERSION_DATE));
 });
 
-NATIVE(main_platform, "", "platform", {
+nFunc(main_platform, "", "platform", {
     params({});
 
     string platform;
@@ -76,7 +76,7 @@ NATIVE(main_platform, "", "platform", {
 
 });
 
-NATIVE(main_print, "", "print", {
+nFunc(main_print, "", "print", {
     params({
         {{},          true },
         {{TYPE_BOOL}, false}
@@ -103,7 +103,7 @@ NATIVE(main_print, "", "print", {
 
 });
 
-NATIVE(main_input, "", "input", {
+nFunc(main_input, "", "input", {
     params({
         {{TYPE_OBJ}, false},
     });
@@ -117,7 +117,7 @@ NATIVE(main_input, "", "input", {
 
 });
 
-NATIVE(main_log, "", "log", {
+nFunc(main_log, "", "log", {
     params({
         {{TYPE_OBJ},  true },
         {{},          true },
@@ -173,7 +173,7 @@ NATIVE(main_log, "", "log", {
 
 });
 
-NATIVE(main_sh, "", "sh", {
+nFunc(main_sh, "", "sh", {
     params({
         {{TYPE_OBJ},  true },
         {{TYPE_BOOL}, false}
@@ -205,7 +205,7 @@ NATIVE(main_sh, "", "sh", {
     #endif
 
 });
-NATIVE(main_js, "", "js", {
+nFunc(main_js, "", "js", {
     params({
         {{TYPE_OBJ}, true}
     });
@@ -220,14 +220,14 @@ NATIVE(main_js, "", "js", {
 
 });
 
-NATIVE(main_eval, "", "eval", {
+nFunc(main_eval, "", "eval", {
     params({
         {{TYPE_OBJ}, true}
     });
     return vm->eval(asString(args[0])->str);
 });
 
-NATIVE(main_wait, "", "wait", {
+nFunc(main_wait, "", "wait", {
     params({
         {ANY_NUMERIC, true}
     });
@@ -235,7 +235,7 @@ NATIVE(main_wait, "", "wait", {
     return CaroNull;
 
 });
-NATIVE(main_wait_ms, "", "wait_ms", {
+nFunc(main_wait_ms, "", "wait_ms", {
     params({
         {ANY_NUMERIC, true}
     });
@@ -243,14 +243,14 @@ NATIVE(main_wait_ms, "", "wait_ms", {
     return CaroNull;
 });
 
-NATIVE(main_exit, "", "exit", {
+nFunc(main_exit, "", "exit", {
     params({
         {{TYPE_BOOL}, false}
     });
     exit(args.size() == 0 || isFalsy(args[0])? 0: 1);
 });
 
-NATIVE(main_clock, "", "clock", {
+nFunc(main_clock, "", "clock", {
     params({});
     return CaroDouble((double)clock() / CLOCKS_PER_SEC);
 });
@@ -259,7 +259,7 @@ NATIVE(main_clock, "", "clock", {
 
 // basic math
 
-NATIVE(main_abs, "", "abs", {
+nFunc(main_abs, "", "abs", {
     params({
         {ANY_NUMERIC, true}
     });
@@ -278,7 +278,7 @@ NATIVE(main_abs, "", "abs", {
 });
 
 #define NATIVE_ROUNDING(name)\
-    NATIVE(main_##name, "", #name, {\
+    nFunc(main_##name, "", #name, {\
         params({\
             {ANY_NUMERIC, true}\
         });\
@@ -290,7 +290,7 @@ NATIVE_ROUNDING(ceil);
 NATIVE_ROUNDING(round);
 
 #define NATIVE_ARRAY_STAT(name, ...)\
-    NATIVE(main_##name, "", #name, {\
+    nFunc(main_##name, "", #name, {\
         params({\
             {{TYPE_OBJ}, true}\
         });\
