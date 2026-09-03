@@ -1,0 +1,17 @@
+
+use fs;
+
+fs.create_folder("fs_test");
+print(fs.exists("fs_test"));    // true
+print(fs.type("fs_test"));      // folder
+
+fs.write("fs_test/hello.txt", "Hello, world!");
+print(fs.exists("fs_test/hello.txt"));    // true
+print(fs.type("fs_test/hello.txt"));      // file
+print(fs.read("fs_test/hello.txt"));      // Hello, world!
+
+fs.delete("fs_test/hello.txt");
+print(fs.exists("fs_test/hello.txt"));    // false
+
+fs.delete("fs_test");
+print(fs.exists("fs_test"));    // false

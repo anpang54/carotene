@@ -77,6 +77,8 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
     // can't be named p() cuz else it'll eat up functions that start with p
     // variadic so that the braced parameter list can be passed in as one argument
 
+#define STR(index)  printValue(args[index])
+
 #define ANY_NUMERIC {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE}
 
 #define NATIVE(cppName, module, caroName, ...)\
@@ -88,6 +90,7 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
 #include "main.hpp"
 
+#include "fs.hpp"
 #include "hash.hpp"
 #include "math.hpp"
 #include "random.hpp"
