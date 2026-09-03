@@ -49,6 +49,33 @@ NATIVE(main_caro_version_date, "", "caro_version_date", {
     return CaroObj(copyString(VERSION_DATE));
 });
 
+NATIVE(main_platform, "", "platform", {
+    params({});
+
+    string platform;
+
+    #if defined(__EMSCRIPTEN__)
+        // emscripten larps as unix, which yeah it doesn't affect any of the real OSes below but better safe than sorry
+        platform = "web";
+    #elif defined(_WIN32)
+        platform = "windows";
+    #elif defined(__APPLE__)
+        platform = "macos";
+    #elif defined(__linux__)
+        platform = "linux";
+    #elif defined(__FreeBSD__)
+        platform = "freebsd";
+    #elif defined(__HAIKU__)
+        platform = "haiku";
+    #else
+        platform = "unknown";
+    #endif
+        // wow, zero harmony between how each platform defines its macro, how beautiful
+        
+    return CaroObj(copyString(platform));
+
+});
+
 NATIVE(main_print, "", "print", {
     params({
         {{},          true },
