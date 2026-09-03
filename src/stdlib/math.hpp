@@ -46,6 +46,35 @@ nMath(asin);
 nMath(acos);
 nMath(atan);
 
+nArrayStatInt(gcd, {
+    uint64_t result = 0;
+    for(int64_t value: values) {
+        result = std::gcd(result, value);
+    }
+    return (int64_t)result;
+});
+nArrayStatInt(lcm, {
+    uint64_t result = 1;
+    for(int64_t value: values) {
+        if(value == 0) return 0;
+        uint64_t magnitude = value;
+        result = result / std::gcd(result, magnitude) * magnitude;
+    }
+    return (int64_t)result;
+});
+
+nFunc(math_to_degrees, "math", "to_degrees", {
+    params({
+        {ANY_NUMERIC, true}
+    });
+    return toFloat(args[0], [](auto&& a) { return decltype(a)(a) * (180.0 / numbers::pi); });
+});
+nFunc(math_to_radians, "math", "to_radians", {
+    params({
+        {ANY_NUMERIC, true}
+    });
+    return toFloat(args[0], [](auto&& a) { return decltype(a)(a) * (numbers::pi / 180.0); });
+});
 
 // constants
 

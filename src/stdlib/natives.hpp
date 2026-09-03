@@ -66,6 +66,12 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
 // macros to help shorten stuff
 
+#define nFunc(cppName, module, caroName, ...)\
+    DefineNativeFunction nFunc_##cppName (module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
+    // every native function has the same C++ function signature soo
+#define nConst(cppName, module, caroName, ...)\
+    DefineNativeConstant nConst_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, []() -> Value __VA_ARGS__)
+
 #define params(...)\
     do{\
         string checkResult = checkParameters(__VA_ARGS__, args);\
@@ -81,11 +87,38 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
 #define ANY_NUMERIC {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE}
 
-#define nFunc(cppName, module, caroName, ...)\
-    DefineNativeFunction nFunc_##cppName (module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
-    // every native function has the same C++ function signature soo
-#define nConst(cppName, module, caroName, ...)\
-    DefineNativeConstant nConst_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, []() -> Value __VA_ARGS__)
+#define nArrayStat(moduleRaw, moduleString, name, numType, caroType, allowed, allowedName, ...)\
+    nFunc(moduleRaw##name, moduleString, #name, {\
+        params({\
+            {{TYPE_OBJ}, true}\
+        });\
+        \
+        vector<Value>& data = asArray(args[0])->data;\
+        \
+        if(data.empty()) {\
+            vm->runtimeError("That array is empty.");\
+            return CaroNull;\
+        }\
+        \
+        vector<numType> values;\
+        values.reserve(data.size());\
+        for(const Value& number: data) {\
+            if(!allowed(number.type)) {\
+                vm->runtimeError("Every item should be " allowedName ", but there's %s.", typeofValue(number).c_str());\
+                return CaroNull;\
+            }\
+            values.push_back(asNumberTo<numType>(number));\
+        }\
+        \
+        auto stat = [](vector<numType>& values) -> numType __VA_ARGS__;\
+        return caroType(stat(values));\
+        \
+    })
+
+#define nArrayStatAny(name, ...)\
+    nArrayStat(     , ""    , name, double,  CaroDouble, isNumeric, "numeric",    __VA_ARGS__)
+#define nArrayStatInt(name, ...)\
+    nArrayStat(math_, "math", name, int64_t, CaroLong,   isInt,     "an integer", __VA_ARGS__)
 
 
 // include all the libraries
