@@ -277,7 +277,7 @@ nFunc(main_abs, "", "abs", {
 
 });
 
-#define NATIVE_ROUNDING(name)\
+#define nRounding(name)\
     nFunc(main_##name, "", #name, {\
         params({\
             {ANY_NUMERIC, true}\
@@ -285,48 +285,20 @@ nFunc(main_abs, "", "abs", {
         return mapFloat(args[0], [](auto&&... a) { return std::name(decltype(a)(a)...); });\
     })
 
-NATIVE_ROUNDING(floor);
-NATIVE_ROUNDING(ceil);
-NATIVE_ROUNDING(round);
+nRounding(floor);
+nRounding(ceil);
+nRounding(round);
 
-#define NATIVE_ARRAY_STAT(name, ...)\
-    nFunc(main_##name, "", #name, {\
-        params({\
-            {{TYPE_OBJ}, true}\
-        });\
-        \
-        vector<Value>& data = asArray(args[0])->data;\
-        \
-        if(data.empty()) {\
-            vm->runtimeError("That array is empty.");\
-            return CaroNull;\
-        }\
-        \
-        vector<double> values;\
-        values.reserve(data.size());\
-        for(const Value& number: data) {\
-            if(!isNumeric(number.type)) {\
-                vm->runtimeError("Every item should be numeric, but there's %s.", typeofValue(number).c_str());\
-                return CaroNull;\
-            }\
-            values.push_back(asNumberTo<double>(number));\
-        }\
-        \
-        auto stat = [](vector<double>& values) -> double __VA_ARGS__;\
-        return CaroDouble(stat(values));\
-        \
-    })
-
-NATIVE_ARRAY_STAT(min, {
+nArrayStatAny(min, {
     return ranges::min(values);
 });
-NATIVE_ARRAY_STAT(max, {
+nArrayStatAny(max, {
     return ranges::max(values);
 });
-NATIVE_ARRAY_STAT(mean, {
+nArrayStatAny(mean, {
     return std::accumulate(values.begin(), values.end(), 0.0) / values.size();
 });
-NATIVE_ARRAY_STAT(median, {
+nArrayStatAny(median, {
     ranges::sort(values);
     size_t middle = values.size() / 2;
     if(values.size() % 2 == 0) {    // even number of elements, so take the average
@@ -334,4 +306,6 @@ NATIVE_ARRAY_STAT(median, {
     }
     return values[middle];
 });
+
+
 
