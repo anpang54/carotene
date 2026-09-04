@@ -1,0 +1,30 @@
+
+i = 0;
+
+forever{
+    print(i);
+    i = i + 1;
+    if(i >= 3) {
+        break;
+    }
+}
+    // 0
+    // 1
+    // 2
+
+i = 0;
+
+forever{
+    forever{
+        print(i);
+        i = i + 1;
+        if(i >= 4) {
+            break 2;
+        }
+    }
+}
+    // 0
+    // 1
+    // 2
+    // 3
+

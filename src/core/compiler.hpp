@@ -55,9 +55,17 @@ enum FunctionType{
     TYPE_SCRIPT
 };
 
+struct LoopState{
+    int start;
+    int scopeDepth;
+    vector<int> breaks;
+    vector<int> continues;
+};
+
 struct FunctionState{
     ObjFunction* function;
     FunctionType type;
+    vector<LoopState> loops;
     vector<Local> locals;
     int localCount;
     int scopeDepth;
@@ -647,6 +655,10 @@ class Compiler{
                 whileStatement();
             } else if(match(TOKEN_FOREVER)) {
                 foreverStatement();
+            } else if(match(TOKEN_BREAK)) {
+                breakStatement();
+            } else if(match(TOKEN_CONTINUE)) {
+                continueStatement();
             } else if(match(TOKEN_LEFT_BRACE)) {
                 beginScope();
                 block();
@@ -702,6 +714,124 @@ class Compiler{
             }
 
             consume(TOKEN_SEMICOLON, "Expect ';' after module name.");
+
+        }
+
+
+        // loops
+
+        LoopState& curLoop() { return cur().loops.back(); }
+        LoopState& loopAt(int depth) {
+            return cur().loops[cur().loops.size() - depth];
+        }
+
+        void beginLoop(int start) {
+            cur().loops.push_back({start, cur().scopeDepth, {}, {}});
+        }
+        void endLoop() {
+            cur().loops.pop_back();
+        }
+
+        void patchBreaks() {
+            for(int jump: curLoop().breaks) patchJump(jump);
+        }
+        void patchContinues() {
+            for(int jump: curLoop().continues) patchJump(jump);
+        }
+
+        void popLoopLocals(LoopState& loop) {
+            for(int i = cur().localCount - 1; i >= 0 && cur().locals[i].depth > loop.scopeDepth; --i) {
+                emitByte(OP_POP);
+            }
+        }
+
+        int parseLoopDepth(string keyword, bool allowAll) {
+            
+            // check loop count
+            int loopCount = cur().loops.size();
+            string tooDeep = 
+                (loopCount == 1? "There is only 1 loop": "There are only " + to_string(loopCount) + " loops")
+                + " here to " + keyword + ".";
+
+            if(check(TOKEN_SEMICOLON)) return 1;
+
+            // check the thing that goes after
+            if(check(TOKEN_IDENTIFIER) && this->current.start == "all") {
+                if(!allowAll) {
+                    errorAtCurrent("'all' can only go after 'break'.");
+                    return 1;
+                }
+                advance();
+                return loopCount;
+            }
+            if(!check(TOKEN_NUMBER)) {
+                errorAtCurrent(
+                    allowAll? "Expect a number, 'all', or ';' after '" + keyword + "'.": "Expect a number or ';' after '" + keyword + "'."
+                );
+                return 1;
+            }
+            advance();
+
+            const string& text = this->previous.start;
+            for(char c: text) {
+                if(!isDigit(c)) {
+                    error("Expect a number or 'all' after '" + keyword + "'.");
+                    return 1;
+                }
+            }
+
+            if(text.length() > 9) {
+                // 1. can't pass to stoi()
+                // 2. you absolutely do not have 100,000,000 loops
+                error(tooDeep);
+                return 1;
+            }
+
+            int depth = std::stoi(text);
+            if(depth < 1) {
+                error("'" + keyword + "' needs at least 1 loop.");
+                return 1;
+            }
+            if(depth > loopCount) {
+                error(tooDeep);
+                return 1;
+            }
+
+            return depth;
+
+        }
+
+        void breakStatement() {
+
+            bool notInLoop = cur().loops.empty();
+            if(notInLoop) error("'break' can only go inside a loop.");
+
+            int depth = parseLoopDepth("break", true);
+            consume(TOKEN_SEMICOLON, "Expect ';' after 'break'.");
+            if(notInLoop) return;
+
+            LoopState& loop = loopAt(depth);
+            popLoopLocals(loop);
+            loop.breaks.push_back(emitJump(OP_JUMP));
+
+        }
+
+        void continueStatement() {
+
+            bool notInLoop = cur().loops.empty();
+            if(notInLoop) error("'continue' can only go inside a loop.");
+
+            int depth = parseLoopDepth("continue", false);
+            consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
+            if(notInLoop) return;
+
+            LoopState& loop = loopAt(depth);
+            popLoopLocals(loop);
+            if(loop.start != -1) {
+                emitLoop(loop.start);
+            } else {
+                loop.continues.push_back(emitJump(OP_JUMP));
+            }
 
         }
 
@@ -783,9 +913,11 @@ class Compiler{
             }
 
             int bodyStart = currentChunk()->code.size();
+            beginLoop(isForLoop? -1: loopStart);
             statement();
 
             if(isForLoop) {
+                patchContinues();
                 emitForLoop(counterSlot, limitSlot, stepConstant, bodyStart);
             } else {
                 emitLoop(loopStart);
@@ -795,6 +927,9 @@ class Compiler{
                 patchJump(exitJump);
                 if(!exitFused) emitByte(OP_POP);
             }
+
+            patchBreaks();
+            endLoop();
 
             endScope();
 
@@ -829,11 +964,16 @@ class Compiler{
 
             // stuff inside the block
             int bodyStart = currentChunk()->code.size();
+            beginLoop(-1);
             statement();
 
             // increment counter
+            patchContinues();
             emitForLoop(counterSlot, countSlot, makeConstant(CaroInt(1)), bodyStart);
             patchJump(exitJump);
+
+            patchBreaks();
+            endLoop();
 
             endScope();
 
@@ -895,11 +1035,16 @@ class Compiler{
 
             ConditionJump exitJump = emitConditionJump();
             if(!exitJump.fused) emitByte(OP_POP);
+
+            beginLoop(loopStart);
             statement();
             emitLoop(loopStart);
 
             patchJump(exitJump.offset);
             if(!exitJump.fused) emitByte(OP_POP);
+
+            patchBreaks();
+            endLoop();
 
         }
 
@@ -923,14 +1068,19 @@ class Compiler{
             int loopStart = currentChunk()->code.size();
 
             // stuff inside the block
+            beginLoop(-1);
             statement();
 
             // increment counter
+            patchContinues();
             emitBytes(OP_INCREMENT_LOCAL, counterSlot);
             emitByte(makeConstant(CaroInt(1)));
 
             // loop
             emitLoop(loopStart);
+
+            patchBreaks();
+            endLoop();
 
             endScope();
 
@@ -1093,6 +1243,8 @@ class Compiler{
                     case TOKEN_REPEAT:
                     case TOKEN_IF:
                     case TOKEN_WHILE:
+                    case TOKEN_BREAK:
+                    case TOKEN_CONTINUE:
                     case TOKEN_TYPEOF:
                     case TOKEN_SIZEOF:
                     case TOKEN_RETURN:
@@ -1386,6 +1538,8 @@ inline ParseRule rules[] = {
     [TOKEN_WHILE]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_REPEAT]        = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_FOREVER]       = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_BREAK]         = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_CONTINUE]      = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_TRUE]          = { &Compiler::parseLiteral, NULL,                     PREC_NONE       },
     [TOKEN_FALSE]         = { &Compiler::parseLiteral, NULL,                     PREC_NONE       },
     [TOKEN_NULL]          = { &Compiler::parseLiteral, NULL,                     PREC_NONE       },
