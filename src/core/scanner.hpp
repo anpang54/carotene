@@ -37,6 +37,7 @@ typedef enum {
     TOKEN_CLASS, TOKEN_THIS, TOKEN_SUPER,
     TOKEN_IF, TOKEN_ELSE,
     TOKEN_FOR, TOKEN_WHILE, TOKEN_REPEAT, TOKEN_FOREVER,
+    TOKEN_BREAK, TOKEN_CONTINUE,
     TOKEN_TRUE, TOKEN_FALSE,
     TOKEN_NULL, TOKEN_SMTH,
     TOKEN_TYPEOF, TOKEN_SIZEOF,
@@ -145,9 +146,16 @@ class Scanner{
 
              // case 'a':
 
-             // case 'b':
+                case 'b': return checkKeyword(1, 4, "reak", TOKEN_BREAK);
 
-                case 'c': return checkKeyword(1, 4, "lass", TOKEN_CLASS);
+                case 'c':
+                    if(this->current - this->start > 1) {
+                        switch(this->source[this->start + 1]) {
+                            case 'l': return checkKeyword(2, 3, "ass", TOKEN_CLASS);
+                            case 'o': return checkKeyword(2, 6, "ntinue", TOKEN_CONTINUE);
+                        }
+                    }
+                    break;
 
              // case 'd':
 
