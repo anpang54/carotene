@@ -572,11 +572,34 @@ class Compiler{
         void makeSubscript(bool canAssign) {
             expression();
             consume(TOKEN_RIGHT_SQUARE, "Expect ']' after index.");
+            int compound = compoundOperator(this->current.type);
             if(canAssign && match(TOKEN_EQUAL)) {
                 expression();
                 emitByte(OP_SET_INDEX);
+            } else if(canAssign && compound != -1) {
+                advance();
+                emitByte(OP_DUPLICATE_INDEX);
+                emitByte(OP_GET_INDEX);
+                expression();
+                emitByte(compound);
+                emitByte(OP_SET_INDEX);
             } else {
                 emitByte(OP_GET_INDEX);
+            }
+        }
+
+
+        // compound assignment
+
+        int compoundOperator(TokenType type) {
+            switch(type) {
+                case TOKEN_PLUS_EQUAL:    return OP_ADD;
+                case TOKEN_MINUS_EQUAL:   return OP_SUBTRACT;
+                case TOKEN_STAR_EQUAL:    return OP_MULTIPLY;
+                case TOKEN_SLASH_EQUAL:   return OP_DIVIDE;
+                case TOKEN_PERCENT_EQUAL: return OP_MODULO;
+                case TOKEN_CARET_EQUAL:   return OP_EXPONENTIATE;
+                default:                  return -1;
             }
         }
 
@@ -605,7 +628,8 @@ class Compiler{
                 (this->*infixRule)(canAssign);
             }
 
-            if(canAssign && match(TOKEN_EQUAL)) {
+            if(canAssign && (check(TOKEN_EQUAL) || compoundOperator(this->current.type) != -1)) {
+                advance();
                 error("Invalid assignment target.");
             }
 
@@ -1394,6 +1418,7 @@ class Compiler{
 
             uint8_t getOp, setOp;
             int arg;
+            int compound = compoundOperator(this->current.type);
 
             if(name.start[0] == '$' || name.start[0] == '#') {
                 arg = identifierConstant(&name);
@@ -1405,7 +1430,7 @@ class Compiler{
                     getOp = OP_GET_LOCAL;
                     setOp = OP_SET_LOCAL;
                 } else {
-                    if(canAssign && check(TOKEN_EQUAL)) {
+                    if(canAssign && (check(TOKEN_EQUAL) || compound != -1)) {
                         error("Undefined variable '" + name.start + "'.");
                     }
                     arg = identifierConstant(&name);
@@ -1416,6 +1441,12 @@ class Compiler{
 
             if(canAssign && match(TOKEN_EQUAL)) {
                 expression();
+                emitBytes(setOp, (uint8_t)arg);
+            } else if(canAssign && compound != -1) {
+                advance();
+                emitBytes(getOp, (uint8_t)arg);
+                expression();
+                emitByte(compound);
                 emitBytes(setOp, (uint8_t)arg);
             } else {
                 emitBytes(getOp, (uint8_t)arg);
@@ -1495,16 +1526,22 @@ inline ParseRule rules[] = {
     [TOKEN_COLON]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_SEMICOLON]     = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_QUESTION]      = { NULL,                    &Compiler::makeTernary,   PREC_TERNARY    },
-    [TOKEN_PLUS]          = { NULL,                    &Compiler::makeBinary,    PREC_TERM       },
-    [TOKEN_MINUS]         = { &Compiler::makeUnary,    &Compiler::makeBinary,    PREC_TERM       },
-    [TOKEN_STAR]          = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
-    [TOKEN_SLASH]         = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
-    [TOKEN_PERCENT]       = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
-    [TOKEN_CARET]         = { NULL,                    &Compiler::makeBinary,    PREC_POWER      },
     [TOKEN_AMPERSAND]     = { NULL,                    &Compiler::makeAnd,       PREC_AND        },
     [TOKEN_PIPE]          = { NULL,                    &Compiler::makeOr,        PREC_OR         },
 
     // 1 or 2 chars
+    [TOKEN_PLUS]          = { NULL,                    &Compiler::makeBinary,    PREC_TERM       },
+    [TOKEN_PLUS_EQUAL]    = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_MINUS]         = { &Compiler::makeUnary,    &Compiler::makeBinary,    PREC_TERM       },
+    [TOKEN_MINUS_EQUAL]   = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_STAR]          = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
+    [TOKEN_STAR_EQUAL]    = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_SLASH]         = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
+    [TOKEN_SLASH_EQUAL]   = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_PERCENT]       = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
+    [TOKEN_PERCENT_EQUAL] = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_CARET]         = { NULL,                    &Compiler::makeBinary,    PREC_POWER      },
+    [TOKEN_CARET_EQUAL]   = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_BANG]          = { &Compiler::makeUnary,    NULL,                     PREC_NONE       },
     [TOKEN_BANG_EQUAL]    = { NULL,                    &Compiler::makeBinary,    PREC_EQUALITY   },
     [TOKEN_EQUAL]         = { NULL,                    NULL,                     PREC_NONE       },
