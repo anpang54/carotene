@@ -62,6 +62,7 @@ enum OpCode{
     OP_MAKE_DICT,
     OP_GET_INDEX,
     OP_SET_INDEX,
+    OP_DUPLICATE_INDEX,
 
     // functions
     OP_CALL,
@@ -257,7 +258,8 @@ class Chunk{
                     return simpleInstruction("OP_GET_INDEX", offset);
                 case OP_SET_INDEX:
                     return simpleInstruction("OP_SET_INDEX", offset);
-
+                case OP_DUPLICATE_INDEX:
+                    return simpleInstruction("OP_DUPLICATE_INDEX", offset);
 
                 case OP_TYPEOF:
                     return simpleInstruction("OP_TYPEOF", offset);

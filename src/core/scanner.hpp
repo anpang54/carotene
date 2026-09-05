@@ -17,10 +17,15 @@ typedef enum {
     TOKEN_LEFT_BRACE,  TOKEN_RIGHT_BRACE,
     TOKEN_DOT, TOKEN_COMMA, TOKEN_COLON, TOKEN_SEMICOLON,
     TOKEN_QUESTION,
-    TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_SLASH, TOKEN_PERCENT, TOKEN_CARET,
     TOKEN_AMPERSAND, TOKEN_PIPE,
 
     // 1 or 2 chars
+    TOKEN_PLUS,    TOKEN_PLUS_EQUAL,
+    TOKEN_MINUS,   TOKEN_MINUS_EQUAL,
+    TOKEN_STAR,    TOKEN_STAR_EQUAL,
+    TOKEN_SLASH,   TOKEN_SLASH_EQUAL,
+    TOKEN_PERCENT, TOKEN_PERCENT_EQUAL,
+    TOKEN_CARET,   TOKEN_CARET_EQUAL,
     TOKEN_BANG,    TOKEN_BANG_EQUAL,
     TOKEN_EQUAL,   TOKEN_EQUAL_EQUAL,
     TOKEN_LESS,    TOKEN_LESS_EQUAL,
@@ -385,12 +390,6 @@ class Scanner{
                 case ':': return makeToken(TOKEN_COLON);
                 case ';': return makeToken(TOKEN_SEMICOLON);
                 case '?': return makeToken(TOKEN_QUESTION);
-                case '+': return makeToken(TOKEN_PLUS);
-                case '-': return makeToken(TOKEN_MINUS);
-                case '*': return makeToken(TOKEN_STAR);
-                case '/': return makeToken(TOKEN_SLASH);
-                case '%': return makeToken(TOKEN_PERCENT);
-                case '^': return makeToken(TOKEN_CARET);
                 case '&': return makeToken(TOKEN_AMPERSAND);
                 case '|': return makeToken(TOKEN_PIPE);
                 case '$': {
@@ -403,6 +402,12 @@ class Scanner{
                 }
 
                 // 1 or 2 chars
+                case '+': return makeToken(match('=')? TOKEN_PLUS_EQUAL   : TOKEN_PLUS);
+                case '-': return makeToken(match('=')? TOKEN_MINUS_EQUAL  : TOKEN_MINUS);
+                case '*': return makeToken(match('=')? TOKEN_STAR_EQUAL   : TOKEN_STAR);
+                case '/': return makeToken(match('=')? TOKEN_SLASH_EQUAL  : TOKEN_SLASH);
+                case '%': return makeToken(match('=')? TOKEN_PERCENT_EQUAL: TOKEN_PERCENT);
+                case '^': return makeToken(match('=')? TOKEN_CARET_EQUAL  : TOKEN_CARET);
                 case '!': return makeToken(match('=')? TOKEN_BANG_EQUAL   : TOKEN_BANG);
                 case '=': return makeToken(match('=')? TOKEN_EQUAL_EQUAL  : TOKEN_EQUAL);
                 case '<': {

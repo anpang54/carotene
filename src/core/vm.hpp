@@ -717,6 +717,12 @@ class VM{
                         break;
                     }
 
+                    case OP_DUPLICATE_INDEX: {
+                        push(peek(1));    // collection
+                        push(peek(1));    // index
+                        break;
+                    }
+
                     case OP_GET_INDEX: {
 
                         if(isString(peek(1))) {
