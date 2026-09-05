@@ -5,6 +5,10 @@
 // INCLUDES
 
 #include <string_view>
+#include <limits>
+#include <stdexcept>
+
+#include <cstring>
 
 #include "common.hpp"
 #include "scanner.hpp"
@@ -69,6 +73,49 @@ struct VariableTarget{
     uint8_t arg;
 };
 
+struct ConstantKey{
+    ValueType type;
+    uint64_t  payload = 0;
+    uint32_t  z       = 0;
+    Obj*      obj     = nullptr;
+    string    text;
+    bool      fString = false;
+    bool operator==(const ConstantKey& other) const = default;
+};
+
+ConstantKey makeConstantKey(const Value& value) {
+
+    ConstantKey key;
+    key.type = value.type;
+
+    if(value.type == TYPE_OBJ) {
+        if(value.as.obj->type == OBJ_STRING) {
+            key.text    = asString(value)->str;
+            key.fString = asString(value)->fString;
+        } else {
+            key.obj = value.as.obj;
+        }
+    } else {
+        memcpy(&key.payload, &value.as, sizeof(key.payload));
+        memcpy(&key.z,       &value.z,  sizeof(key.z));
+    }
+
+    return key;
+
+}
+
+struct ConstantKeyHash{
+    size_t operator()(const ConstantKey& key) const {
+        size_t h = hash<int>{}((int)key.type);
+        h = h * 31 + hash<uint64_t>{}(key.payload);
+        h = h * 31 + hash<uint32_t>{}(key.z);
+        h = h * 31 + hash<Obj*>{}(key.obj);
+        h = h * 31 + hash<string>{}(key.text);
+        h = h * 31 + (size_t)key.fString;
+        return h;
+    }
+};
+
 struct FunctionState{
     ObjFunction* function;
     FunctionType type;
@@ -76,6 +123,7 @@ struct FunctionState{
     vector<Local> locals;
     int localCount;
     int scopeDepth;
+    unordered_map<ConstantKey, int, ConstantKeyHash> constants;
 };
 
 
@@ -348,12 +396,20 @@ class Compiler{
         }
 
         uint8_t makeConstant(Value value) {
+
+            ConstantKey key = makeConstantKey(value);
+            auto found = cur().constants.find(key);
+            if(found != cur().constants.end()) return (uint8_t)found->second;
+
             int constant = currentChunk()->addConstant(value);
             if(constant > UINT8_MAX) {
                 error("Too many constants in one chunk.");
                 return 0;
             }
+
+            cur().constants.emplace(std::move(key), constant);
             return (uint8_t)constant;
+
         }
 
         void emitComparison(uint8_t op) {
@@ -406,6 +462,52 @@ class Compiler{
 
         }
         
+        void emitIntLiteral(const string& text, int base, ValueType type, uint64_t limit) {
+
+            uint64_t whole;
+
+            try{
+                whole = std::stoull(text, nullptr, base);
+            } catch(const std::out_of_range&) {
+                error("This doesn't fit in " + typeofType(type) + ".");
+                return;
+            } catch(...) {
+                error("This isn't a valid " + typeofType(type) + ".");
+                return;
+            }
+
+            if(whole > limit) {
+                error("This doesn't fit in " + typeofType(type) + ".");
+                return;
+            }
+
+            emitConstant(CaroNumber(type, whole));
+
+        }
+
+        void emitFloatLiteral(const string& text, ValueType type) {
+
+            double real;
+
+            try{
+                real = std::stod(text);
+            } catch(const std::out_of_range&) {
+                error("This doesn't fit in " + typeofType(type) + ".");
+                return;
+            } catch(...) {
+                error("This isn't a valid " + typeofType(type) + ".");
+                return;
+            }
+
+            if(type == TYPE_FLOAT && std::fabs(real) > (double)std::numeric_limits<float>::max()) {
+                error("This doesn't fit in float.");
+                return;
+            }
+
+            emitConstant(CaroNumber(type, real));
+
+        }
+
         void parseNumber(bool canAssign) {
 
             const string& text = this->previous.start;
@@ -418,16 +520,14 @@ class Compiler{
 
                 switch(text.back()) {
                     case 'u':
-                        emitConstant(CaroNumber(TYPE_UINT, std::stoul(digits, nullptr, base)));
+                        emitIntLiteral(digits, base, TYPE_UINT, UINT32_MAX);
                         break;
                     case 'l':
-                        if(text[text.length() - 2] == 'u') {
-                            emitConstant(CaroNumber(TYPE_ULONG, std::stoull(digits, nullptr, base)));
-                        }
-                        else emitConstant(CaroNumber(TYPE_LONG, std::stoll(digits, nullptr, base)));
+                        if(text[text.length() - 2] == 'u') emitIntLiteral(digits, base, TYPE_ULONG, UINT64_MAX);
+                        else                               emitIntLiteral(digits, base, TYPE_LONG,   INT64_MAX);
                         break;
                     default:
-                        emitConstant(CaroNumber(TYPE_INT, std::stoll(digits, nullptr, base)));
+                        emitIntLiteral(digits, base, TYPE_INT, INT32_MAX);
                 }
 
                 return;
@@ -436,31 +536,28 @@ class Compiler{
             // decimal base, can be float
             switch(text.back()) {
                 case 'b':
-                    emitConstant(CaroNumber(TYPE_BYTE, std::stoul(text)));
-                                                    // why does C++ not have a std::stou()???
+                    emitIntLiteral(text, 10, TYPE_BYTE, UINT8_MAX);
                     break;
                 case 'u':
-                    emitConstant(CaroNumber(TYPE_UINT, std::stoul(text)));
+                    emitIntLiteral(text, 10, TYPE_UINT, UINT32_MAX);
                     break;
                 case 'l':
-                    if(text[text.length() - 2] == 'u') {
-                        emitConstant(CaroNumber(TYPE_ULONG, std::stoull(text)));
-                    }
-                    else emitConstant(CaroNumber(TYPE_LONG, std::stoll(text)));
+                    if(text[text.length() - 2] == 'u') emitIntLiteral(text, 10, TYPE_ULONG, UINT64_MAX);
+                    else                               emitIntLiteral(text, 10, TYPE_LONG,   INT64_MAX);
                     break;
                 case 'f':
-                    emitConstant(CaroNumber(TYPE_FLOAT, std::stof(text)));
+                    emitFloatLiteral(text, TYPE_FLOAT);
                     break;
                 case 'd':
-                    emitConstant(CaroNumber(TYPE_DOUBLE, std::stod(text)));
+                    emitFloatLiteral(text, TYPE_DOUBLE);
                     break;
                 default:
                     if(text.find('.') != string::npos) {
-                        emitConstant(CaroNumber(TYPE_DOUBLE, std::stod(text)));
+                        emitFloatLiteral(text, TYPE_DOUBLE);
                         // emitting a float would be more consistent with the fact that ints become 32 bit ints
                         // but in C++ something like this becomes a double, and floats can lose precision
                     } else {
-                        emitConstant(CaroNumber(TYPE_INT, std::stod(text)));
+                        emitIntLiteral(text, 10, TYPE_INT, INT32_MAX);
                     }
             }
 
@@ -1289,7 +1386,10 @@ class Compiler{
         }
 
         void addLocal(Token name) {
-            // clox has a limit on the number of locals here but we don't because locals is a vector instead of an array
+            if(cur().localCount >= FRAME_SLOTS) {
+                error("Too many local variables in function.");
+                return;
+            }
             cur().locals.push_back({name, -1});
             ++cur().localCount;
         }

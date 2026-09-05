@@ -28,10 +28,6 @@ enum InterpretResult{
     INTERPRET_RUNTIME_ERROR
 };
 
-#define FRAMES_MAX  64    // there is a limit here to stop infinite recursion
-#define FRAME_SLOTS 256
-#define STACK_MAX   (FRAMES_MAX * FRAME_SLOTS)
-
 struct CallFrame{
     ObjFunction* function;
     uint8_t* ip;
@@ -264,6 +260,7 @@ class VM{
                     // the only operation that's different C++ depending on the type
                     // has to be a constexpr cuz a % b won't compile otherwise
                     if constexpr(std::is_floating_point_v<T>) result = num(std::fmod(a, b));
+                    else if constexpr(std::is_signed_v<T>)    result = num(b == -1? 0: a % b);
                     else                                      result = num(a % b);
                     break;
                 case OP_EXPONENTIATE:  result = num(std::pow(a, b));                break;
@@ -452,6 +449,7 @@ class VM{
                         runtimeError("Strings can only be divided a positive amount of times.");
                         return INTERPRET_RUNTIME_ERROR;
                     }
+                    GCPause pause;
                     int eachPartLength = strA.length() / multiplier;
                     vector<Value> result;
                     result.reserve(multiplier);
@@ -1039,28 +1037,18 @@ class VM{
                     }
 
                     // fused comparison + jump
-                    #define jumpUnless(op) { \
+                    #define jumpUnless(comparison) { \
                         uint16_t offset = READ_SHORT(); \
-                        if(!isNumeric(peek(0).type) || !isNumeric(peek(1).type)) { \
-                            SYNC(); \
-                            runtimeError("Operands must be numbers."); \
-                            return INTERPRET_RUNTIME_ERROR; \
-                        } \
-                        if(peek(0).type != peek(1).type) { \
-                            SYNC(); \
-                            runtimeError("Arithmetic operations between numbers of different types currently aren't supported yet."); \
-                            return INTERPRET_RUNTIME_ERROR; \
-                        } \
-                        int b = asNumberTo<int>(pop()); \
-                        int a = asNumberTo<int>(pop()); \
-                        if(!(a op b)) ip += offset; \
+                        SYNC(); \
+                        if(numberBinaryOperation(comparison) != INTERPRET_OK) return INTERPRET_RUNTIME_ERROR; \
+                        if(isFalsy(pop())) ip += offset; \
                         break; \
                     }
 
-                    case OP_JUMP_IF_NOT_LESS:          jumpUnless(<)
-                    case OP_JUMP_IF_NOT_LESS_EQUAL:    jumpUnless(<=)
-                    case OP_JUMP_IF_NOT_GREATER:       jumpUnless(>)
-                    case OP_JUMP_IF_NOT_GREATER_EQUAL: jumpUnless(>=)
+                    case OP_JUMP_IF_NOT_LESS:          jumpUnless(OP_LESS)
+                    case OP_JUMP_IF_NOT_LESS_EQUAL:    jumpUnless(OP_LESS_EQUAL)
+                    case OP_JUMP_IF_NOT_GREATER:       jumpUnless(OP_GREATER)
+                    case OP_JUMP_IF_NOT_GREATER_EQUAL: jumpUnless(OP_GREATER_EQUAL)
 
                     case OP_JUMP_IF_NOT_EQUAL: {
                         uint16_t offset = READ_SHORT();

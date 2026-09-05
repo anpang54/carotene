@@ -35,6 +35,13 @@ using std::cin, std::cout, std::cerr,
 typedef unsigned int uint;
 
 
+// limits
+
+#define FRAMES_MAX  64
+#define FRAME_SLOTS 256
+#define STACK_MAX   (FRAMES_MAX * FRAME_SLOTS)
+
+
 // switches
 
 #define DEBUG_PRINT_CODE      false
