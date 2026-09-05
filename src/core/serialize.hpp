@@ -18,7 +18,9 @@ constexpr char MAGIC_NUMBER[] = "\x7f" "reti";
                              // 7f 72 65 74 69 00
                              // 7f because ELF is cool
                              // also if you open a .reti file in a text editor it's gonna know something's up
-const uint16_t BYTECODE_FORMAT = 0x0002;
+const uint16_t BYTECODE_FORMAT = 102;
+                             // x.xx.xx
+                             // the highest version is therefore 6.55.35, but that probably won't happen, and if it does just make a new format
 
 
 // SERIALIZE
