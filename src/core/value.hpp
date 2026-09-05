@@ -271,9 +271,10 @@ void setComponent(Value& v, int component, const Value& to) {
 
 // functions
 
-bool isNumeric(ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_DOUBLE; }
-bool isInt    (ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_LONG;   }
-bool isFloat  (ValueType type) { return type == TYPE_FLOAT || type == TYPE_DOUBLE; }
+bool isNumeric (ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_DOUBLE; }
+bool isInt     (ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_LONG;   }
+bool isFloat   (ValueType type) { return type == TYPE_FLOAT || type == TYPE_DOUBLE; }
+bool isUnsigned(ValueType type) { return type == TYPE_BYTE  || type == TYPE_UINT || type == TYPE_ULONG; }
 
 bool isVector (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_VEC3F;  }
 bool isVec2   (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_VEC2F;  }
@@ -309,6 +310,41 @@ bool isFalsy(Value value) {
     return !isTruthy(value);
 }
 
+bool numbersEqual(const Value& a, const Value& b) {
+
+    // an int and a float
+    if(isFloat(a.type) != isFloat(b.type)) {
+
+        const Value& number = isFloat(a.type)? b: a;
+        double real = asNumberTo<double>(isFloat(a.type)? a: b);
+
+        if(std::isnan(real) || std::isinf(real) || real != std::floor(real)) return false;
+
+        if(isUnsigned(number.type)) {
+            if(real < 0.0 || real >= 18446744073709551616.0) return false;
+            return (uint64_t)real == asNumberTo<uint64_t>(number);
+        }
+        if(real < -9223372036854775808.0 || real >= 9223372036854775808.0) return false;
+        return (int64_t)real == asNumberTo<int64_t>(number);
+
+    }
+
+    // 2 floats
+    if(isFloat(a.type)) return asNumberTo<double>(a) == asNumberTo<double>(b);
+
+    // a signed int and an unsigned int
+    if(isUnsigned(a.type) != isUnsigned(b.type)) {
+        int64_t signedValue = asNumberTo<int64_t>(isUnsigned(a.type)? b: a);
+        if(signedValue < 0) return false;
+        return (uint64_t)signedValue == asNumberTo<uint64_t>(isUnsigned(a.type)? a: b);
+    }
+
+    // 2 ints of the same signedness
+    if(isUnsigned(a.type)) return asNumberTo<uint64_t>(a) == asNumberTo<uint64_t>(b);
+    return asNumberTo<int64_t>(a) == asNumberTo<int64_t>(b);
+
+}
+
 bool valuesEqual(Value a, Value b) {
 
     // same type, vectors
@@ -333,11 +369,7 @@ bool valuesEqual(Value a, Value b) {
 
     // different type, but numeric
     if(isNumeric(a.type) && isNumeric(b.type)) {
-        if(isFloat(a.type) || isFloat(b.type)) {
-            return asNumberTo<double>(a) == asNumberTo<double>(b);
-        } else {
-            return asNumberTo<int64_t>(a) == asNumberTo<int64_t>(b);
-        }
+        return numbersEqual(a, b);
     }
 
     return false;
@@ -439,6 +471,19 @@ size_t sizeofValue(Value& value) {
 
 // hash for use in dict keys
 
+size_t hashNumber(const Value& value) {
+    if(isFloat(value.type)) {
+        double real = asNumberTo<double>(value);
+        if(!std::isnan(real) && !std::isinf(real) && real == std::floor(real)) {
+            if(real >= 0.0 && real <  18446744073709551616.0) return hash<uint64_t>{}(          (uint64_t)real);
+            if(real <  0.0 && real >= -9223372036854775808.0) return hash<uint64_t>{}((uint64_t)(int64_t) real);
+        }
+        return hash<double>{}(real);
+    }
+    if(isUnsigned(value.type)) return hash<uint64_t>{}(          asNumberTo<uint64_t>(value));
+    return                            hash<uint64_t>{}((uint64_t)asNumberTo< int64_t>(value));
+}
+
 size_t hashValue(const Value& value) {
 
     size_t h;
@@ -449,14 +494,9 @@ size_t hashValue(const Value& value) {
         case TYPE_SMTH:   h = 420;                  break;
         case TYPE_BOOL:   h = value.as.Abool? 6: 7; break;
 
-        case TYPE_BYTE: case TYPE_UINT: case TYPE_INT: case TYPE_ULONG: case TYPE_LONG: {
-            h = hash<int64_t>{}(asNumberTo<int64_t>(value)); break;
-        }
+        case TYPE_BYTE: case TYPE_UINT: case TYPE_INT: case TYPE_ULONG: case TYPE_LONG:
         case TYPE_FLOAT: case TYPE_DOUBLE: {
-            double number = asNumberTo<double>(value);
-            if(number == 0) number = 0.0;    // -0.0 = 0.0
-            h = hash<double>{}(number);
-            break;
+            h = hashNumber(value); break;
         }
 
         case TYPE_OBJ:    h = hashObject(value.as.obj); break;
