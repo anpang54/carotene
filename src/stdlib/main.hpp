@@ -2,7 +2,7 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include <chrono>
 #include <thread>
@@ -18,7 +18,7 @@ namespace chrono = std::chrono;
 namespace ranges = std::ranges;
 
 
-// general
+// GENERAL
 
 nFunc(main_name, "", "name", {
     if(vm->appName.empty()) {
@@ -257,7 +257,7 @@ nFunc(main_clock, "", "clock", {
     // will probably delete once done with crafting interpreters
 
 
-// basic math
+// BASIC MATH
 
 nFunc(main_abs, "", "abs", {
     params({
@@ -308,31 +308,191 @@ nArrayStatAny(median, {
 });
 
 
-// vector "constructors" until I add actual constructors
+// CASTING
 
-nFunc(main_vec2i, "", "vec2i", {
-    params({ {{TYPE_INT}, true}, {{TYPE_INT}, true} });
-    return CaroVec2i(args[0].as.Aint, args[1].as.Aint);
-});
-nFunc(main_vec2u, "", "vec2u", {
-    params({ {{TYPE_UINT}, true}, {{TYPE_UINT}, true} });
-    return CaroVec2u(args[0].as.Auint, args[1].as.Auint);
-});
-nFunc(main_vec2f, "", "vec2f", {
-    params({ {{TYPE_FLOAT}, true}, {{TYPE_FLOAT}, true} });
-    return CaroVec2f(args[0].as.Afloat, args[1].as.Afloat);
+
+// the casting work
+
+#define cantCast(target) {\
+    vm->runtimeError("Can't cast %s to %s.", typeofValue(v).c_str(), string(target).c_str());\
+    return CaroNull;\
+}
+
+Value castToNumber(VM* vm, const Value& v, ValueType targetType) {
+    
+    // easy to convert
+    switch(v.type) {
+
+        case TYPE_BOOL:   return CaroNumber(targetType, v.as.Abool? 1: 0);
+
+        case TYPE_BYTE:   return CaroNumber(targetType, v.as.Abyte);
+        case TYPE_INT:    return CaroNumber(targetType, v.as.Aint);
+        case TYPE_UINT:   return CaroNumber(targetType, v.as.Auint);
+        case TYPE_LONG:   return CaroNumber(targetType, v.as.Along);
+        case TYPE_ULONG:  return CaroNumber(targetType, v.as.Aulong);
+        case TYPE_FLOAT:  return CaroNumber(targetType, v.as.Afloat);
+        case TYPE_DOUBLE: return CaroNumber(targetType, v.as.Adouble);
+        
+        default: break;
+    }
+
+    // strings
+    if(isString(v)) {
+
+        const string& str = asString(v)->str;
+        double output;
+
+        try{
+            size_t length = 0;
+            output = std::stod(str, &length);
+            if(length < str.size()) cantCast(typeofType(targetType));    // garbage at the end
+        } catch(...) {
+            cantCast(typeofType(targetType));    // stod errored
+        }
+
+        return CaroNumber(targetType, output);
+
+    }
+    
+    cantCast(typeofType(targetType));    // not a supported type
+
+}
+
+Value castToVector(VM* vm, ValueType targetType, const vector<Value>& args) {
+    
+    int       size = componentCount(targetType);
+    ValueType type = componentType (targetType);
+    vector<Value> components;
+
+    // 1 argument, casting
+    if(args.size() == 1) {
+
+        const Value& v = args[0];
+
+        // another vector
+        if(isVector(v.type)) {
+            if(componentCount(v.type) != size) cantCast(typeofType(targetType));    // no casting been vec2's and vec3's
+            for(int i = 0; i < size; ++i) {
+                components.push_back(getComponent(v, i));
+            }
+
+        // an array
+        } else if(isArray(v)) {
+            components = asArray(v)->data;
+            if((int)components.size() != size) cantCast(typeofType(targetType));    // it needs to be the same size as the vector's length
+
+        } else cantCast(typeofType(targetType));
+
+    // same amount of components (either 2 or 3), so construct
+    } else if((int)args.size() == size) {
+        components = args;
+
+    // neither of those
+    } else {
+        vm->runtimeError("%s takes 1 or %d parameters, but %d were given.", typeofType(targetType).c_str(), size, (int)args.size());
+        return CaroNull;
+    }
+
+    // convert each component to the appropriate type
+    components.resize(3, CaroInt(0));
+    for(Value& value: components) {
+        value = castToNumber(vm, value, type);
+        if(vm->hadError) return CaroNull;
+    }
+
+    // return
+    return CaroVector(
+        targetType,
+        asNumberTo<double>(components[0]), asNumberTo<double>(components[1]), asNumberTo<double>(components[2])
+    );
+
+}
+
+Value castToArray(VM* vm, const Value& v) {
+
+    // a string, split it
+    if(isString(v)) {
+        GCPause pause;
+        vector<Value> data;
+        const string& str = asString(v)->str;
+        data.reserve(str.size());
+        for(char c: str) {
+            data.push_back(CaroObj(copyString(string(1, c))));
+        }
+        return CaroObj(copyArray(std::move(data)));
+    }
+
+    // a vector, spread it
+    if(isVector(v.type)) {
+        vector<Value> data;
+        for(int i = 0; i < componentCount(v.type); ++i) {
+            data.push_back(getComponent(v, i));
+        }
+        return CaroObj(copyArray(std::move(data)));
+    }
+
+    // an array, copy it
+    if(isArray(v)) {
+        return CaroObj(copyArray(asArray(v)->data));
+    }
+
+    cantCast("array");
+
+}
+
+Value castToDict(VM* vm, const Value& v) {
+    // it just copies the dict
+    if(isDict(v)) {
+        return CaroObj(copyDict(asDict(v)->data));
+    }
+    cantCast("dict");
+}
+
+
+// actual casting functions
+
+nFunc(main_bool, "", "bool", {
+    params({{{}, true}});
+    return CaroBool(isTruthy(args[0]));
 });
 
-nFunc(main_vec3i, "", "vec3i", {
-    params({ {{TYPE_INT}, true}, {{TYPE_INT}, true}, {{TYPE_INT}, true} });
-    return CaroVec3i(args[0].as.Aint, args[1].as.Aint, args[2].as.Aint);
+#define nNumericCast(name, valueType)\
+    nFunc(main_##name, "", #name, {\
+        params({{{}, true}});\
+        return castToNumber(vm, args[0], valueType);\
+    })
+nNumericCast(byte,   TYPE_BYTE);
+nNumericCast(int,    TYPE_INT);
+nNumericCast(uint,   TYPE_UINT);
+nNumericCast(long,   TYPE_LONG);
+nNumericCast(ulong,  TYPE_ULONG);
+nNumericCast(float,  TYPE_FLOAT);
+nNumericCast(double, TYPE_DOUBLE);
+
+#define nVectorCast(name, valueType)\
+    nFunc(main_##name, "", #name, {\
+        return castToVector(vm, valueType, args);\
+    })
+nVectorCast(vec2i, TYPE_VEC2I);
+nVectorCast(vec2u, TYPE_VEC2U);
+nVectorCast(vec2f, TYPE_VEC2F);
+nVectorCast(vec3i, TYPE_VEC3I);
+nVectorCast(vec3u, TYPE_VEC3U);
+nVectorCast(vec3f, TYPE_VEC3F);
+    // also double as constructors
+    
+nFunc(main_str, "", "str", {
+    params({{{}, true}});
+    return CaroObj(copyString(printValue(args[0])));
 });
-nFunc(main_vec3u, "", "vec3u", {
-    params({ {{TYPE_UINT}, true}, {{TYPE_UINT}, true}, {{TYPE_UINT}, true} });
-    return CaroVec3u(args[0].as.Auint, args[1].as.Auint, args[2].as.Auint);
+
+nFunc(main_array, "", "array", {
+    params({{{}, true}});
+    return castToArray(vm, args[0]);
 });
-nFunc(main_vec3f, "", "vec3f", {
-    params({ {{TYPE_FLOAT}, true}, {{TYPE_FLOAT}, true}, {{TYPE_FLOAT}, true} });
-    return CaroVec3f(args[0].as.Afloat, args[1].as.Afloat, args[2].as.Afloat);
+
+nFunc(main_dict, "", "dict", {
+    params({{{}, true}});
+    return castToDict(vm, args[0]);
 });
 

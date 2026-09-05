@@ -39,7 +39,7 @@ if(valid) {
 
     windows_only = "-target x86_64-windows-gnu ";
     mac_only     = "-target aarch64-macos -Wno-nullability-completeness ";
-    linux_only   = "-target x86_64-linux-gnu.2.28 -idirafter /usr/include -L/usr/lib -lreadline ";
+    linux_only   = "-target x86_64-linux-gnu.2.28 -idirafter /usr/include -L/usr/lib -L/usr/lib/x86_64-linux-gnu -lreadline ";
     freebsd_only = "-target x86_64-freebsd -Wno-nullability-completeness ";
     web_only     = "-sALLOW_MEMORY_GROWTH -sSTACK_SIZE=8388608 -sEXIT_RUNTIME ";
                                        // = 8mb, because linux threads get 8mb

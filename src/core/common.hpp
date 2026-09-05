@@ -21,8 +21,8 @@
 
 // version
 
-#define VERSION      "0.1.1"
-#define VERSION_DATE "3 Sep 2026"
+#define VERSION      "0.1.2"
+#define VERSION_DATE "5 Sep 2026"
 
 
 // convenience
