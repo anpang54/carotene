@@ -204,6 +204,71 @@ Value toFloat(Value& v, F f) {
 }
 
 
+// vectors
+
+template<typename T>
+Value CaroVector(ValueType type, T x, T y, T z) {
+    switch(type) {
+        case TYPE_VEC2I: return CaroVec2i( (int32_t)x,  (int32_t)y             );
+        case TYPE_VEC2U: return CaroVec2u((uint32_t)x, (uint32_t)y             );
+        case TYPE_VEC2F: return CaroVec2f(   (float)x,    (float)y             );
+        case TYPE_VEC3I: return CaroVec3i( (int32_t)x,  (int32_t)y,  (int32_t)z);
+        case TYPE_VEC3U: return CaroVec3u((uint32_t)x, (uint32_t)y, (uint32_t)z);
+        case TYPE_VEC3F: return CaroVec3f(   (float)x,    (float)y,    (float)z);
+        default: return CaroNull;    // unreachable
+    }
+}
+
+ValueType componentType(ValueType type) {
+    switch(type) {
+        case TYPE_VEC2I: case TYPE_VEC3I: return TYPE_INT;
+        case TYPE_VEC2U: case TYPE_VEC3U: return TYPE_UINT;
+        case TYPE_VEC2F: case TYPE_VEC3F: return TYPE_FLOAT;
+        default: return TYPE_NULL;    // unreachable
+    }
+}
+ValueType vectorType(ValueType component, uint8_t size) {
+    switch(component) {
+        case TYPE_INT:   return size == 2? TYPE_VEC2I: TYPE_VEC3I;
+        case TYPE_UINT:  return size == 2? TYPE_VEC2U: TYPE_VEC3U;
+        case TYPE_FLOAT: return size == 2? TYPE_VEC2F: TYPE_VEC3F;
+        default: return TYPE_NULL;    // unreachable
+    }
+}
+
+Value getComponent(const Value& v, int component) {
+    switch(v.type) {
+        case TYPE_VEC2I: case TYPE_VEC3I:
+            return CaroInt  (component == 0? v.as.XYint  .Xint  : (component == 1? v.as.XYint  .Yint  : v.z.Zint  ));
+        case TYPE_VEC2U: case TYPE_VEC3U:
+            return CaroUint (component == 0? v.as.XYuint .Xuint : (component == 1? v.as.XYuint .Yuint : v.z.Zuint ));
+        case TYPE_VEC2F: case TYPE_VEC3F:
+            return CaroFloat(component == 0? v.as.XYfloat.Xfloat: (component == 1? v.as.XYfloat.Yfloat: v.z.Zfloat));
+        default: return CaroNull;    // unreachable    
+    }
+}
+void setComponent(Value& v, int component, const Value& to) {
+    switch(v.type) {
+        case TYPE_VEC2I: case TYPE_VEC3I: {
+            int32_t&  slot = component == 0? v.as.XYint  .Xint  : (component == 1? v.as.XYint  .Yint  : v.z.Zint  );
+            slot = to.as.Aint;
+            break;
+        }
+        case TYPE_VEC2U: case TYPE_VEC3U: {
+            uint32_t& slot = component == 0? v.as.XYuint .Xuint : (component == 1? v.as.XYuint .Yuint : v.z.Zuint );
+            slot = to.as.Auint;
+            break;
+        }
+        case TYPE_VEC2F: case TYPE_VEC3F: {
+            float&    slot = component == 0? v.as.XYfloat.Xfloat: (component == 1? v.as.XYfloat.Yfloat: v.z.Zfloat);
+            slot = to.as.Afloat;
+            break;
+        }
+        default: break;    // unreachable
+    }
+}
+
+
 // functions
 
 bool isNumeric(ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_DOUBLE; }
@@ -213,6 +278,8 @@ bool isFloat  (ValueType type) { return type == TYPE_FLOAT || type == TYPE_DOUBL
 bool isVector (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_VEC3F;  }
 bool isVec2   (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_VEC2F;  }
 bool isVec3   (ValueType type) { return type >= TYPE_VEC3I && type <= TYPE_VEC3F;  }
+
+int componentCount(ValueType type) { return isVec2(type)? 2: 3; }
 
 bool isTruthy(Value value) {
     if(isNumeric(value.type)) {
@@ -243,6 +310,15 @@ bool isFalsy(Value value) {
 }
 
 bool valuesEqual(Value a, Value b) {
+
+    // same type, vectors
+    if(isVector(a.type) && isVector(b.type)) {
+        if(componentCount(a.type) != componentCount(b.type)) return false;    // comparing a vec2 and a vec3
+        for(int i = 0; i < componentCount(a.type); ++i) {    // same size, but check each element
+            if(!valuesEqual(getComponent(a, i), getComponent(b, i))) return false;
+        }
+        return true;
+    }
 
     // same type, neither is numeric
     if(a.type == b.type && !isNumeric(a.type)) {
@@ -391,50 +467,6 @@ size_t hashValue(const Value& value) {
 
     return h;
 
-}
-
-
-// vector components
-
-ValueType componentType(ValueType type) {
-    switch(type) {
-        case TYPE_VEC2I: case TYPE_VEC3I: return TYPE_INT;
-        case TYPE_VEC2U: case TYPE_VEC3U: return TYPE_UINT;
-        case TYPE_VEC2F: case TYPE_VEC3F: return TYPE_FLOAT;
-        default: return TYPE_NULL;    // unreachable
-    }
-}
-
-Value getComponent(const Value& v, int component) {
-    switch(v.type) {
-        case TYPE_VEC2I: case TYPE_VEC3I:
-            return CaroInt  (component == 0? v.as.XYint  .Xint  : (component == 1? v.as.XYint  .Yint  : v.z.Zint  ));
-        case TYPE_VEC2U: case TYPE_VEC3U:
-            return CaroUint (component == 0? v.as.XYuint .Xuint : (component == 1? v.as.XYuint .Yuint : v.z.Zuint ));
-        case TYPE_VEC2F: case TYPE_VEC3F:
-            return CaroFloat(component == 0? v.as.XYfloat.Xfloat: (component == 1? v.as.XYfloat.Yfloat: v.z.Zfloat));
-        default: return CaroNull;    // unreachable    
-    }
-}
-void setComponent(Value& v, int component, const Value& to) {
-    switch(v.type) {
-        case TYPE_VEC2I: case TYPE_VEC3I: {
-            int32_t&  slot = component == 0? v.as.XYint  .Xint  : (component == 1? v.as.XYint  .Yint  : v.z.Zint  );
-            slot = to.as.Aint;
-            break;
-        }
-        case TYPE_VEC2U: case TYPE_VEC3U: {
-            uint32_t& slot = component == 0? v.as.XYuint .Xuint : (component == 1? v.as.XYuint .Yuint : v.z.Zuint );
-            slot = to.as.Auint;
-            break;
-        }
-        case TYPE_VEC2F: case TYPE_VEC3F: {
-            float&    slot = component == 0? v.as.XYfloat.Xfloat: (component == 1? v.as.XYfloat.Yfloat: v.z.Zfloat);
-            slot = to.as.Afloat;
-            break;
-        }
-        default: break;    // unreachable
-    }
 }
 
 
