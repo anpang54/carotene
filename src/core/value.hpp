@@ -42,6 +42,14 @@ enum ValueType{
     TYPE_FLOAT,
     TYPE_DOUBLE,
 
+    // vectors
+    TYPE_VEC2I,
+    TYPE_VEC2U,
+    TYPE_VEC2F,
+    TYPE_VEC3I,
+    TYPE_VEC3U,
+    TYPE_VEC3F,
+    
     // object
     TYPE_OBJ,
 
@@ -50,40 +58,61 @@ enum ValueType{
 
 // value struct
 
-struct Value{    // total 16 bytes
-    ValueType type;     // 4 bytes
-                        // 4 bytes of padding
-    union{              // 8 bytes max
+struct Value{
+
+    // 0 - 3: type
+    ValueType type;
+    
+    // 4 - 7: z value in vec3
+    union{
+        int32_t  Zint;
+        uint32_t Zuint;
+        float    Zfloat;
+    } z;
+
+    // 8 - 15: actual value
+    union{
         bool     Abool;
         uint8_t  Abyte;
-        uint32_t Auint;
         int32_t  Aint;
-        uint64_t Aulong;
+        uint32_t Auint;
         int64_t  Along;
+        uint64_t Aulong;
         float    Afloat;
         double   Adouble;
+        struct{ int32_t  Xint;   int32_t  Yint;   } XYint;
+        struct{ uint32_t Xuint;  uint32_t Yuint;  } XYuint;
+        struct{ float    Xfloat; float    Yfloat; } XYfloat;
         Obj* obj;
     } as;
+
 };
     // crafting interpreters section 30.3 uses NaN boxing to condense everything into a single double
-    // however, we can't do that here cuz we have 64 bit ints
+    // however, we can't do that here cuz we can't afford throwing 64-bit ints and 3 value vectors into the heap
 
 
 // functions to make values
 
-inline constexpr Value CaroNull                             { TYPE_NULL,   {                  } };
-inline constexpr Value CaroSmth                             { TYPE_SMTH,   {                  } };
-       constexpr Value CaroBool  (    bool v) { return Value{ TYPE_BOOL,   { .Abool   = v } }; }
+inline constexpr Value CaroNull                             { TYPE_NULL,   {}, {              } };
+inline constexpr Value CaroSmth                             { TYPE_SMTH,   {}, {              } };
+       constexpr Value CaroBool  (    bool v) { return Value{ TYPE_BOOL,   {}, { .Abool   = v } }; }
 
-       constexpr Value CaroByte  ( uint8_t v) { return Value{ TYPE_BYTE,   { .Abyte   = v } }; }
-       constexpr Value CaroUint  (uint32_t v) { return Value{ TYPE_UINT,   { .Auint   = v } }; }
-       constexpr Value CaroInt   ( int32_t v) { return Value{ TYPE_INT,    { .Aint    = v } }; }
-       constexpr Value CaroUlong (uint64_t v) { return Value{ TYPE_ULONG,  { .Aulong  = v } }; }
-       constexpr Value CaroLong  ( int64_t v) { return Value{ TYPE_LONG,   { .Along   = v } }; }
-       constexpr Value CaroFloat (   float v) { return Value{ TYPE_FLOAT,  { .Afloat  = v } }; }
-       constexpr Value CaroDouble(  double v) { return Value{ TYPE_DOUBLE, { .Adouble = v } }; }
+       constexpr Value CaroByte  ( uint8_t v) { return Value{ TYPE_BYTE,   {}, { .Abyte   = v } }; }
+       constexpr Value CaroInt   ( int32_t v) { return Value{ TYPE_INT,    {}, { .Aint    = v } }; }
+       constexpr Value CaroUint  (uint32_t v) { return Value{ TYPE_UINT,   {}, { .Auint   = v } }; }
+       constexpr Value CaroLong  ( int64_t v) { return Value{ TYPE_LONG,   {}, { .Along   = v } }; }
+       constexpr Value CaroUlong (uint64_t v) { return Value{ TYPE_ULONG,  {}, { .Aulong  = v } }; }
+       constexpr Value CaroFloat (   float v) { return Value{ TYPE_FLOAT,  {}, { .Afloat  = v } }; }
+       constexpr Value CaroDouble(  double v) { return Value{ TYPE_DOUBLE, {}, { .Adouble = v } }; }
 
-       constexpr Value CaroObj   (    Obj* v) { return Value{ TYPE_OBJ,    { .obj     = v } }; }
+       constexpr Value CaroVec2i(int32_t  x, int32_t  y            ) { return Value{ TYPE_VEC2I, {             }, { .XYint   = { x, y } } }; }
+       constexpr Value CaroVec2u(uint32_t x, uint32_t y            ) { return Value{ TYPE_VEC2U, {             }, { .XYuint  = { x, y } } }; }
+       constexpr Value CaroVec2f(float    x, float    y            ) { return Value{ TYPE_VEC2F, {             }, { .XYfloat = { x, y } } }; }
+       constexpr Value CaroVec3i(int32_t  x, int32_t  y, int32_t  z) { return Value{ TYPE_VEC3I, { .Zint   = z }, { .XYint   = { x, y } } }; }
+       constexpr Value CaroVec3u(uint32_t x, uint32_t y, uint32_t z) { return Value{ TYPE_VEC3U, { .Zuint  = z }, { .XYuint  = { x, y } } }; }
+       constexpr Value CaroVec3f(float    x, float    y, float    z) { return Value{ TYPE_VEC3F, { .Zfloat = z }, { .XYfloat = { x, y } } }; }
+
+       constexpr Value CaroObj   (    Obj* v) { return Value{ TYPE_OBJ,    {}, { .obj     = v } }; }
 
 
 // number handling functions
@@ -92,13 +121,13 @@ inline constexpr Value CaroSmth                             { TYPE_SMTH,   {    
 template<typename T>
 Value CaroNumber(ValueType type, T v) {
     switch(type) {
-        case TYPE_BYTE  : return Value{ type, { .Abyte   =  (uint8_t)v } };
-        case TYPE_UINT  : return Value{ type, { .Auint   = (uint32_t)v } };
-        case TYPE_INT   : return Value{ type, { .Aint    =  (int32_t)v } };
-        case TYPE_ULONG : return Value{ type, { .Aulong  = (uint64_t)v } };
-        case TYPE_LONG  : return Value{ type, { .Along   =  (int64_t)v } };
-        case TYPE_FLOAT : return Value{ type, { .Afloat  =    (float)v } };
-        case TYPE_DOUBLE: return Value{ type, { .Adouble =   (double)v } };
+        case TYPE_BYTE  : return Value{ type, {}, { .Abyte   =  (uint8_t)v } };
+        case TYPE_INT   : return Value{ type, {}, { .Aint    =  (int32_t)v } };
+        case TYPE_UINT  : return Value{ type, {}, { .Auint   = (uint32_t)v } };
+        case TYPE_LONG  : return Value{ type, {}, { .Along   =  (int64_t)v } };
+        case TYPE_ULONG : return Value{ type, {}, { .Aulong  = (uint64_t)v } };
+        case TYPE_FLOAT : return Value{ type, {}, { .Afloat  =    (float)v } };
+        case TYPE_DOUBLE: return Value{ type, {}, { .Adouble =   (double)v } };
         default: return CaroNull;    // unreachable
     }
 }
@@ -107,10 +136,10 @@ template<typename T>
 T asNumberTo(const Value& v) {
     switch(v.type) {
         case TYPE_BYTE  : return (T)v.as.Abyte  ;
-        case TYPE_UINT  : return (T)v.as.Auint  ;
         case TYPE_INT   : return (T)v.as.Aint   ;
-        case TYPE_ULONG : return (T)v.as.Aulong ;
+        case TYPE_UINT  : return (T)v.as.Auint  ;
         case TYPE_LONG  : return (T)v.as.Along  ;
+        case TYPE_ULONG : return (T)v.as.Aulong ;
         case TYPE_FLOAT : return (T)v.as.Afloat ;
         case TYPE_DOUBLE: return (T)v.as.Adouble;
         default: return (T)0;    // unreachable
@@ -119,10 +148,10 @@ T asNumberTo(const Value& v) {
 string asNumberToString(const Value& v) {
     switch(v.type) {
         case TYPE_BYTE  : return to_string(v.as.Abyte  );
-        case TYPE_UINT  : return to_string(v.as.Auint  );
         case TYPE_INT   : return to_string(v.as.Aint   );
-        case TYPE_ULONG : return to_string(v.as.Aulong );
+        case TYPE_UINT  : return to_string(v.as.Auint  );
         case TYPE_LONG  : return to_string(v.as.Along  );
+        case TYPE_ULONG : return to_string(v.as.Aulong );
         case TYPE_FLOAT : return to_string(v.as.Afloat );
         case TYPE_DOUBLE: return to_string(v.as.Adouble);
         default: return "0";    // unreachable
@@ -133,10 +162,10 @@ template<typename F>
 Value mapNumber(const Value& v, F f) {
     switch(v.type) {
         case TYPE_BYTE  : return CaroByte  (f(v.as.Abyte  ));
-        case TYPE_UINT  : return CaroUint  (f(v.as.Auint  ));
         case TYPE_INT   : return CaroInt   (f(v.as.Aint   ));
-        case TYPE_ULONG : return CaroUlong (f(v.as.Aulong ));
+        case TYPE_UINT  : return CaroUint  (f(v.as.Auint  ));
         case TYPE_LONG  : return CaroLong  (f(v.as.Along  ));
+        case TYPE_ULONG : return CaroUlong (f(v.as.Aulong ));
         case TYPE_FLOAT : return CaroFloat (f(v.as.Afloat ));
         case TYPE_DOUBLE: return CaroDouble(f(v.as.Adouble));
         default: return CaroNull;    // unreachable
@@ -146,10 +175,10 @@ template<typename F>
 Value mapNumbers(const Value& a, const Value& b, F f) {
     switch(a.type) {
         case TYPE_BYTE  : return CaroByte  (f(a.as.Abyte  , b.as.Abyte  ));
-        case TYPE_UINT  : return CaroUint  (f(a.as.Auint  , b.as.Auint  ));
         case TYPE_INT   : return CaroInt   (f(a.as.Aint   , b.as.Aint   ));
-        case TYPE_ULONG : return CaroUlong (f(a.as.Aulong , b.as.Aulong ));
+        case TYPE_UINT  : return CaroUint  (f(a.as.Auint  , b.as.Auint  ));
         case TYPE_LONG  : return CaroLong  (f(a.as.Along  , b.as.Along  ));
+        case TYPE_ULONG : return CaroUlong (f(a.as.Aulong , b.as.Aulong ));
         case TYPE_FLOAT : return CaroFloat (f(a.as.Afloat , b.as.Afloat ));
         case TYPE_DOUBLE: return CaroDouble(f(a.as.Adouble, b.as.Adouble));
         default: return CaroNull;    // unreachable
@@ -177,15 +206,13 @@ Value toFloat(Value& v, F f) {
 
 // functions
 
-bool isNumeric(ValueType type) {
-    return type >= TYPE_BYTE && type <= TYPE_DOUBLE;
-}
-bool isInt(ValueType type) {
-    return type >= TYPE_BYTE && type <= TYPE_LONG;
-}
-bool isFloat(ValueType type) {
-    return type == TYPE_FLOAT || type == TYPE_DOUBLE;
-}
+bool isNumeric(ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_DOUBLE; }
+bool isInt    (ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_LONG;   }
+bool isFloat  (ValueType type) { return type == TYPE_FLOAT || type == TYPE_DOUBLE; }
+
+bool isVector (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_VEC3F;  }
+bool isVec2   (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_VEC2F;  }
+bool isVec3   (ValueType type) { return type >= TYPE_VEC3I && type <= TYPE_VEC3F;  }
 
 bool isTruthy(Value value) {
     if(isNumeric(value.type)) {
@@ -193,6 +220,14 @@ bool isTruthy(Value value) {
             return false;
         }
         return asNumberTo<double>(value) != 0;
+    }
+    if(isVector(value.type)) {
+        switch(value.type) {
+            case TYPE_VEC2I: case TYPE_VEC3I: return value.as.XYint  .Xint        || value.as.XYint  .Yint        || value.z.Zint;
+            case TYPE_VEC2U: case TYPE_VEC3U: return value.as.XYuint .Xuint       || value.as.XYuint .Yuint       || value.z.Zuint;
+            case TYPE_VEC2F: case TYPE_VEC3F: return value.as.XYfloat.Xfloat != 0 || value.as.XYfloat.Yfloat != 0 || value.z.Zfloat != 0;
+            default: return false;    // unreachable
+        }
     }
     switch(value.type) {
         case TYPE_NULL: return false;
@@ -244,6 +279,16 @@ string printValue(Value value) {
         default:
             if(isNumeric(value.type)) {
                 return asNumberToString(value);
+            } else if(isVector(value.type)) {
+                switch(value.type) {
+                    case TYPE_VEC2I: return "(" + to_string(value.as.XYint  .Xint  ) + ", " + to_string(value.as.XYint  .Yint  ) + ")";
+                    case TYPE_VEC2U: return "(" + to_string(value.as.XYuint .Xuint ) + ", " + to_string(value.as.XYuint .Yuint ) + ")";
+                    case TYPE_VEC2F: return "(" + to_string(value.as.XYfloat.Xfloat) + ", " + to_string(value.as.XYfloat.Yfloat) + ")";
+                    case TYPE_VEC3I: return "(" + to_string(value.as.XYint  .Xint  ) + ", " + to_string(value.as.XYint  .Yint  ) + ", " + to_string(value.z.Zint  ) + ")";
+                    case TYPE_VEC3U: return "(" + to_string(value.as.XYuint .Xuint ) + ", " + to_string(value.as.XYuint .Yuint ) + ", " + to_string(value.z.Zuint ) + ")";
+                    case TYPE_VEC3F: return "(" + to_string(value.as.XYfloat.Xfloat) + ", " + to_string(value.as.XYfloat.Yfloat) + ", " + to_string(value.z.Zfloat) + ")";
+                    default: return "vector";    // unreachable
+                }
             } else {
                 return "unknown";    // should be unreachable
             }
@@ -259,13 +304,20 @@ string typeofType(ValueType type) {
         case TYPE_SMTH:   return "smth";
 
         case TYPE_BYTE:   return "byte";
-        case TYPE_UINT:   return "uint";
         case TYPE_INT:    return "int";
-        case TYPE_ULONG:  return "ulong";
+        case TYPE_UINT:   return "uint";
         case TYPE_LONG:   return "long";
+        case TYPE_ULONG:  return "ulong";
         case TYPE_FLOAT:  return "float";
         case TYPE_DOUBLE: return "double";
 
+        case TYPE_VEC2I:  return "vec2i";
+        case TYPE_VEC2U:  return "vec2u";
+        case TYPE_VEC2F:  return "vec2f";
+        case TYPE_VEC3I:  return "vec3i";
+        case TYPE_VEC3U:  return "vec3u";
+        case TYPE_VEC3F:  return "vec3f";
+        
         default:        return "unknown";    // should be unreachable
 
     }
@@ -285,17 +337,16 @@ size_t sizeofType(ValueType type) {
 
     switch(type) {
 
-        case TYPE_BOOL:   return 1;    // technically 1 bit but it's stored as 1 byte
-        case TYPE_NULL:   return 0;
-        case TYPE_SMTH:   return 0;
-
-        case TYPE_BYTE:   return 1;
-        case TYPE_UINT:   return 4;
-        case TYPE_INT:    return 4;
-        case TYPE_ULONG:  return 8;
-        case TYPE_LONG:   return 8;
-        case TYPE_FLOAT:  return 4;
-        case TYPE_DOUBLE: return 8;
+        case TYPE_NULL: case TYPE_SMTH:
+            return 0;
+        case TYPE_BOOL: case TYPE_BYTE:
+            return 1;    // bool is technically 1 bit but is stored as 1 byte
+        case TYPE_INT: case TYPE_UINT: case TYPE_FLOAT:
+            return 4;
+        case TYPE_LONG: case TYPE_ULONG: case TYPE_DOUBLE: case TYPE_VEC2I: case TYPE_VEC2U: case TYPE_VEC2F:
+            return 8;
+        case TYPE_VEC3I: case TYPE_VEC3U: case TYPE_VEC3F:
+            return 12;
 
         default:          return 0;    // should be unreachable
 
@@ -340,6 +391,50 @@ size_t hashValue(const Value& value) {
 
     return h;
 
+}
+
+
+// vector components
+
+ValueType componentType(ValueType type) {
+    switch(type) {
+        case TYPE_VEC2I: case TYPE_VEC3I: return TYPE_INT;
+        case TYPE_VEC2U: case TYPE_VEC3U: return TYPE_UINT;
+        case TYPE_VEC2F: case TYPE_VEC3F: return TYPE_FLOAT;
+        default: return TYPE_NULL;    // unreachable
+    }
+}
+
+Value getComponent(const Value& v, int component) {
+    switch(v.type) {
+        case TYPE_VEC2I: case TYPE_VEC3I:
+            return CaroInt  (component == 0? v.as.XYint  .Xint  : (component == 1? v.as.XYint  .Yint  : v.z.Zint  ));
+        case TYPE_VEC2U: case TYPE_VEC3U:
+            return CaroUint (component == 0? v.as.XYuint .Xuint : (component == 1? v.as.XYuint .Yuint : v.z.Zuint ));
+        case TYPE_VEC2F: case TYPE_VEC3F:
+            return CaroFloat(component == 0? v.as.XYfloat.Xfloat: (component == 1? v.as.XYfloat.Yfloat: v.z.Zfloat));
+        default: return CaroNull;    // unreachable    
+    }
+}
+void setComponent(Value& v, int component, const Value& to) {
+    switch(v.type) {
+        case TYPE_VEC2I: case TYPE_VEC3I: {
+            int32_t&  slot = component == 0? v.as.XYint  .Xint  : (component == 1? v.as.XYint  .Yint  : v.z.Zint  );
+            slot = to.as.Aint;
+            break;
+        }
+        case TYPE_VEC2U: case TYPE_VEC3U: {
+            uint32_t& slot = component == 0? v.as.XYuint .Xuint : (component == 1? v.as.XYuint .Yuint : v.z.Zuint );
+            slot = to.as.Auint;
+            break;
+        }
+        case TYPE_VEC2F: case TYPE_VEC3F: {
+            float&    slot = component == 0? v.as.XYfloat.Xfloat: (component == 1? v.as.XYfloat.Yfloat: v.z.Zfloat);
+            slot = to.as.Afloat;
+            break;
+        }
+        default: break;    // unreachable
+    }
 }
 
 

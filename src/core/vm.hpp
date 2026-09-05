@@ -686,6 +686,46 @@ class VM{
                         break;
                     }
 
+                    #define checkComponent(vec, component) { \
+                        if(!isVector((vec).type)) { \
+                            SYNC(); \
+                            runtimeError("You can only get a component from a vector."); \
+                            return INTERPRET_RUNTIME_ERROR; \
+                        } \
+                        if((component) == 2 && isVec2((vec).type)) { \
+                            SYNC(); \
+                            runtimeError("A %s doesn't have a Z component.", typeofType((vec).type).c_str()); \
+                            return INTERPRET_RUNTIME_ERROR; \
+                        } \
+                    }
+
+                    case OP_GET_COMPONENT: {
+
+                        uint8_t component = READ_BYTE();
+                        checkComponent(peek(0), component);
+
+                        top() = getComponent(top(), component);
+
+                        break;
+                    }
+                    case OP_SET_COMPONENT: {
+
+                        uint8_t component = READ_BYTE();
+                        checkComponent(peek(1), component);
+
+                        ValueType wanted = componentType(peek(1).type);
+                        if(peek(0).type != wanted) {
+                            SYNC();
+                            runtimeError("A %s has %ss, but %s was given.", typeofType(peek(1).type).c_str(), typeofType(wanted).c_str(), typeofValue(peek(0)).c_str());
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+
+                        Value value = pop();
+                        setComponent(top(), component, value);
+
+                        break;
+                    }
+
                     case OP_MAKE_ARRAY: {
 
                         uint8_t elementCount = READ_BYTE();

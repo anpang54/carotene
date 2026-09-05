@@ -62,6 +62,13 @@ struct LoopState{
     vector<int> continues;
 };
 
+struct VariableTarget{
+    int offset = -1;
+    uint8_t getOp;
+    uint8_t setOp;
+    uint8_t arg;
+};
+
 struct FunctionState{
     ObjFunction* function;
     FunctionType type;
@@ -94,6 +101,7 @@ class Compiler{
         bool inEval = false;       // affects finishExpression()
 
         int lastCmpOffset = -1;    // code offset of the last comparison opcode
+        VariableTarget lastVariable;    // lets v.x = 1 store the updated vector back into v
 
         inline static set<string> usedModules;
 
@@ -113,6 +121,7 @@ class Compiler{
             state.scopeDepth = 0;
 
             this->lastCmpOffset = -1;    // now emitting into a different chunk
+            this->lastVariable = {};
 
             if(type != TYPE_SCRIPT) state.function->name = this->previous.start;
 
@@ -586,6 +595,48 @@ class Compiler{
             } else {
                 emitByte(OP_GET_INDEX);
             }
+        }
+
+
+        // vector components
+
+        void makeComponent(bool canAssign) {
+
+            consume(TOKEN_IDENTIFIER, "Expect 'x', 'y', or 'z' after '.'.");
+            const string& name = this->previous.start;
+
+            int component = name == "x"? 0: (name == "y"? 1: (name == "z"? 2: -1));
+            if(component == -1) {
+                error("Vectors only have the components 'x', 'y' and 'z'.");
+                return;
+            }
+
+            int compound = compoundOperator(this->current.type);
+            if(!canAssign || (!check(TOKEN_EQUAL) && compound == -1)) {
+                emitBytes(OP_GET_COMPONENT, component);
+                return;
+            }
+
+            const vector<uint8_t>& code = currentChunk()->code;
+            VariableTarget target = this->lastVariable;
+            if(target.offset < 0 || target.offset + 2 != (int)code.size() || code[target.offset] != target.getOp) {
+                error("You can only assign to a component of a variable.");
+                return;
+            }
+
+            if(match(TOKEN_EQUAL)) {
+                expression();
+            } else {
+                advance();
+                emitBytes(target.getOp, target.arg);
+                emitBytes(OP_GET_COMPONENT, component);
+                expression();
+                emitByte(compound);
+            }
+
+            emitBytes(OP_SET_COMPONENT, component);
+            emitBytes(target.setOp, target.arg);
+
         }
 
 
@@ -1449,6 +1500,7 @@ class Compiler{
                 emitByte(compound);
                 emitBytes(setOp, (uint8_t)arg);
             } else {
+                this->lastVariable = { (int)currentChunk()->code.size(), getOp, setOp, (uint8_t)arg };
                 emitBytes(getOp, (uint8_t)arg);
             }
 
@@ -1521,7 +1573,7 @@ inline ParseRule rules[] = {
     [TOKEN_RIGHT_SQUARE]  = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_LEFT_BRACE]    = { &Compiler::parseDict,    NULL,                     PREC_NONE       },
     [TOKEN_RIGHT_BRACE]   = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_DOT]           = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_DOT]           = { NULL,                    &Compiler::makeComponent, PREC_CALL       },
     [TOKEN_COMMA]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_COLON]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_SEMICOLON]     = { NULL,                    NULL,                     PREC_NONE       },

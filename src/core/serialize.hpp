@@ -68,6 +68,22 @@ void serializeValue(Writer& w, Value& value) {
         case TYPE_FLOAT:  w.writeFloat (value.as.Afloat);  break;
         case TYPE_DOUBLE: w.writeDouble(value.as.Adouble); break;
 
+        case TYPE_VEC2I: case TYPE_VEC3I:
+            w.writeUint32(value.as.XYint.Xint);
+            w.writeUint32(value.as.XYint.Yint);
+            if(isVec3(value.type)) w.writeUint32(value.z.Zint);
+            break;
+        case TYPE_VEC2U: case TYPE_VEC3U:
+            w.writeUint32(value.as.XYuint.Xuint);
+            w.writeUint32(value.as.XYuint.Yuint);
+            if(isVec3(value.type)) w.writeUint32(value.z.Zuint);
+            break;
+        case TYPE_VEC2F: case TYPE_VEC3F:
+            w.writeFloat(value.as.XYfloat.Xfloat);
+            w.writeFloat(value.as.XYfloat.Yfloat);
+            if(isVec3(value.type)) w.writeFloat(value.z.Zfloat);
+            break;
+
         case TYPE_OBJ: {
             Obj* obj = value.as.obj;
             w.writeUint8(obj->type);
@@ -184,6 +200,13 @@ Value deserializeValue(Reader& r) {
         case TYPE_LONG:   return CaroLong  ((int64_t)r.readUint64());
         case TYPE_FLOAT:  return CaroFloat (         r.readFloat()) ;
         case TYPE_DOUBLE: return CaroDouble(         r.readDouble());
+
+        case TYPE_VEC2I: { int32_t  x = r.readUint32(); int32_t  y = r.readUint32();                              return CaroVec2i(x, y);    }
+        case TYPE_VEC2U: { uint32_t x = r.readUint32(); uint32_t y = r.readUint32();                              return CaroVec2u(x, y);    }
+        case TYPE_VEC2F: { float    x = r.readFloat();  float    y = r.readFloat();                               return CaroVec2f(x, y);    }
+        case TYPE_VEC3I: { int32_t  x = r.readUint32(); int32_t  y = r.readUint32(); int32_t  z = r.readUint32(); return CaroVec3i(x, y, z); }
+        case TYPE_VEC3U: { uint32_t x = r.readUint32(); uint32_t y = r.readUint32(); uint32_t z = r.readUint32(); return CaroVec3u(x, y, z); }
+        case TYPE_VEC3F: { float    x = r.readFloat();  float    y = r.readFloat();  float    z = r.readFloat();  return CaroVec3f(x, y, z); }
 
         case TYPE_OBJ: {
             uint8_t objType = r.readUint8();
