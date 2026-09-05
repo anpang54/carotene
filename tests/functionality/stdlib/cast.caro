@@ -1,0 +1,21 @@
+
+print(bool(0));    // false
+print(bool(1));    // true
+
+print(int(3f));         // 3
+print(float(5));        // 5.000000
+print(int("7"));        // 7
+print(int("7.5"));      // 7
+print(float("9"));      // 9.000000
+print(int(true));       // 1
+print(float(false));    // 0.000000
+
+print(vec2i(4, 5).x);      // 4
+print(vec3i(1, 2, 3));      // (1, 2, 3)
+print(vec3i([1, 2, 3]));    // (1, 2, 3)
+
+print(array(vec2i(6, 7)));    // [6, 7]
+print(array("Hello!"));       // [H, e, l, l, o, !]
+print(array([1, 2, 3]));      // [1, 2, 3]
+
+print(dict({1: 2, 3: 4, 5: 6}));    // {1: 2, 3: 4, 5: 6}
