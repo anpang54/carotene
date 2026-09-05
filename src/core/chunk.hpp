@@ -57,6 +57,10 @@ enum OpCode{
     OP_INCREMENT_LOCAL,
     OP_DECREMENT_LOCAL,
 
+    // vectors
+    OP_GET_COMPONENT,
+    OP_SET_COMPONENT,
+    
     // collections
     OP_MAKE_ARRAY,
     OP_MAKE_DICT,
@@ -250,6 +254,11 @@ class Chunk{
                 case OP_DECREMENT_LOCAL:
                     return incrementInstruction("OP_DECREMENT_LOCAL", false, offset);
     
+                case OP_GET_COMPONENT:
+                    return byteInstruction("OP_GET_COMPONENT", offset);
+                case OP_SET_COMPONENT:
+                    return byteInstruction("OP_SET_COMPONENT", offset);
+
                 case OP_MAKE_ARRAY:
                     return byteInstruction("OP_MAKE_ARRAY", offset);
                 case OP_MAKE_DICT:

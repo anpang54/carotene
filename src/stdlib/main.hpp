@@ -308,4 +308,31 @@ nArrayStatAny(median, {
 });
 
 
+// vector "constructors" until I add actual constructors
+
+nFunc(main_vec2i, "", "vec2i", {
+    params({ {{TYPE_INT}, true}, {{TYPE_INT}, true} });
+    return CaroVec2i(args[0].as.Aint, args[1].as.Aint);
+});
+nFunc(main_vec2u, "", "vec2u", {
+    params({ {{TYPE_UINT}, true}, {{TYPE_UINT}, true} });
+    return CaroVec2u(args[0].as.Auint, args[1].as.Auint);
+});
+nFunc(main_vec2f, "", "vec2f", {
+    params({ {{TYPE_FLOAT}, true}, {{TYPE_FLOAT}, true} });
+    return CaroVec2f(args[0].as.Afloat, args[1].as.Afloat);
+});
+
+nFunc(main_vec3i, "", "vec3i", {
+    params({ {{TYPE_INT}, true}, {{TYPE_INT}, true}, {{TYPE_INT}, true} });
+    return CaroVec3i(args[0].as.Aint, args[1].as.Aint, args[2].as.Aint);
+});
+nFunc(main_vec3u, "", "vec3u", {
+    params({ {{TYPE_UINT}, true}, {{TYPE_UINT}, true}, {{TYPE_UINT}, true} });
+    return CaroVec3u(args[0].as.Auint, args[1].as.Auint, args[2].as.Auint);
+});
+nFunc(main_vec3f, "", "vec3f", {
+    params({ {{TYPE_FLOAT}, true}, {{TYPE_FLOAT}, true}, {{TYPE_FLOAT}, true} });
+    return CaroVec3f(args[0].as.Afloat, args[1].as.Afloat, args[2].as.Afloat);
+});
 
