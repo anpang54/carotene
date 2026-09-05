@@ -309,6 +309,75 @@ class VM{
 
         }
 
+        template<typename T>
+        InterpretResult vectorBinaryOperationAs(OpCode op, ValueType resultType) {
+
+            // get a and b
+            Value b = pop();
+            Value a = pop();
+
+            // do the operation on every component
+            T result[3] = {};
+            for(int i = 0; i < componentCount(resultType); ++i) {
+
+                T x = asNumberTo<T>(getComponent(a, i));
+                T y = asNumberTo<T>(getComponent(b, i));
+
+                // check division by zero
+                if((op == OP_DIVIDE || op == OP_MODULO) && y == 0) {
+                    runtimeError("Division by zero.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                switch(op) {
+
+                    case OP_ADD:          result[i] = x + y; break;
+                    case OP_SUBTRACT:     result[i] = x - y; break;
+                    case OP_MULTIPLY:     result[i] = x * y; break;
+                    case OP_DIVIDE:       result[i] = x / y; break;
+                    case OP_MODULO:
+                        if constexpr(std::is_floating_point_v<T>) result[i] = std::fmod(x, y);
+                        else                                      result[i] = x % y;
+                        break;
+                    case OP_EXPONENTIATE: result[i] = (T)std::pow(x, y); break;
+
+                    default: break;
+
+                }
+
+            }
+            push(CaroVector(resultType, result[0], result[1], result[2]));
+
+            return INTERPRET_OK;
+
+        }
+
+        InterpretResult vectorBinaryOperation(OpCode op) {
+
+            // check
+            if(!isVector(peek(0).type) || !isVector(peek(1).type)) {
+                runtimeError("Arithmetic operations between a vector and a non-vector currently aren't supported.");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            if(componentCount(peek(0).type) != componentCount(peek(1).type)) {
+                runtimeError("%s and %s don't have the same amount of components.", typeofType(peek(1).type).c_str(), typeofType(peek(0).type).c_str());
+                return INTERPRET_RUNTIME_ERROR;
+            }
+
+            uint8_t size = componentCount(peek(0).type);
+            ValueType componentA = componentType(peek(1).type);
+            ValueType componentB = componentType(peek(0).type);
+
+            if(componentA == TYPE_FLOAT || componentB == TYPE_FLOAT || op == OP_DIVIDE) {
+                return vectorBinaryOperationAs<float>(op, vectorType(TYPE_FLOAT, size));
+            }
+            if(componentA == TYPE_UINT && componentB == TYPE_UINT) {
+                return vectorBinaryOperationAs<uint32_t>(op, vectorType(TYPE_UINT, size));
+            }
+            return vectorBinaryOperationAs<int32_t>(op, vectorType(TYPE_INT, size));
+
+        }
+
         InterpretResult stringBinaryOperation(OpCode op) {
 
             // get a and b
@@ -523,11 +592,15 @@ class VM{
 
                     #define unary()          SYNC(); if(unaryOperation()          == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
                     #define numberBinary(op) SYNC(); if(numberBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
+                    #define vectorBinary(op) SYNC(); if(vectorBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
                     #define stringBinary(op) SYNC(); if(stringBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
-                    
+
                     case OP_ADD: case OP_SUBTRACT: {
                         if(isString(peek(0)) && isString(peek(1))) {
                             stringBinary(instruction);
+                            break;
+                        } else if(isVector(peek(0).type) || isVector(peek(1).type)) {
+                            vectorBinary(instruction);
                             break;
                         } else if(isNumeric(peek(0).type) && isNumeric(peek(1).type)) {
                             numberBinary(instruction);
@@ -545,6 +618,9 @@ class VM{
                         ) {
                             stringBinary(instruction);
                             break;
+                        } else if(isVector(peek(0).type) || isVector(peek(1).type)) {
+                            vectorBinary(instruction);
+                            break;
                         } else if(isNumeric(peek(0).type) && isNumeric(peek(1).type)) {
                             numberBinary(instruction);
                             break;
@@ -554,7 +630,13 @@ class VM{
                             return INTERPRET_RUNTIME_ERROR;
                         }
                     }
-                    case OP_EXPONENTIATE: { numberBinary(OP_EXPONENTIATE); }
+                    case OP_EXPONENTIATE: {
+                        if(isVector(peek(0).type) || isVector(peek(1).type)) {
+                            vectorBinary(OP_EXPONENTIATE);
+                            break;
+                        }
+                        numberBinary(OP_EXPONENTIATE);
+                    }
 
                     case OP_NEGATE:       { unary();     }
 
