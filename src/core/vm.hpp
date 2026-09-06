@@ -45,7 +45,7 @@ class VM{
     
         vector<CallFrame> frames;
 
-        array<Value, STACK_MAX> stack;    // an array is faster than a vector
+        array<Value, STACK_MAX + STACK_GUARD> stack;    // an array is faster than a vector
         Value* stackTop = stack.data();
         
         unordered_map<string, Value> globals;
@@ -54,6 +54,7 @@ class VM{
         CallFrame* frame = nullptr;
         bool replMode = false;
         bool hadError = false;
+        bool stackOverflowed = false;
 
         string appName, appDesc, appVersion;
         
@@ -161,6 +162,7 @@ class VM{
         // helpers
 
         void push(Value value) {
+            if(this->stackTop - this->stack.data() >= STACK_MAX) this->stackOverflowed = true;
             *this->stackTop++ = value;
         }
         Value pop() {
@@ -204,6 +206,7 @@ class VM{
             this->stackTop = this->stack.data();    // clear
             this->frames.clear();
             this->frame = nullptr;
+            this->stackOverflowed = false;
         }
 
 
@@ -485,7 +488,11 @@ class VM{
                         runtimeError("Strings can only be duplicated a positive amount of times.");
                         return INTERPRET_RUNTIME_ERROR;
                     }
-                    if(!strA.empty() && (uint64_t)multiplier > MAX_STRING_LENGTH / strA.length()) {
+                    if(strA.empty()) {
+                        push(CaroObj(copyString(strA, fString)));
+                        break;
+                    }
+                    if((uint64_t)multiplier > MAX_STRING_LENGTH / strA.length()) {
                         runtimeError("The resulting string would be too large.");
                         return INTERPRET_RUNTIME_ERROR;
                     }
@@ -629,6 +636,12 @@ class VM{
             #define LOAD_FRAME() (frame = &this->frames.back(), ip = frame->ip, slots = frame->slots, constants = frame->function->chunk.constants.data())
 
             for (;;){
+
+                if(this->stackOverflowed) {
+                    SYNC();
+                    runtimeError("Stack overflow.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
 
                 // debug trace execution
                 if(DEBUG_TRACE_EXECUTION) {
