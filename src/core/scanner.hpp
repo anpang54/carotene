@@ -340,7 +340,10 @@ class Scanner{
             bool inQuotes = false;
             while(!isAtEnd()) {
                 char c = peek();
-                if(c == '\n')                                          this->line++;
+                if(c == '\n') {
+                    if(depth > 0) return errorToken("Unterminated '{' in F-string.");
+                    this->line++;
+                }
                 else if(c == '"' && depth == 0)                        break;
                 else if(c == '"')                                      inQuotes = !inQuotes;
                 else if(fString && !inQuotes && c == '{')              ++depth;
@@ -348,7 +351,7 @@ class Scanner{
                 advance();
             }
 
-            if(isAtEnd()) return errorToken("Unterminated string.");
+            if(isAtEnd()) return errorToken(depth > 0? "Unterminated '{' in F-string.": "Unterminated string.");
             advance();    // closing quote
 
             return makeToken(fString? TOKEN_FSTRING: TOKEN_STRING);
