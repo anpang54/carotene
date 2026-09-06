@@ -1,0 +1,17 @@
+
+a = 5;
+
+if(a > 5.1) {
+    print("Condition 1");
+} elif(a < 5.1) {
+    print("Condition 2");    // Condition 2
+    a = 6;
+}
+
+if(a == 6) {
+    print("Again");    // Again
+} elif(a == 6) {
+    print("This shouldn't run");
+} else{
+    print("Not again");
+}

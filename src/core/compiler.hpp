@@ -1165,7 +1165,8 @@ class Compiler{
             patchJump(thenJump.offset);
             if(!thenJump.fused) emitByte(OP_POP);
 
-            if(match(TOKEN_ELSE)) statement();
+                 if(match(TOKEN_ELIF)) ifStatement();
+            else if(match(TOKEN_ELSE)) statement();
             patchJump(elseJump);
         
         }
@@ -1722,6 +1723,7 @@ inline ParseRule rules[] = {
     [TOKEN_THIS]          = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_SUPER]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_IF]            = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_ELIF]          = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_ELSE]          = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_FOR]           = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_WHILE]         = { NULL,                    NULL,                     PREC_NONE       },
