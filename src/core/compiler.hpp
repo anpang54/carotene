@@ -366,6 +366,26 @@ class Compiler{
 
         }
 
+        void hoistLoopLimit(int& loopStart, int& exitJump) {
+
+            Chunk* chunk = currentChunk();
+            uint8_t constant = chunk->code[loopStart + 3];
+            uint8_t limitSlot = makeHiddenLocal('l');
+
+            const uint8_t push[2] = {(uint8_t)OP_CONSTANT, constant};
+            const uint line = chunk->lines[loopStart];
+            chunk->code.insert(chunk->code.begin() + loopStart, push, push + 2);
+            chunk->lines.insert(chunk->lines.begin() + loopStart, 2, line);
+            loopStart += 2;
+            exitJump += 2;
+
+            chunk->code[loopStart + 2] = OP_GET_LOCAL;
+            chunk->code[loopStart + 3] = limitSlot;
+
+            cur().lastCmpOffset = -1;
+
+        }
+
         void emitForLoop(uint8_t counterSlot, uint8_t limitSlot, uint8_t step, int bodyStart) {
 
             cur().lastCmpOffset = -1;
@@ -1044,8 +1064,12 @@ class Compiler{
             bool condIsForLoop = exitFused
                               && (int)code.size() - loopStart == 7
                               && code[loopStart] == OP_GET_LOCAL
-                              && code[loopStart + 2] == OP_GET_LOCAL
+                              && (code[loopStart + 2] == OP_GET_LOCAL || code[loopStart + 2] == OP_CONSTANT)
                               && code[loopStart + 4] == OP_JUMP_IF_NOT_LESS;
+
+            // hoist it into a hidden local so OP_FOR_LOOP can read it
+            if(condIsForLoop && code[loopStart + 2] == OP_CONSTANT) hoistLoopLimit(loopStart, exitJump);
+
             uint8_t counterSlot = condIsForLoop? code[loopStart + 1]: 0;
             uint8_t limitSlot   = condIsForLoop? code[loopStart + 3]: 0;
 
