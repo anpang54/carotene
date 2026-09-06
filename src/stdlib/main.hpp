@@ -105,7 +105,7 @@ nFunc(main_print, "", "print", {
 
 nFunc(main_input, "", "input", {
     params({
-        {{TYPE_OBJ}, false},
+        {{}, false},
     });
 
     if(args.size() >= 1) {
@@ -119,9 +119,9 @@ nFunc(main_input, "", "input", {
 
 nFunc(main_log, "", "log", {
     params({
-        {{TYPE_OBJ},  true },
-        {{},          true },
-        {{TYPE_BOOL}, false}
+        {{OBJ_STRING}, true },
+        {{},           true },
+        {{TYPE_BOOL},  false}
     });
 
     // check type
@@ -175,8 +175,8 @@ nFunc(main_log, "", "log", {
 
 nFunc(main_sh, "", "sh", {
     params({
-        {{TYPE_OBJ},  true },
-        {{TYPE_BOOL}, false}
+        {{OBJ_STRING}, true },
+        {{TYPE_BOOL},  false}
     });
 
     #ifdef __EMSCRIPTEN__
@@ -207,7 +207,7 @@ nFunc(main_sh, "", "sh", {
 });
 nFunc(main_js, "", "js", {
     params({
-        {{TYPE_OBJ}, true}
+        {{OBJ_STRING}, true}
     });
 
     #ifdef __EMSCRIPTEN__
@@ -222,7 +222,7 @@ nFunc(main_js, "", "js", {
 
 nFunc(main_eval, "", "eval", {
     params({
-        {{TYPE_OBJ}, true}
+        {{OBJ_STRING}, true}
     });
     return vm->eval(asString(args[0])->str);
 });

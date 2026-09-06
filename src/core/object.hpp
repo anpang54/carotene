@@ -293,8 +293,8 @@ string printObject(Obj* object) {
 
 }
 
-string typeofObject(Obj* object) {
-    switch(object->type) {
+string typeofObjType(ObjType type) {
+    switch(type) {
         case OBJ_STRING:   return "str";
         case OBJ_ARRAY:    return "array";
         case OBJ_DICT:     return "dict";
@@ -302,6 +302,9 @@ string typeofObject(Obj* object) {
         case OBJ_NATIVE:   return "native";
     }
     return "unknown";    // should be unreachable
+}
+string typeofObject(Obj* object) {
+    return typeofObjType(object->type);
 }
 
 bool isTruthyObject(Obj* object) {

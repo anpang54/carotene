@@ -40,7 +40,7 @@ using std::ios, std::ifstream, std::ofstream, std::stringstream, std::error_code
 
 nFunc(fs_read, "fs", "read", {
     params({
-        {{TYPE_OBJ}, true}
+        {{}, true}
     });
 
     string path = STR(0);
@@ -63,8 +63,8 @@ nFunc(fs_read, "fs", "read", {
 
 nFunc(fs_write, "fs", "write", {
     params({
-        {{TYPE_OBJ}, true},
-        {{TYPE_OBJ}, true}
+        {{}, true},
+        {{}, true}
     });
 
     string path = STR(0);
@@ -86,8 +86,8 @@ nFunc(fs_write, "fs", "write", {
 
 nFunc(fs_append, "fs", "append", {
     params({
-        {{TYPE_OBJ}, true},
-        {{TYPE_OBJ}, true}
+        {{}, true},
+        {{}, true}
     });
 
     string path = STR(0);
@@ -112,7 +112,7 @@ nFunc(fs_append, "fs", "append", {
 
 nFunc(fs_create_folder, "fs", "create_folder", {
     params({
-        {{TYPE_OBJ}, true}
+        {{}, true}
     });
 
     error_code errorCode;
@@ -124,8 +124,8 @@ nFunc(fs_create_folder, "fs", "create_folder", {
 
 nFunc(fs_symlink, "fs", "symlink", {
     params({
-        {{TYPE_OBJ}, true},
-        {{TYPE_OBJ}, true}
+        {{}, true},
+        {{}, true}
     });
 
     #ifdef _WIN32
@@ -145,8 +145,8 @@ nFunc(fs_symlink, "fs", "symlink", {
 
 nFunc(fs_copy, "fs", "copy", {
     params({
-        {{TYPE_OBJ }, true },
-        {{TYPE_OBJ }, true },
+        {{},          true },
+        {{},          true },
         {{TYPE_BOOL}, false}
     });
 
@@ -160,8 +160,8 @@ nFunc(fs_copy, "fs", "copy", {
 
 nFunc(fs_rename, "fs", "rename", {
     params({
-        {{TYPE_OBJ}, true},
-        {{TYPE_OBJ}, true}
+        {{}, true},
+        {{}, true}
     });
 
     error_code errorCode;
@@ -173,7 +173,7 @@ nFunc(fs_rename, "fs", "rename", {
 
 nFunc(fs_delete, "fs", "delete", {
     params({
-        {{TYPE_OBJ }, true },
+        {{},          true },
         {{TYPE_BOOL}, false}
     });
 
@@ -197,7 +197,7 @@ nFunc(fs_delete, "fs", "delete", {
 
 nFunc(fs_exists, "fs", "exists", {
     params({
-        {{TYPE_OBJ}, true}
+        {{}, true}
     });
 
     error_code errorCode;
@@ -209,7 +209,7 @@ nFunc(fs_exists, "fs", "exists", {
 
 nFunc(fs_size, "fs", "size", {
     params({
-        {{TYPE_OBJ}, true}
+        {{}, true}
     });
 
     error_code errorCode;
@@ -221,7 +221,7 @@ nFunc(fs_size, "fs", "size", {
 
 nFunc(fs_type, "fs", "type", {
     params({
-        {{TYPE_OBJ}, true}
+        {{}, true}
     });
 
     filesystem::path path = PATH(0);
@@ -249,7 +249,7 @@ nFunc(fs_type, "fs", "type", {
 
 nFunc(fs_target, "fs", "target", {
     params({
-        {{TYPE_OBJ}, true}
+        {{}, true}
     });
 
     error_code errorCode;

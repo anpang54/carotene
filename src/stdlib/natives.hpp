@@ -4,10 +4,31 @@
 
 // check parameters
 
+struct PType{
+    ValueType valueType;
+    ObjType   objType;
+    bool      isObjType;
+    PType(ValueType type): valueType(type),     objType(),     isObjType(false) {}
+    PType(ObjType   type): valueType(TYPE_OBJ), objType(type), isObjType(true ) {}
+};
+    // {}                    = any type
+    // {TYPE_INT, TYPE_LONG} = int or long
+    // {TYPE_OBJECT}         = any object
+    // {OBJ_STRING}          = string
+
 struct P{
-    vector<ValueType> allowedTypes;    // empty list = any type is allowed
+    vector<PType> allowedTypes;
     bool required;
 };
+
+bool matchesType(const PType& allowed, const Value& value) {
+    if(value.type != allowed.valueType) return false;
+    if(!allowed.isObjType) return true;
+    return value.as.obj->type == allowed.objType;
+}
+string typeofPType(const PType& type) {
+    return type.isObjType? typeofObjType(type.objType): typeofType(type.valueType);
+}
 
 string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
@@ -35,12 +56,14 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
         }
 
         // check parameter type
-        if(!parameter.allowedTypes.empty() && !std::ranges::contains(parameter.allowedTypes, args[i].type)) {
-            
+        if(!parameter.allowedTypes.empty() && !std::ranges::any_of(parameter.allowedTypes,
+            [&](const PType& allowed) { return matchesType(allowed, args[i]); }
+        )) {
+
             string acceptedTypes = "";
             for(auto it = parameter.allowedTypes.begin(); it != parameter.allowedTypes.end(); ++it) {
                 const auto& type = *it;
-                acceptedTypes += typeofType(type);
+                acceptedTypes += typeofPType(type);
                 if(std::next(it) == parameter.allowedTypes.end()) {    // last type
                     // do nothing
                 }  else if(std::next(it, 2) == parameter.allowedTypes.end()) {    // 2nd to last type
@@ -90,7 +113,7 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 #define nArrayStat(moduleRaw, moduleString, name, numType, caroType, allowed, allowedName, ...)\
     nFunc(moduleRaw##name, moduleString, #name, {\
         params({\
-            {{TYPE_OBJ}, true}\
+            {{OBJ_ARRAY}, true}\
         });\
         \
         vector<Value>& data = asArray(args[0])->data;\
