@@ -216,7 +216,7 @@ class VM{
                 return INTERPRET_RUNTIME_ERROR;
             }
 
-            if(isInt(peek(0).type) && isInt(peek(1).type)) {
+            if(isInt(peek(0).type)) {    // negation only needs 1 operand
                 top() = CaroNumber(peek(0).type, -asNumberTo<uint64_t>(top()));
             } else {
                 top() = CaroNumber(peek(0).type, -asNumberTo<double>(top()));
@@ -241,11 +241,13 @@ class VM{
 
             // wrap back into a value depending on the type
             auto num = [](auto v) {
-                     if constexpr(std::is_same_v<T, uint8_t>) return CaroByte  (v);
-                else if constexpr(std::is_same_v<T, int32_t>) return CaroInt   (v);
-                else if constexpr(std::is_same_v<T, int64_t>) return CaroLong  (v);
-                else if constexpr(std::is_same_v<T, float>)   return CaroFloat (v);
-                else if constexpr(std::is_same_v<T, double>)  return CaroDouble(v);
+                     if constexpr(std::is_same_v<T, uint8_t>)  return CaroByte  (v);
+                else if constexpr(std::is_same_v<T, int32_t>)  return CaroInt   (v);
+                else if constexpr(std::is_same_v<T, uint32_t>) return CaroUint  (v);
+                else if constexpr(std::is_same_v<T, int64_t>)  return CaroLong  (v);
+                else if constexpr(std::is_same_v<T, uint64_t>) return CaroUlong (v);
+                else if constexpr(std::is_same_v<T, float>)    return CaroFloat (v);
+                else if constexpr(std::is_same_v<T, double>)   return CaroDouble(v);
             };
 
             // do the operation
@@ -280,6 +282,33 @@ class VM{
 
         }
 
+        static bool isComparison(OpCode op) {
+            return op == OP_LESS    || op == OP_LESS_EQUAL
+                || op == OP_GREATER || op == OP_GREATER_EQUAL
+                || op == OP_SPACESHIP;
+        }
+
+        InterpretResult mixedSignComparison(OpCode op, bool aIsSigned) {
+
+            if(asNumberTo<int64_t>(aIsSigned? peek(1): peek(0)) >= 0) {
+                return numberBinaryOperationAs<uint64_t>(op);
+            }
+
+            pop();
+            pop();
+
+            bool aIsLess = aIsSigned;
+            switch(op) {
+                case OP_LESS:    case OP_LESS_EQUAL:    push(CaroBool( aIsLess));         break;
+                case OP_GREATER: case OP_GREATER_EQUAL: push(CaroBool(!aIsLess));         break;
+                case OP_SPACESHIP:                      push(CaroInt (aIsLess? -1: 1));   break;
+                default: push(CaroNull); break;
+            }
+
+            return INTERPRET_OK;
+
+        }
+
         InterpretResult numberBinaryOperation(OpCode op) {
 
             // check that both operands are some sort of numeric type
@@ -290,13 +319,24 @@ class VM{
 
             // do int arithmetic if both types are ints, if one or both are float then float arithmetic
             if((isInt(peek(0).type) && isInt(peek(1).type)) && op != OP_DIVIDE) {
-                if(sizeofType(peek(0).type) == 1 && sizeofType(peek(1).type) == 1) {
-                    return numberBinaryOperationAs<uint8_t>(op);
+
+                ValueType a = peek(1).type, b = peek(0).type;
+
+                // both unsigned, so use an unsigned type
+                if(a == TYPE_BYTE && b == TYPE_BYTE) return numberBinaryOperationAs<uint8_t>(op);
+                if(isUnsigned(a) && isUnsigned(b)) {
+                    if(a == TYPE_ULONG || b == TYPE_ULONG) return numberBinaryOperationAs<uint64_t>(op);
+                    return numberBinaryOperationAs<uint32_t>(op);
                 }
-                if(sizeofType(peek(0).type) <= 4 && sizeofType(peek(1).type) <= 4) {
-                    return numberBinaryOperationAs<int32_t>(op);
+
+                // one signed and one unsigned
+                if(isComparison(op) && isUnsigned(a) != isUnsigned(b)) {
+                    return mixedSignComparison(op, !isUnsigned(a));
                 }
+
+                if(sizeofType(a) <= 4 && sizeofType(b) <= 4) return numberBinaryOperationAs<int32_t>(op);
                 return numberBinaryOperationAs<int64_t>(op);
+
             } else {
                 if(sizeofType(peek(0).type) <= 4 && sizeofType(peek(1).type) <= 4) {
                     return numberBinaryOperationAs<float>(op);
@@ -379,7 +419,7 @@ class VM{
 
             // get a and b
             string strA, strB;
-            int multiplier;
+            int64_t multiplier = 0;
 
             bool fString = false;
             auto popString = [&]() {
@@ -388,24 +428,34 @@ class VM{
                 return str->str;
             };
 
+            auto popCount = [&]() -> int64_t {
+                double raw = asNumberTo<double>(pop());
+                if(std::isnan(raw)) return -1;
+                if(raw >  1e18) return  (int64_t)1e18;
+                if(raw < -1e18) return -(int64_t)1e18;
+                return (int64_t)raw;
+            };
+
             if(op == OP_MULTIPLY) {
 
                 if(isNumeric(peek(0).type)) {    // number is on the right
-                    multiplier = asNumberTo<int>(pop());
+                    multiplier = popCount();
                     strA = popString();
                 } else if(isNumeric(peek(1).type)) {    // number is on the left
                     strA = popString();
-                    multiplier = asNumberTo<int>(pop());
+                    multiplier = popCount();
                 } else {
+                    runtimeError("Operands must be numbers or strings.");
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
             } else if(op == OP_DIVIDE || op == OP_MODULO) {
 
                 if(isNumeric(peek(0).type) && isString(peek(1))) {
-                    multiplier = asNumberTo<int>(pop());
+                    multiplier = popCount();
                     strA = popString();
                 } else {
+                    runtimeError("A string can only go on the left side of '/' and '%%'.");
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
@@ -435,9 +485,13 @@ class VM{
                         runtimeError("Strings can only be duplicated a positive amount of times.");
                         return INTERPRET_RUNTIME_ERROR;
                     }
+                    if(!strA.empty() && (uint64_t)multiplier > MAX_STRING_LENGTH / strA.length()) {
+                        runtimeError("The resulting string would be too large.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
                     string result;
                     result.reserve(strA.length() * multiplier);
-                    for(int i = 0; i < multiplier; ++i) {
+                    for(int64_t i = 0; i < multiplier; ++i) {
                         result += strA;
                     }
                     push(CaroObj(copyString(result, fString)));
@@ -449,11 +503,15 @@ class VM{
                         runtimeError("Strings can only be divided a positive amount of times.");
                         return INTERPRET_RUNTIME_ERROR;
                     }
+                    if((uint64_t)multiplier > strA.length()) {
+                        runtimeError("A string can't be divided into more parts than it has characters.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
                     GCPause pause;
-                    int eachPartLength = strA.length() / multiplier;
+                    int64_t eachPartLength = strA.length() / multiplier;
                     vector<Value> result;
                     result.reserve(multiplier);
-                    for(int i = 0; i < multiplier; ++i) {
+                    for(int64_t i = 0; i < multiplier; ++i) {
                         result.push_back(CaroObj(copyString(strA.substr(i * eachPartLength, eachPartLength), fString)));
                     }
                     push(CaroObj(copyArray(result)));
@@ -465,7 +523,11 @@ class VM{
                         runtimeError("Strings can only be divided a positive amount of times.");
                         return INTERPRET_RUNTIME_ERROR;
                     }
-                    int eachPartLength = strA.length() / multiplier;
+                    if((uint64_t)multiplier > strA.length()) {
+                        runtimeError("A string can't be divided into more parts than it has characters.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+                    int64_t eachPartLength = strA.length() / multiplier;
                     push(CaroObj(copyString(strA.substr(eachPartLength * multiplier), fString)));
                     break;
                 }
@@ -478,6 +540,17 @@ class VM{
 
         }
 
+        InterpretResult addOrSubtract(OpCode op) {
+            if(isString(peek(0)) && isString(peek(1))) {
+                return stringBinaryOperation(op);
+            } else if(isVector(peek(0).type) || isVector(peek(1).type)) {
+                return vectorBinaryOperation(op);
+            } else if(isNumeric(peek(0).type) && isNumeric(peek(1).type)) {
+                return numberBinaryOperation(op);
+            }
+            runtimeError("Operands must be numbers or strings.");
+            return INTERPRET_RUNTIME_ERROR;
+        }
 
         // calling functions
 
@@ -498,6 +571,11 @@ class VM{
                 return false;
             }
                 // user probably wrote an infinitely recursing function
+
+            for(Value* argument = this->stackTop - argCount; argument < this->stackTop; ++argument) {
+                *argument = copyIfString(*argument);
+            }
+
             CallFrame* newFrame = &this->frames.emplace_back();
             newFrame->function = function;
             newFrame->ip = function->chunk.code.data();
@@ -594,20 +672,9 @@ class VM{
                     #define stringBinary(op) SYNC(); if(stringBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
 
                     case OP_ADD: case OP_SUBTRACT: {
-                        if(isString(peek(0)) && isString(peek(1))) {
-                            stringBinary(instruction);
-                            break;
-                        } else if(isVector(peek(0).type) || isVector(peek(1).type)) {
-                            vectorBinary(instruction);
-                            break;
-                        } else if(isNumeric(peek(0).type) && isNumeric(peek(1).type)) {
-                            numberBinary(instruction);
-                            break;
-                        } else {
-                            SYNC();
-                            runtimeError("Operands must be numbers or strings.");
-                            return INTERPRET_RUNTIME_ERROR;
-                        }
+                        SYNC();
+                        if(addOrSubtract(instruction) != INTERPRET_OK) return INTERPRET_RUNTIME_ERROR;
+                        break;
                     }
                     case OP_MULTIPLY: case OP_DIVIDE: case OP_MODULO: {
                         if(
@@ -687,7 +754,7 @@ class VM{
 
                     case OP_DEFINE_GLOBAL: {
                         ObjString* name = asString(constants[READ_BYTE()]);
-                        this->globals[name->str] = peek(0);
+                        this->globals[name->str] = copyIfString(peek(0));
                         --this->stackTop;
                         break;
                     }
@@ -698,7 +765,7 @@ class VM{
                             runtimeError("You can't edit a constant.");
                             return INTERPRET_RUNTIME_ERROR;
                         }
-                        this->globals[name->str] = peek(0);
+                        this->globals[name->str] = copyIfString(peek(0));
                         break;
                     }
 
@@ -715,28 +782,27 @@ class VM{
                     }
                     case OP_SET_GLOBAL: {
                         ObjString* name = asString(constants[READ_BYTE()]);
-                        this->globals[name->str] = peek(0);
+                        this->globals[name->str] = copyIfString(peek(0));
                         break;
                     }
 
                     // fused i = i + 1
-                    #define incrementError(variable) { \
+                    #define incrementSlow(target, opcode) { \
                         SYNC(); \
-                        if(isNumeric((variable).type)) { \
-                            runtimeError("Arithmetic operations between numbers of different types currently aren't supported yet."); \
-                        } else { \
-                            runtimeError("Operands must be numbers or strings."); \
-                        } \
-                        return INTERPRET_RUNTIME_ERROR; \
+                        push(target); \
+                        push(step); \
+                        if(addOrSubtract(opcode) != INTERPRET_OK) return INTERPRET_RUNTIME_ERROR; \
+                        target = pop(); \
                     }
-                    #define incrementLocal(op) { \
+                    #define incrementLocal(op, opcode) { \
                         uint8_t slot = READ_BYTE(); \
                         const Value& step = constants[READ_BYTE()]; \
-                        if(slots[slot].type != TYPE_INT) incrementError(slots[slot]); \
-                        slots[slot].as.Aint op step.as.Aint; \
+                        if(slots[slot].type == TYPE_INT && step.type == TYPE_INT) { \
+                            slots[slot].as.Aint op step.as.Aint; \
+                        } else incrementSlow(slots[slot], opcode) \
                         break; \
                     }
-                    #define incrementGlobal(op) { \
+                    #define incrementGlobal(op, opcode) { \
                         ObjString* name = asString(constants[READ_BYTE()]); \
                         const Value& step = constants[READ_BYTE()]; \
                         auto found = this->globals.find(name->str); \
@@ -745,15 +811,16 @@ class VM{
                             runtimeError("Undefined variable '%s'.", name->str.c_str()); \
                             return INTERPRET_RUNTIME_ERROR; \
                         } \
-                        if(found->second.type != TYPE_INT) incrementError(found->second); \
-                        found->second.as.Aint op step.as.Aint; \
+                        if(found->second.type == TYPE_INT && step.type == TYPE_INT) { \
+                            found->second.as.Aint op step.as.Aint; \
+                        } else incrementSlow(found->second, opcode) \
                         break; \
                     }
 
-                    case OP_INCREMENT_LOCAL:  incrementLocal(+=)
-                    case OP_DECREMENT_LOCAL:  incrementLocal(-=)
-                    case OP_INCREMENT_GLOBAL: incrementGlobal(+=)
-                    case OP_DECREMENT_GLOBAL: incrementGlobal(-=)
+                    case OP_INCREMENT_LOCAL:  incrementLocal (+=, OP_ADD)
+                    case OP_DECREMENT_LOCAL:  incrementLocal (-=, OP_SUBTRACT)
+                    case OP_INCREMENT_GLOBAL: incrementGlobal(+=, OP_ADD)
+                    case OP_DECREMENT_GLOBAL: incrementGlobal(-=, OP_SUBTRACT)
 
                     case OP_GET_LOCAL: {
                         uint8_t slot = READ_BYTE();
@@ -762,7 +829,7 @@ class VM{
                     }
                     case OP_SET_LOCAL: {
                         uint8_t slot = READ_BYTE();
-                        slots[slot] = peek(0);
+                        slots[slot] = copyIfString(peek(0));
                         break;
                     }
 
@@ -809,7 +876,10 @@ class VM{
                     case OP_MAKE_ARRAY: {
 
                         uint8_t elementCount = READ_BYTE();
-                        ObjArray* array = copyArray(vector<Value>(this->stackTop - elementCount, this->stackTop));
+                        GCPause pause;
+                        vector<Value> data(this->stackTop - elementCount, this->stackTop);
+                        for(Value& element: data) element = copyIfString(element);
+                        ObjArray* array = copyArray(std::move(data));
                         this->stackTop -= elementCount;
                         push(CaroObj(array));
 
@@ -818,6 +888,7 @@ class VM{
                     case OP_MAKE_DICT: {
 
                         uint8_t elementCount = READ_BYTE();
+                        GCPause pause;
                         unordered_map<Value, Value> data;
                         data.reserve(elementCount);
                         Value* start = this->stackTop - 2 * elementCount;
@@ -828,7 +899,7 @@ class VM{
                                     // todo:
                                 return INTERPRET_RUNTIME_ERROR;
                             }
-                            data.insert_or_assign(start[2 * i], start[2 * i + 1]);
+                            data.insert_or_assign(copyIfString(start[2 * i]), copyIfString(start[2 * i + 1]));
                         }
                         ObjDict* dict = copyDict(std::move(data));
                         this->stackTop -= 2 * elementCount;
@@ -908,6 +979,8 @@ class VM{
 
                     case OP_SET_INDEX: {
 
+                        GCPause pause;
+
                         if(isString(peek(2))) {
 
                             if(!isNumeric(peek(1).type)) {
@@ -915,7 +988,11 @@ class VM{
                                 runtimeError("The right side must be a number.");
                                 return INTERPRET_RUNTIME_ERROR;
                             }
-
+                            if(asString(peek(2))->immutable) {
+                                SYNC();
+                                runtimeError("You can't modify a string literal.");
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
                             if(!isString(peek(0))) {
                                 SYNC();
                                 runtimeError("The value to assign must be a string.");
@@ -954,7 +1031,7 @@ class VM{
                                 runtimeError("Array index out of bounds.");
                                 return INTERPRET_RUNTIME_ERROR;
                             }
-                            array->data[index] = value;
+                            array->data[index] = copyIfString(value);
                             push(value);
 
                         } else if(isDict(peek(2))) {
@@ -968,7 +1045,7 @@ class VM{
                             Value value = pop();
                             Value key = pop();
                             ObjDict* dict = asDict(pop());
-                            dict->data.insert_or_assign(key, value);
+                            dict->data.insert_or_assign(copyIfString(key), copyIfString(value));
                             push(value);
 
                         } else {
@@ -1072,18 +1149,24 @@ class VM{
                         const Value& step = constants[READ_BYTE()];
                         uint16_t offset = READ_SHORT();
 
-                        if(counter.type != TYPE_INT || limit.type != TYPE_INT) {
-                            SYNC();
-                            if(isNumeric(counter.type) && isNumeric(limit.type)) {
-                                runtimeError("Arithmetic operations between numbers of different types currently aren't supported yet.");
-                            } else {
-                                runtimeError("Operands must be numbers or strings.");
-                            }
-                            return INTERPRET_RUNTIME_ERROR;
+                        // fast path: an int counter against an int limit
+                        if(counter.type == TYPE_INT && limit.type == TYPE_INT && step.type == TYPE_INT) {
+                            counter.as.Aint += step.as.Aint;
+                            if(counter.as.Aint < limit.as.Aint) ip -= offset;
+                            break;
                         }
 
-                        counter.as.Aint += step.as.Aint;
-                        if(counter.as.Aint < limit.as.Aint) ip -= offset;
+                        SYNC();
+
+                        push(counter);
+                        push(step);
+                        if(addOrSubtract(OP_ADD) != INTERPRET_OK) return INTERPRET_RUNTIME_ERROR;
+                        counter = pop();
+
+                        push(counter);
+                        push(limit);
+                        if(numberBinaryOperation(OP_LESS) != INTERPRET_OK) return INTERPRET_RUNTIME_ERROR;
+                        if(isTruthy(pop())) ip -= offset;
 
                         break;
 
@@ -1091,6 +1174,10 @@ class VM{
 
                     case OP_POP: {
                         --this->stackTop;
+                        break;
+                    }
+                    case OP_COPY: {
+                        top() = copyIfString(top());
                         break;
                     }
 

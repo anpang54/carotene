@@ -46,10 +46,12 @@ nMath(asin);
 nMath(acos);
 nMath(atan);
 
+#define magnitudeOf(value) ((value) < 0? -(uint64_t)(value): (uint64_t)(value))
+
 nArrayStatInt(gcd, {
     uint64_t result = 0;
     for(int64_t value: values) {
-        result = std::gcd(result, value);
+        result = std::gcd(result, magnitudeOf(value));
     }
     return (int64_t)result;
 });
@@ -57,7 +59,7 @@ nArrayStatInt(lcm, {
     uint64_t result = 1;
     for(int64_t value: values) {
         if(value == 0) return 0;
-        uint64_t magnitude = value;
+        uint64_t magnitude = magnitudeOf(value);
         result = result / std::gcd(result, magnitude) * magnitude;
     }
     return (int64_t)result;
