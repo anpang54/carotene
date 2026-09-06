@@ -126,12 +126,14 @@ string compile(string filename) {
 
 }
 
-void run(string filename) {
+InterpretResult run(string filename) {
 
     ObjFunction* function = deserializeApp(readFileBytes(filename));
-    vm.interpretBytecode(function);
+    InterpretResult result = vm.interpretBytecode(function);
 
     freeObjects();
+
+    return result;
 
 }
 
@@ -143,7 +145,7 @@ int main(int argc, const char* argv[]) {
     // no arguments, repl
     if(argc <= 1) {
         repl();
-        return 1;
+        return 0;
     }
 
     // get arguments
@@ -167,20 +169,21 @@ int main(int argc, const char* argv[]) {
     }
 
     // do something
+    InterpretResult result = INTERPRET_OK;
     switch(option) {
 
         // compile/run
         case ' ':
-            vm.interpret(readFile(filename));
+            result = vm.interpret(readFile(filename));
             break;
         case 'c':
             compile(filename);
             break;
         case 'r':
-            run(filename);
+            result = run(filename);
             break;
         case 't':
-            run(compile(filename));
+            result = run(compile(filename));
             break;
 
         // help
@@ -207,5 +210,5 @@ int main(int argc, const char* argv[]) {
 
     }
 
-    return 0;
+    return result == INTERPRET_OK? 0: 1;
 }
