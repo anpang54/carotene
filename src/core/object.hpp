@@ -49,6 +49,7 @@ struct Obj{
 struct ObjString: Obj{
     string str;
     bool fString = false;
+    bool immutable = false;
 };
     // just a wrapper around an std::string
 
@@ -64,6 +65,12 @@ ObjString* copyString(string str, bool fString = false) {
     ObjString* object = new ObjString({OBJ_STRING}, std::move(str), fString);
     objects.push_back(object);
     return object;
+}
+
+Value copyIfString(const Value& value) {
+    if(!isString(value)) return value;
+    ObjString* str = asString(value);
+    return CaroObj(copyString(str->str, str->fString));
 }
 
 
@@ -219,8 +226,7 @@ string printObject(Obj* object) {
             // print [...] if an array contains itself
             static set<Obj*> beingPrinted;
             if(!beingPrinted.insert(object).second) {
-                printed += "[...]";
-                break;
+                return "[...]";
             }
 
             printed += "[";
@@ -247,8 +253,7 @@ string printObject(Obj* object) {
             // print {...} if a dict contains itself
             static set<Obj*> beingPrinted;
             if(!beingPrinted.insert(object).second) {
-                printed += "{...}";
-                break;
+                return "{...}";
             }
 
             printed += "{";

@@ -124,6 +124,8 @@ struct FunctionState{
     int localCount;
     int scopeDepth;
     unordered_map<ConstantKey, int, ConstantKeyHash> constants;
+    int lastCmpOffset = -1;
+    VariableTarget lastVariable;
 };
 
 
@@ -148,9 +150,6 @@ class Compiler{
         bool panicMode = false;    // suppresses other errors
         bool inEval = false;       // affects finishExpression()
 
-        int lastCmpOffset = -1;    // code offset of the last comparison opcode
-        VariableTarget lastVariable;    // lets v.x = 1 store the updated vector back into v
-
         inline static set<string> usedModules;
 
         Chunk* currentChunk() {
@@ -167,9 +166,7 @@ class Compiler{
             state.function = newFunction();
             state.type = type;
             state.scopeDepth = 0;
-
-            this->lastCmpOffset = -1;    // now emitting into a different chunk
-            this->lastVariable = {};
+            // lastCmpOffset and lastVariable start fresh with the state, and are dropped with it
 
             if(type != TYPE_SCRIPT) state.function->name = this->previous.start;
 
@@ -292,12 +289,12 @@ class Compiler{
         }
         void emitLoop(int loopStart) {
 
-            this->lastCmpOffset = -1;
+            cur().lastCmpOffset = -1;
 
             emitByte(OP_LOOP);
 
             int offset = currentChunk()->code.size() - loopStart + 2;
-
+            if(offset > UINT16_MAX) error("Loop body too large.");    // the offset is 2 bytes
             emitByte((offset >> 8) & 0xff);
             emitByte(offset & 0xff);
 
@@ -310,7 +307,7 @@ class Compiler{
         ConditionJump emitConditionJump() {
             // fuse a trailing comparison into a single compare-and-jump instruction
 
-            if(this->lastCmpOffset == (int)currentChunk()->code.size() - 1) {
+            if(cur().lastCmpOffset == (int)currentChunk()->code.size() - 1) {
 
                 uint8_t fusedOp;
                 switch(currentChunk()->code.back()) {
@@ -371,12 +368,13 @@ class Compiler{
 
         void emitForLoop(uint8_t counterSlot, uint8_t limitSlot, uint8_t step, int bodyStart) {
 
-            this->lastCmpOffset = -1;
+            cur().lastCmpOffset = -1;
 
             emitBytes(OP_FOR_LOOP, counterSlot);
             emitBytes(limitSlot, step);
 
             int offset = currentChunk()->code.size() - bodyStart + 2;
+            if(offset > UINT16_MAX) error("Loop body too large.");
 
             emitByte((offset >> 8) & 0xff);
             emitByte(offset & 0xff);
@@ -397,6 +395,8 @@ class Compiler{
 
         uint8_t makeConstant(Value value) {
 
+            if(isString(value)) asString(value)->immutable = true;    // a literal is shared by every OP_CONSTANT that loads it
+
             ConstantKey key = makeConstantKey(value);
             auto found = cur().constants.find(key);
             if(found != cur().constants.end()) return (uint8_t)found->second;
@@ -413,7 +413,7 @@ class Compiler{
         }
 
         void emitComparison(uint8_t op) {
-            this->lastCmpOffset = currentChunk()->code.size();
+            cur().lastCmpOffset = currentChunk()->code.size();
             emitByte(op);
         }
 
@@ -592,6 +592,7 @@ class Compiler{
                 size_t openingBrace = text.find('{', i);
                 if(openingBrace != i) {
                     emitConstant(CaroObj(copyString(text.substr(i, openingBrace - i), true)));
+                    if(pieceCount == 255) error("An F-string can only have 255 pieces.");
                     ++pieceCount;
                 }
                 if(openingBrace == string::npos) break;
@@ -613,6 +614,7 @@ class Compiler{
                 }
 
                 compileEmbedded(text.substr(openingBrace + 1, closingBrace - openingBrace - 1));
+                if(pieceCount == 255) error("An F-string can only have 255 pieces.");
                 ++pieceCount;
                 i = closingBrace + 1;
 
@@ -715,7 +717,7 @@ class Compiler{
             }
 
             const vector<uint8_t>& code = currentChunk()->code;
-            VariableTarget target = this->lastVariable;
+            VariableTarget target = cur().lastVariable;
             if(target.offset < 0 || target.offset + 2 != (int)code.size() || code[target.offset] != target.getOp) {
                 error("You can only assign to a component of a variable.");
                 return;
@@ -1175,10 +1177,12 @@ class Compiler{
             int jump = currentChunk()->code.size() - offset - 2;
                 // -2 to adjust for the bytecode for the jump offset itself
 
+            if(jump > UINT16_MAX) error("Too much code to jump over.");    // the offset is 2 bytes
+
             currentChunk()->code[offset] = (jump >> 8) & 0xff;
             currentChunk()->code[offset + 1] = jump & 0xff;
 
-            this->lastCmpOffset = -1;
+            cur().lastCmpOffset = -1;
 
         }
 
@@ -1337,6 +1341,7 @@ class Compiler{
             declareVariable();
             advance();    // consume =
             expression();
+            emitByte(OP_COPY);
             consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
             markInitialized();
 
@@ -1601,7 +1606,7 @@ class Compiler{
                 emitByte(compound);
                 emitBytes(setOp, (uint8_t)arg);
             } else {
-                this->lastVariable = { (int)currentChunk()->code.size(), getOp, setOp, (uint8_t)arg };
+                cur().lastVariable = { (int)currentChunk()->code.size(), getOp, setOp, (uint8_t)arg };
                 emitBytes(getOp, (uint8_t)arg);
             }
 

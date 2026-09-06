@@ -252,7 +252,9 @@ ObjFunction* deserializeFunction(Reader& r) {
     // constants
     uint16_t constants = r.readUint16();
     for(uint16_t i = 0; i < constants; ++i) {
-        function->chunk.constants.push_back(deserializeValue(r));
+        Value constant = deserializeValue(r);
+        if(isString(constant)) asString(constant)->immutable = true;
+        function->chunk.constants.push_back(constant);
     }
 
     return function;

@@ -340,11 +340,11 @@ class Scanner{
             bool inQuotes = false;
             while(!isAtEnd()) {
                 char c = peek();
-                if(c == '\n')                             this->line++;
-                else if(c == '"' && depth == 0)           break;
-                else if(c == '"')                         inQuotes = !inQuotes;
-                else if(fString && !inQuotes && c == '{') ++depth;
-                else if(fString && !inQuotes && c == '}') --depth;
+                if(c == '\n')                                          this->line++;
+                else if(c == '"' && depth == 0)                        break;
+                else if(c == '"')                                      inQuotes = !inQuotes;
+                else if(fString && !inQuotes && c == '{')              ++depth;
+                else if(fString && !inQuotes && c == '}' && depth > 0) --depth;
                 advance();
             }
 

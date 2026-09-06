@@ -90,6 +90,7 @@ enum OpCode{
 
     // misc
     OP_POP,
+    OP_COPY,
 
 };
 
@@ -304,6 +305,8 @@ class Chunk{
 
                 case OP_POP:
                     return simpleInstruction("OP_POP", offset);
+                case OP_COPY:
+                    return simpleInstruction("OP_COPY", offset);
 
                 default:
                     cout << "Unknown opcode " << instruction << '\n';
