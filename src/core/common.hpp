@@ -22,7 +22,7 @@
 // version
 
 #define VERSION      "0.1.2"
-#define VERSION_DATE "5 Sep 2026"
+#define VERSION_DATE "6 Sep 2026"
 
 
 // convenience
