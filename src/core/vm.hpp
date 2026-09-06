@@ -47,6 +47,7 @@ class VM{
 
         array<Value, STACK_MAX + STACK_GUARD> stack;    // an array is faster than a vector
         Value* stackTop = stack.data();
+        Value* const stackLimit = stack.data() + STACK_MAX;
         
         unordered_map<string, Value> globals;
         vector<Local> replLocals;
@@ -162,7 +163,7 @@ class VM{
         // helpers
 
         void push(Value value) {
-            if(this->stackTop - this->stack.data() >= STACK_MAX) this->stackOverflowed = true;
+            if(this->stackTop >= this->stackLimit) this->stackOverflowed = true;
             *this->stackTop++ = value;
         }
         Value pop() {
@@ -171,7 +172,7 @@ class VM{
         Value& top() {
             return this->stackTop[-1];
         }
-        Value peek(int distance) {
+        const Value& peek(int distance) {
             return this->stackTop[-1 - distance];
         }
         
@@ -635,17 +636,19 @@ class VM{
             #define SYNC()       (frame->ip = ip)
             #define LOAD_FRAME() (frame = &this->frames.back(), ip = frame->ip, slots = frame->slots, constants = frame->function->chunk.constants.data())
 
-            for (;;){
-
-                if(this->stackOverflowed) {
-                    SYNC();
-                    runtimeError("Stack overflow.");
-                    return INTERPRET_RUNTIME_ERROR;
+            // overflow is checked at frame boundaries instead of before every instruction
+            #define CHECK_OVERFLOW() \
+                if(this->stackOverflowed) { \
+                    SYNC(); \
+                    runtimeError("Stack overflow."); \
+                    return INTERPRET_RUNTIME_ERROR; \
                 }
 
+            for (;;){
+
                 // debug trace execution
-                if(DEBUG_TRACE_EXECUTION) {
-                    
+                #if DEBUG_TRACE_EXECUTION
+
                     cout << "          ";
                     for(Value* slot = this->stack.data(); slot < this->stackTop; ++slot) {
                         cout << "[ " << printValue(*slot) << " ]";
@@ -654,7 +657,7 @@ class VM{
 
                     frame->function->chunk.disassembleInstruction((int)(ip - frame->function->chunk.code.data()));
 
-                }
+                #endif
 
                 // run the instruction
                 OpCode instruction;
@@ -1073,6 +1076,7 @@ class VM{
                     case OP_CALL: {
                         int argCount = READ_BYTE();
                         SYNC();
+                        CHECK_OVERFLOW();
                         if(!callValue(peek(argCount), argCount)) {
                             return INTERPRET_RUNTIME_ERROR;
                         }
@@ -1080,6 +1084,8 @@ class VM{
                         break;
                     }
                     case OP_RETURN: {
+
+                        CHECK_OVERFLOW();
 
                         Value returned = pop();
                         Value* returnSlots = frame->slots;

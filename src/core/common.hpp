@@ -40,7 +40,7 @@ typedef unsigned int uint;
 #define FRAMES_MAX  64
 #define FRAME_SLOTS 256
 #define STACK_MAX   (FRAMES_MAX * FRAME_SLOTS)
-#define STACK_GUARD 256
+#define STACK_GUARD 1024
 
 #define MAX_STRING_LENGTH ((uint64_t)1 << 30)
     // 2^30 bytes = 1 GiB, the longest string that "abc" * n is allowed to build

@@ -13,7 +13,7 @@ languages = [
     ("Lua",         "luajit -j off",                     "lua" ),
     ("Node.js",     "node --jitless --no-expose-wasm",   "js"  ),
     ("PHP",         "php -d opcache.enable_cli=0",       "php" ),
-    ("Python",      "python",                            "py"  ),
+    ("Python",      "python3",                           "py"  ),
     ("Wren",        "wren",                              "wren")
 ]
 
