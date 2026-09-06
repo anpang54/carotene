@@ -19,7 +19,7 @@
 
 nFunc(hash_xxhash, "hash", "xxhash", {
     params({
-        {{TYPE_OBJ}, true}
+        {{OBJ_STRING}, true}
     });
     const string& str = asString(args[0])->str;
     uint64_t hashed = XXH3_64bits(str.data(), str.size());
@@ -28,21 +28,21 @@ nFunc(hash_xxhash, "hash", "xxhash", {
 
 nFunc(hash_sha256, "hash", "sha256", {
     params({
-        {{TYPE_OBJ}, true}
+        {{OBJ_STRING}, true}
     });
     SHA256 hasher;
     return CaroObj(copyString(hasher.hash(asString(args[0])->str)));
 });
 nFunc(hash_sha384, "hash", "sha384", {
     params({
-        {{TYPE_OBJ}, true}
+        {{OBJ_STRING}, true}
     });
     SHA384 hasher;
     return CaroObj(copyString(hasher.hash(asString(args[0])->str)));
 });
 nFunc(hash_sha512, "hash", "sha512", {
     params({
-        {{TYPE_OBJ}, true}
+        {{OBJ_STRING}, true}
     });
     SHA512 hasher;
     return CaroObj(copyString(hasher.hash(asString(args[0])->str)));

@@ -425,7 +425,9 @@ string typeofType(ValueType type) {
         case TYPE_VEC3I:  return "vec3i";
         case TYPE_VEC3U:  return "vec3u";
         case TYPE_VEC3F:  return "vec3f";
-        
+
+        case TYPE_OBJ:    return "object";
+
         default:        return "unknown";    // should be unreachable
 
     }
