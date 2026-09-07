@@ -107,3 +107,5 @@ nFunc(http_post, "http", "post", {
     const string& body = args.size() >= 2? asString(args[1])->str: noBody;
     return httpRequest(vm, args, "POST", body, 2);
 });
+
+nConst(http_user_agent, "http", "user_agent", { return CaroObj(copyString(HTTP_USER_AGENT)); });

@@ -3,6 +3,6 @@ set_name    "Name";
 set_desc    "Desc";
 set_version "Version";
 
-print(name());       // Name
-print(desc());       // Desc
-print(version());    // Version
+print(_name);       // Name
+print(_desc);       // Desc
+print(_version);    // Version
