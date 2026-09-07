@@ -83,6 +83,13 @@ namespace CaroHttp{
 
     }
 
+    bool hasHeader(const vector<pair<string, string>>& headers, const string& name) {
+        for(const pair<string, string>& header: headers) {
+            if(lower(header.first) == name) return true;
+        }
+        return false;
+    }
+
     size_t addHeaderBlock(Response& response, string_view block, size_t position = 0) {
 
         while(position < block.size()) {
@@ -128,6 +135,15 @@ namespace CaroHttp{
     }
 
 
+    // ERRORS
+
+    string requestError(const string& method, const string& url, const string& reason = "") {
+        return reason.empty()?
+               format("Couldn't make a {:s} request to \"{:s}\".",       method, url):
+               format("Couldn't make a {:s} request to \"{:s}\": {:s}.", method, url, reason);
+    }
+
+
     // BACKENDS
     // vibecoded because I'm not gonna waste time dealing with WinHTTP and libcurl
 
@@ -147,7 +163,7 @@ namespace CaroHttp{
             for(const pair<string, string>& header: requestHeaders) {
                 js += "request.setRequestHeader(\"" + escapeJS(header.first) + "\", \"" + escapeJS(header.second) + "\");";
             }
-            js +=       "request.send(" + (method == "GET"? string("null"): "\"" + escapeJS(body) + "\"") + ");"
+            js +=       "request.send(" + (body.empty()? string("null"): "\"" + escapeJS(body) + "\"") + ");"
                         "return request.status+\"\\r\\n\" + request.getAllResponseHeaders() + \"\\r\\n\" + request.responseText;"
                     "} catch(error){"
                         "return \"!\"+(error&&error.message? error.message: error);"
@@ -158,11 +174,10 @@ namespace CaroHttp{
             string result = runJS(js);
 
             // check for errors
-            string verb = lower(method);
-            if(result.empty())   return format("Couldn't {:s} \"{:s}\".", verb, url);
-            if(result[0] == '!') return format("Couldn't {:s} \"{:s}\": {:s}.", verb, url, result.substr(1));
+            if(result.empty())   return requestError(method, url);
+            if(result[0] == '!') return requestError(method, url, result.substr(1));
             size_t statusEnd = result.find('\n');
-            if(statusEnd == string::npos) return format("Couldn't {:s} \"{:s}\".", verb, url);
+            if(statusEnd == string::npos) return requestError(method, url);
             response.status = (uint32_t)strtoul(result.c_str(), nullptr, 10);
             if(response.status == 0) {
                 return format(
@@ -344,11 +359,13 @@ namespace CaroHttp{
             CURL_USERAGENT       = 10018,
             CURL_HTTPHEADER      = 10023,
             CURL_HEADERDATA      = 10029,
+            CURL_CUSTOMREQUEST   = 10036,
             CURL_ACCEPT_ENCODING = 10102,
             CURL_WRITEFUNCTION   = 20011,
             CURL_HEADERFUNCTION  = 20079,
 
             // numbers
+            CURL_NOBODY          = 44,
             CURL_POST            = 47,
             CURL_FOLLOWLOCATION  = 52,
             CURL_POSTFIELDSIZE   = 60,
@@ -451,7 +468,7 @@ namespace CaroHttp{
         string perform(const string& method, const string& url, const vector<pair<string, string>>& requestHeaders, const string& body, double timeout, Response& response) {
 
             if(!curl().library) {
-                return "Couldn't find libcurl, which http.get() and http.post() need. Please install curl.";
+                return "Couldn't find libcurl, which the http module needs. Please install curl.";
             }
 
             // make the request
@@ -473,14 +490,22 @@ namespace CaroHttp{
             curl().setopt_ptr (request.handle, CURL_HEADERFUNCTION,  (void*)writeHeader);
             curl().setopt_ptr (request.handle, CURL_HEADERDATA,      &response);
 
-            // Method and body. CURL_POSTFIELDSIZE must be set before CURL_POSTFIELDS, otherwise
-            // curl measures the body with strlen() and truncates it at the first null byte.
-            if(method == "GET") {
-                curl().setopt_long(request.handle, CURL_HTTPGET,       1);
-            } else {
+            // Method and body.
+            // A request that sends a body is shaped like a POST and one that doesn't like a GET.
+            // CURL_POSTFIELDSIZE must be set before CURL_POSTFIELDS, otherwise curl measures the
+            // body with strlen() and truncates it at the first null byte.
+            bool sendsBody = !body.empty() || method == "POST" || method == "PUT" || method == "PATCH";
+            if(method == "HEAD") {
+                curl().setopt_long(request.handle, CURL_NOBODY,        1);
+            } else if(sendsBody) {
                 curl().setopt_long(request.handle, CURL_POST,          1);
                 curl().setopt_long(request.handle, CURL_POSTFIELDSIZE, (long)body.size());
                 curl().setopt_ptr (request.handle, CURL_POSTFIELDS,    body.c_str());
+            } else {
+                curl().setopt_long(request.handle, CURL_HTTPGET,       1);
+            }
+            if(method != "GET" && method != "HEAD") {
+                curl().setopt_ptr(request.handle, CURL_CUSTOMREQUEST, method.c_str());
             }
 
             // headers
@@ -491,22 +516,21 @@ namespace CaroHttp{
                 headers.list = appended;
             }
 
-            // Curl is the only backend that sends "Expect: 100-continue" for larger bodies. A
-            // server that ignores it costs a second of waiting, so disable it. A header with an
-            // empty value and no trailing space is how curl is told to drop one of its own.
-            if(method != "GET") {
-                void* appended = curl().slist_append(headers.list, "Expect:");
-                if(!appended) return "Couldn't set the request headers.";
-                headers.list = appended;
+            auto drop = [&](const char* header) {
+                void* appended = curl().slist_append(headers.list, header);
+                if(appended) headers.list = appended;
+                return appended != nullptr;
+            };
+            if(!drop("Expect:")) return "Couldn't set the request headers.";
+            if(!hasHeader(requestHeaders, "content-type") && !drop("Content-Type:")) {
+                return "Couldn't set the request headers.";
             }
 
             if(headers.list) curl().setopt_ptr(request.handle, CURL_HTTPHEADER, headers.list);
 
             // run
             int result = curl().easy_perform(request.handle);
-            if(result != 0) {
-                return format("Couldn't {:s} \"{:s}\": {:s}.", lower(method), url, curl().easy_strerror(result));
-            }
+            if(result != 0) return requestError(method, url, curl().easy_strerror(result));
 
             // get status
             long status = 0;
@@ -532,15 +556,8 @@ namespace CaroHttp{
         string error = normalizeUrl(url);
         if(!error.empty()) return error;
 
-        if(method != "GET") {
-            bool hasContentType = false;
-            for(const pair<string, string>& header: requestHeaders) {
-                if(lower(header.first) == "content-type") {
-                    hasContentType = true;
-                    break;
-                }
-            }
-            if(!hasContentType) requestHeaders.push_back({"Content-Type", "text/plain; charset=utf-8"});
+        if(!body.empty() && !hasHeader(requestHeaders, "content-type")) {
+            requestHeaders.push_back({"Content-Type", "text/plain; charset=utf-8"});
         }
 
         return perform(method, url, requestHeaders, body, timeout, response);
