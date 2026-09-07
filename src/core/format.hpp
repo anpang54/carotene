@@ -56,7 +56,15 @@ string escapeJS(const string& str) {
             case '\t': result += "\\t";  break;
             case '\n': result += "\\n";  break;
             case '\r': result += "\\r";  break;
-            default: result.push_back(c);
+            default:
+                if((unsigned char)c < 0x20) {
+                    const char* digits = "0123456789abcdef";
+                    result += "\\x";
+                    result.push_back(digits[((unsigned char)c >> 4) & 0xf]);
+                    result.push_back(digits[ (unsigned char)c       & 0xf]);
+                } else {
+                    result.push_back(c);
+                }
         }
     }
     return result;

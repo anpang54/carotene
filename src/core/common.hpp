@@ -2,15 +2,16 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <unordered_map>
 #include <iostream>
 #include <format>
+#include <utility>
 
-#include <cstdbool>
 #include <cstddef>
 #include <cstdint>
 
@@ -18,21 +19,21 @@
 #include <emscripten.h>
 #endif
 
+using std::cin, std::cout, std::cerr,
+      std::string, std::string_view, std::format, std::to_string,
+      std::pair, std::vector, std::unordered_map, std::hash,
+      std::int8_t, std::int16_t, std::int32_t, std::int64_t, std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t;
+
+typedef unsigned int uint;
+
+
+// MACROS
+
 
 // version
 
 #define VERSION      "0.1.2"
 #define VERSION_DATE "6 Sep 2026"
-
-
-// convenience
-
-using std::cin, std::cout, std::cerr,
-      std::string, std::format, std::to_string,
-      std::vector, std::unordered_map, std::hash,
-      std::int8_t, std::int16_t, std::int32_t, std::int64_t, std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t;
-
-typedef unsigned int uint;
 
 
 // limits
@@ -53,9 +54,12 @@ typedef unsigned int uint;
 #define DEBUG_STRESS_GC       false
 
 
-// helpers
+// HELPERS
 
 vector<string> moreArguments;
+
+
+// general
 
 bool isAlpha(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
@@ -90,6 +94,29 @@ string runJS(string code) {
 
 
 // string manipulation
+
+// line endings count as whitespace, so this also strips the CRLF off a line
+string trim(string_view str) {
+    const char* whitespace = " \t\r\n";
+    size_t start = str.find_first_not_of(whitespace);
+    if(start == string::npos) return "";
+    return string(str.substr(start, str.find_last_not_of(whitespace) - start + 1));
+}
+
+string lower(string_view str) {
+    string result(str);
+    for(char& c: result) {
+        if(c >= 'A' && c <= 'Z') c += 'a' - 'A';
+    }
+    return result;
+}
+string upper(string_view str) {
+    string result(str);
+    for(char& c: result) {
+        if(c >= 'a' && c <= 'z') c -= 'a' - 'A';
+    }
+    return result;
+}
 
 int replace(string& str, const string& from, const string& to, int maxReplacements = 0) {
 

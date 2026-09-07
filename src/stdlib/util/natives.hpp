@@ -143,14 +143,3 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 #define nArrayStatInt(name, ...)\
     nArrayStat(math_, "math", name, int64_t, CaroLong,   isInt,     "an integer", __VA_ARGS__)
 
-
-// include all the libraries
-
-#include "main.hpp"
-
-#include "fs.hpp"
-#include "hash.hpp"
-#include "math.hpp"
-#include "random.hpp"
-#include "time.hpp"
-

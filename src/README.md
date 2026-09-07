@@ -17,6 +17,11 @@ File structure:
   - `object.hpp` - Heap-allocated objects
   - `format.hpp` - Formatting for `f""` strings
 - `stdlib/`
-  - `natives.hpp` - Parameter checking and helper macros
-  - `main.hpp` - The functions that don't have a module
-  - `x.hpp` - The functions in module `x`
+  - `modules/`
+    - `main.hpp` - The functions that don't have a module
+    - `x.hpp` - The functions in module `x`
+  - `methods/` (coming soon)
+  - `util/`
+    - `natives.hpp` - Parameter checking and helper macros\
+    - `http.hpp` - HTTP(S) requests
+

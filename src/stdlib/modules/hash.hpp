@@ -6,13 +6,13 @@
 // includes
 
 #define XXH_INLINE_ALL
-#include "../../include/xxHash/xxhash.h"
+#include "../../../include/xxHash/xxhash.h"
 
-#include "../../include/SHA/SHA256.cpp"
-#include "../../include/SHA/SHA384.cpp"
-#include "../../include/SHA/SHA512.cpp"
+#include "../../../include/SHA/SHA256.cpp"
+#include "../../../include/SHA/SHA384.cpp"
+#include "../../../include/SHA/SHA512.cpp"
 
-#include "natives.hpp"
+#include "../util/natives.hpp"
 
 
 // functions

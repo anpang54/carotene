@@ -12,7 +12,7 @@
 #include <cmath>
 #include <cstdlib>
 
-#include "natives.hpp"
+#include "../util/natives.hpp"
 
 namespace chrono = std::chrono;
 namespace ranges = std::ranges;
