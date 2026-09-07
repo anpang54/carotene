@@ -20,37 +20,14 @@ namespace ranges = std::ranges;
 
 // GENERAL
 
-nFunc(main_name, "", "name", {
-    if(vm->appName.empty()) {
-        vm->runtimeError("This app doesn't have a name.");
-        return CaroNull;
-    }
-    return CaroObj(copyString(vm->appName));
-});
-nFunc(main_desc, "", "desc", {
-    if(vm->appDesc.empty()) {
-        vm->runtimeError("This app doesn't have a description.");
-        return CaroNull;
-    }
-    return CaroObj(copyString(vm->appDesc));
-});
-nFunc(main_version, "", "version", {
-    if(vm->appVersion.empty()) {
-        vm->runtimeError("This app doesn't have a version.");
-        return CaroNull;
-    }
-    return CaroObj(copyString(vm->appVersion));
-});
-
-nFunc(main_caro_version, "", "caro_version", {
+nConst(main_caro_version, "", "caro_version", {
     return CaroObj(copyString(VERSION));
 });
-nFunc(main_caro_version_date, "", "caro_version_date", {
+nConst(main_caro_version_date, "", "caro_version_date", {
     return CaroObj(copyString(VERSION_DATE));
 });
 
-nFunc(main_platform, "", "platform", {
-    params({});
+nConst(main_platform, "", "platform", {
 
     string platform;
 

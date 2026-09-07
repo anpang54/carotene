@@ -665,14 +665,17 @@ class VM{
 
                     case OP_NAME: {
                         appName = asString(constants[READ_BYTE()])->str;
+                        this->globals["_name"] = CaroObj(copyString(appName));
                         break;
                     }
                     case OP_DESC: {
                         appDesc = asString(constants[READ_BYTE()])->str;
+                        this->globals["_desc"] = CaroObj(copyString(appDesc));
                         break;
                     }
                     case OP_VERSION: {
                         appVersion = asString(constants[READ_BYTE()])->str;
+                        this->globals["_version"] = CaroObj(copyString(appVersion));
                         break;
                     }
 
