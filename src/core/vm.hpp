@@ -1255,5 +1255,11 @@ void maybeCollect() {
 
 // load natives
 
-#include "../stdlib/natives.hpp"
+#include "../stdlib/modules/main.hpp"
 
+#include "../stdlib/modules/fs.hpp"
+#include "../stdlib/modules/hash.hpp"
+#include "../stdlib/modules/http.hpp"
+#include "../stdlib/modules/math.hpp"
+#include "../stdlib/modules/random.hpp"
+#include "../stdlib/modules/time.hpp"

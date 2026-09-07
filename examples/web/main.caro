@@ -1,6 +1,7 @@
 
 use math;
 use random;
+use http;
 
 log("o", "The web build is working!");
 log("i", "Very important log message!", true);
@@ -35,3 +36,6 @@ print("");
 
 print(f"[b]Bold[] [i]Italic[] [b][i]Both[] [i]Inverse[] [#ff0000]R[#00ff00]G[#0000ff]B[] [#00ffff]C[#ff00ff]M[#ffff00]Y[#000000]K[] [1.5]Big[] [1]Normal[] [0.67]Small[]");
 
+print("And finally, let's fetch this file's source code from Github.");
+result = http.get("https://raw.githubusercontent.com/anpang54/carotene/refs/heads/main/examples/web/main.caro");
+print(result);
