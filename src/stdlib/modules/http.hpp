@@ -87,25 +87,35 @@ Value httpRequest(VM* vm, const vector<Value>& args, const string& method, const
 
 // FUNCTIONS
 
-nFunc(http_get, "http", "get", {
-    params({
-        {{OBJ_STRING}, true },    // url
-        {{OBJ_DICT},   false},    // headers
-        {ANY_NUMERIC,  false}     // timeout
-    });
-    return httpRequest(vm, args, "GET", "", 1);
-});
+#define nHttpNoBody(cppName, caroName, method)\
+    nFunc(cppName, "http", caroName, {\
+        params({\
+            {{OBJ_STRING}, true },    /* url     */\
+            {{OBJ_DICT},   false},    /* headers */\
+            {ANY_NUMERIC,  false}     /* timeout */\
+        });\
+        return httpRequest(vm, args, method, "", 1);\
+    })
 
-nFunc(http_post, "http", "post", {
-    params({
-        {{OBJ_STRING}, true },    // url
-        {{OBJ_STRING}, false},    // body
-        {{OBJ_DICT},   false},    // headers
-        {ANY_NUMERIC,  false}     // timeout
-    });
-    const string noBody;
-    const string& body = args.size() >= 2? asString(args[1])->str: noBody;
-    return httpRequest(vm, args, "POST", body, 2);
-});
+#define nHttpHasBody(cppName, caroName, method)\
+    nFunc(cppName, "http", caroName, {\
+        params({\
+            {{OBJ_STRING}, true },    /* url     */\
+            {{OBJ_STRING}, false},    /* body    */\
+            {{OBJ_DICT},   false},    /* headers */\
+            {ANY_NUMERIC,  false}     /* timeout */\
+        });\
+        const string noBody;\
+        const string& body = args.size() >= 2? asString(args[1])->str: noBody;\
+        return httpRequest(vm, args, method, body, 2);\
+    })
+
+nHttpNoBody (http_get,     "get",     "GET"    );
+nHttpHasBody(http_post,    "post",    "POST"   );
+nHttpHasBody(http_put,     "put",     "PUT"    );
+nHttpHasBody(http_patch,   "patch",   "PATCH"  );
+nHttpHasBody(http_delete,  "delete",  "DELETE" );
+nHttpNoBody (http_head,    "head",    "HEAD"   );
+nHttpNoBody (http_options, "options", "OPTIONS");
 
 nConst(http_user_agent, "http", "user_agent", { return CaroObj(copyString(HTTP_USER_AGENT)); });
