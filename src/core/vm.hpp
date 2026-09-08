@@ -1262,6 +1262,7 @@ void maybeCollect() {
 
 #include "../stdlib/modules/caro.hpp"
 #include "../stdlib/modules/fs.hpp"
+#include "../stdlib/modules/gui.hpp"
 #include "../stdlib/modules/hash.hpp"
 #include "../stdlib/modules/http.hpp"
 #include "../stdlib/modules/math.hpp"
