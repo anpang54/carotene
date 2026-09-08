@@ -2,13 +2,32 @@
 use fs;
 
 
+// Command parts
+
+#common       = "src/main.cpp -std=c++23 ";
+
+#platforms = {
+    "windows": ["Windows", "zig c++ ", "-Wno-c99-designator -target x86_64-windows-gnu -lwinhttp "],
+    "macos":   ["macOS",   "zig c++ ", "-Wno-c99-designator -target aarch64-macos -Wno-nullability-completeness "],
+    "linux":   ["Linux",   "zig c++ ", "-Wno-c99-designator -target x86_64-linux-gnu.2.28 -idirafter /usr/include -L/usr/lib -L/usr/lib/x86_64-linux-gnu -lreadline -ldl "],
+    "freebsd": ["FreeBSD", "zig c++ ", "-Wno-c99-designator -target x86_64-freebsd -Wno-nullability-completeness "],
+    "haiku":   ["Haiku",   "~/haiku-cross/haiku/generated/cross-tools-x86_64/bin/x86_64-unknown-haiku-g++ ", ""],
+    "web":     ["web",     "/usr/lib/emscripten/em++ ", "-Wno-c99-designator -sALLOW_MEMORY_GROWTH -sSTACK_SIZE=8388608 -sEXIT_RUNTIME "]
+};                                                                             // = 8mb, because linux threads get 8mb
+
+release_only = "-O2 -g0 -s ";
+
+// For Windows and Linux, we compile with Zig, which in turn runs Clang, because it allows us to specify a glibc version.
+// Clang support for C++26 is still rather incomplete, so this uses C++23.
+
+
 // Get arguments
 
 platform = null;
 release = null;
 valid = true;
 
-if(_args == 0u) {
+if(_args == 0) {
     platform = "linux";
     release = false;
 } else {
@@ -33,78 +52,36 @@ if(_args == 0u) {
 if(valid) {
 
 
-    // Command parts
-
-    common       = "src/main.cpp -std=c++23 ";
-
-    windows_only = "-target x86_64-windows-gnu -lwinhttp ";
-    mac_only     = "-target aarch64-macos -Wno-nullability-completeness ";
-    linux_only   = "-target x86_64-linux-gnu.2.28 -idirafter /usr/include -L/usr/lib -L/usr/lib/x86_64-linux-gnu -lreadline -ldl ";
-    freebsd_only = "-target x86_64-freebsd -Wno-nullability-completeness ";
-    web_only     = "-sALLOW_MEMORY_GROWTH -sSTACK_SIZE=8388608 -sEXIT_RUNTIME ";
-                                       // = 8mb, because linux threads get 8mb
-    
-    clang_only   = "-Wno-c99-designator ";
-    release_only = "-O2 -g0 -s ";
-    
-
     // Make command
 
+    command = #platforms[platform][1] + #common + #platforms[platform][2];
     output = "caro";
-    message = "Built for";
-
-    command = "";
-
-    // For Windows and Linux, we compile with Zig, which in turn runs Clang, because it allows us to specify a glibc version.
-    // Clang support for C++26 is still rather incomplete, so this uses C++23.
-
-    if(platform == "windows") {
-        command = "zig c++ " + common + clang_only + windows_only;
-        output = output + "-windows.exe";
-        message = message + " Windows";
-
-    } else if(platform == "macos") {
-        command = "zig c++ " + common + clang_only + mac_only;
-        output = output + "-macos";
-        message = message + " macOS";
-
-    } else if(platform == "linux") {
-        command = "zig c++ " + common + clang_only + linux_only;
-        if(release) {
-            output = output + "-linux";
-        }
-        message = message + " Linux";
-
-    } else if(platform == "freebsd") {
-        command = "zig c++ " + common + clang_only + freebsd_only;
-        output = output + "-freebsd";
-        message = message + " FreeBSD";
-
-    } else if(platform == "haiku") {
-        command = "~/haiku-cross/haiku/generated/cross-tools-x86_64/bin/x86_64-unknown-haiku-g++ " + common;
-        output = output + "-haiku";
-        message = message + " Haiku";
-
-    } else if(platform == "web") {
-        if(!fs.exists("builds/web")) {
-            fs.create_folder("builds/web");
-        }
-        command = "/usr/lib/emscripten/em++ " + common + clang_only + web_only;
-        release_only = "-O2 -g0 ";
-        output = "web/" + output + ".html";
-        message = message + " web";
-
-    }
+    message = "Built for " + #platforms[platform][0];
 
     if(release) {
-        command = command + release_only;
-        message = message + " release!";
+
+        output += "-" + platform;
+        if(platform == "windows") {
+            output += ".exe";
+        } elif(platform == "web") {
+            release_only = "-O2 -g0 ";
+            output = "web/" + output + ".html";
+            if(!fs.exists("builds/web")) {
+                fs.create_folder("builds/web");
+            }
+        }
         output = "builds/" + output;
+
+        command = command + release_only;
+        message += " release!";
+        
     } else {
-        message = message + " debug!";
+
+        message += " debug!";
+
     }
 
-    command = command + "-o " + output;
+    command += "-o " + output;
 
 
     // Build
