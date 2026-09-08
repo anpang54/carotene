@@ -32,8 +32,8 @@ typedef unsigned int uint;
 
 // version
 
-#define VERSION      "0.1.2"
-#define VERSION_DATE "6 Sep 2026"
+#define VERSION      "0.2.0"
+#define VERSION_DATE "8 Sep 2026"
 
 
 // limits
