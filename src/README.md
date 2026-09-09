@@ -25,3 +25,4 @@ File structure:
     - `natives.hpp` - Parameter checking and helper macros\
     - `http.hpp` - HTTP(S) requests
 
+Why is everything one translation unit? Because I don't like having to have separate `.cpp` and `.hpp` files for literally everything.

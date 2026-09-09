@@ -10,4 +10,5 @@ sudo ln -sf /usr/local/zig/zig /usr/local/bin/zig
 
 zig version
 
-# Based on https://github.com/NangiDev/zig-codespace-template
+# Based on https://github.com/NangiDev/zig-codespace-template (MIT license)
+
