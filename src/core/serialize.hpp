@@ -22,7 +22,7 @@ constexpr uint16_t BYTECODE_FORMAT = (0 * 1600) + (2 * 40) + 0 + 1000;
                              //    overhaul      major     minor
                              // the cube root of 65536 is ~40.32, so each number can go 0 - 39
                              // 1000 is added so that 102 (0.1.2) is less than 1080 (0.2.0)
-                             // max = (39 * 1600) + (39 * 40) + 39 + 23 = 64022
+                             // max = (39 * 1600) + (39 * 40) + 39 + 1000 = 64999
 
 
 // SERIALIZE
