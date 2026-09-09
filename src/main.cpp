@@ -37,6 +37,7 @@ void repl() {
 
     ic_style_def("ic-prompt", "bold #ff8700");
     ic_set_prompt_marker("> ", NULL);
+    ic_set_history(NULL, 1000);
 
     int consecutiveEmptyLines = 0;
 
@@ -56,6 +57,9 @@ void repl() {
             continue;
         }
         consecutiveEmptyLines = 0;
+
+        // isocline doesn't store 1 char lines in the history for whatever reason, so add it manually instead
+        if(input[1] == '\0') ic_history_add(input);
 
         vm.interpret(string(input));
         free(input);
