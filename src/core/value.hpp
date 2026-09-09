@@ -513,8 +513,7 @@ size_t hashValue(const Value& value) {
         case TYPE_SMTH:   h = 420;                  break;
         case TYPE_BOOL:   h = value.as.Abool? 6: 7; break;
 
-        case TYPE_BYTE: case TYPE_UINT: case TYPE_INT: case TYPE_ULONG: case TYPE_LONG:
-        case TYPE_FLOAT: case TYPE_DOUBLE: {
+        case TYPE_BYTE: case TYPE_UINT: case TYPE_INT: case TYPE_ULONG: case TYPE_LONG: case TYPE_FLOAT: case TYPE_DOUBLE: {
             h = hashNumber(value); break;
         }
 

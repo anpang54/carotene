@@ -18,9 +18,17 @@ namespace SHA{
 	// wrapped to prevent typedef conflicts with haiku
 	
 #include "../util/natives.hpp"
+#include "../../core/value.hpp"
 
 
 // FUNCTIONS
+
+nFunc(hash_caro_hash, "hash", "caro_hash", {
+    params({
+        {{}, true}
+    });
+    return CaroUlong(hashValue(args[0]));
+});
 
 nFunc(hash_xxhash, "hash", "xxhash", {
     params({
