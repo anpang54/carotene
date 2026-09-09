@@ -2,19 +2,18 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include <set>
-#include <utility>
 
 #include "common.hpp"
 #include "chunk.hpp"
 #include "format.hpp"
 
-using std::set, std::pair;
+using std::set;
 
 
-// objects
+// OBJECTS
 
 class VM;    // forward? declaration
 VM* currentVM = nullptr;
@@ -186,7 +185,7 @@ ObjNative* newNative(NativeFn function) {
 }
 
 
-// free
+// FREEING OBJECTS
 
 void freeObject(Obj* object) {
     switch(object->type) {
@@ -205,7 +204,7 @@ void freeObjects() {
 }
 
 
-// object functions that were separated from value functions
+// OBJECT FUNCTIONS
 
 string printObject(Obj* object) {
     

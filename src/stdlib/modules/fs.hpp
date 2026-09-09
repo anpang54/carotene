@@ -10,7 +10,7 @@
 */
 
 
-// includes
+// INCLUDES
 
 #include <filesystem>
 #include <fstream>
@@ -23,7 +23,7 @@ namespace filesystem = std::filesystem;
 using std::ios, std::ifstream, std::ofstream, std::stringstream, std::error_code;
 
 
-// helpers
+// HELPERS
 
 #define PATH(index) filesystem::path(STR(index))
 
@@ -34,6 +34,9 @@ using std::ios, std::ifstream, std::ofstream, std::stringstream, std::error_code
             return CaroNull;\
         }\
     } while(false)
+
+
+// FUNCTIONS
 
 
 // read/write

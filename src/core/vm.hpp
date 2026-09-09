@@ -2,7 +2,7 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include <array>
 #include <unordered_map>
@@ -20,7 +20,7 @@
 using std::array, std::pair, std::unordered_map;
 
 
-// setup
+// SETUP
 
 enum InterpretResult{
     INTERPRET_OK,
@@ -36,13 +36,15 @@ struct CallFrame{
     // represents a single ongoing function call
 
 
-// vm
+// VM
 
 class VM{
 
     public:
 
     
+        // variables
+
         vector<CallFrame> frames;
 
         array<Value, STACK_MAX + STACK_GUARD> stack;    // an array is faster than a vector
@@ -67,14 +69,11 @@ class VM{
         }
 
 
-        // native functions
+        // interpret
 
         void defineNative(string name, NativeFn function) {
             this->globals[name] = CaroObj(newNative(function));
         }
-
-
-        // interpret
 
         InterpretResult interpret(string source) {
 
@@ -175,7 +174,17 @@ class VM{
         const Value& peek(int distance) {
             return this->stackTop[-1 - distance];
         }
+
+        void resetStack() {
+            this->stackTop = this->stack.data();    // clear
+            this->frames.clear();
+            this->frame = nullptr;
+            this->stackOverflowed = false;
+        }
         
+
+        // runtime error
+
         void runtimeError(const char* format, ...) {
 
             cerr << "\033[38;5;210m";
@@ -201,13 +210,6 @@ class VM{
             resetStack();
             this->hadError = true;
 
-        }
-
-        void resetStack() {
-            this->stackTop = this->stack.data();    // clear
-            this->frames.clear();
-            this->frame = nullptr;
-            this->stackOverflowed = false;
         }
 
 
@@ -559,6 +561,7 @@ class VM{
             runtimeError("Operands must be numbers or strings.");
             return INTERPRET_RUNTIME_ERROR;
         }
+
 
         // calling functions
 
@@ -1247,7 +1250,8 @@ class VM{
 };
 
 
-// collect garbage if there are too many objects
+// COLLECT GARBAGE
+// if there are too many objects
 
 void maybeCollect() {
     if((DEBUG_STRESS_GC || objects.size() >= nextGC) && currentVM != nullptr) {
@@ -1256,7 +1260,7 @@ void maybeCollect() {
 }
 
 
-// load natives
+// LOAD NATIVES
 
 #include "../stdlib/modules/main.hpp"
 

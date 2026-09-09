@@ -2,12 +2,12 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include "value.hpp"
 
 
-// opcodes
+// OPCODES
 
 enum OpCode{
 
@@ -95,7 +95,7 @@ enum OpCode{
 };
 
 
-// chunks
+// CHUNKS
 
 class Chunk{
 
@@ -325,4 +325,3 @@ class Chunk{
 
 
 };
-

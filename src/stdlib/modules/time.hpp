@@ -3,7 +3,7 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include <chrono>
 
@@ -12,9 +12,12 @@
 namespace chrono = std::chrono;
 
 
-// functions
+// FUNCTIONS
 
 // all utc for now
+
+
+// each part
 
 nFunc(time_timestamp, "time", "timestamp", {
     params({});
@@ -70,6 +73,9 @@ nFunc(time_ms, "time", "ms", {
     chrono::hh_mm_ss hms{now - floor<chrono::days>(now)};
     return CaroUint((uint32_t)hms.subseconds().count());
 });
+
+
+// pre-formatted
 
 nFunc(time_display, "time", "display", {
     // strftime but you don't get to choose

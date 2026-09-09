@@ -3,7 +3,7 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include <cmath>
 #include <cstdlib>
@@ -16,7 +16,7 @@ namespace numbers = std::numbers;
 using std::numeric_limits;
 
 
-// functions
+// FUNCTIONS
 
 #define nMath(name)\
     nFunc(math_##name, "math", #name, {\
@@ -78,7 +78,8 @@ nFunc(math_to_radians, "math", "to_radians", {
     return toFloat(args[0], [](auto&& a) { return decltype(a)(a) * (numbers::pi / 180.0); });
 });
 
-// constants
+
+// CONSTANTS
 
 nConst(math_inf, "math", "inf", { return CaroDouble(INFINITY);        });
 nConst(math_nan, "math", "nan", { return CaroDouble(std::nan(""));    });

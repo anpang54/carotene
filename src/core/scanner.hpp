@@ -2,12 +2,12 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include "common.hpp"
 
 
-// tokens
+// TOKENS
 
 typedef enum {
 
@@ -60,7 +60,7 @@ struct Token{
 };
 
 
-// scanner
+// SCANNER
 
 class Scanner{
 

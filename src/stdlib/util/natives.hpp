@@ -2,7 +2,7 @@
 #pragma once
 
 
-// check parameters
+// PARAMETER CHECKING
 
 struct PType{
     ValueType valueType;
@@ -87,13 +87,19 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 }
 
 
-// macros to help shorten stuff
+// UTILITY MACROS
+
+
+// definitions
 
 #define nFunc(cppName, module, caroName, ...)\
     DefineNativeFunction nFunc_##cppName (module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
     // every native function has the same C++ function signature soo
 #define nConst(cppName, module, caroName, ...)\
     DefineNativeConstant nConst_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, []() -> Value __VA_ARGS__)
+
+
+// parameters
 
 #define params(...)\
     do{\
@@ -106,9 +112,12 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
     // can't be named p() cuz else it'll eat up functions that start with p
     // variadic so that the braced parameter list can be passed in as one argument
 
+#define ANY_NUMERIC {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE}
+
 #define STR(index)  printValue(args[index])
 
-#define ANY_NUMERIC {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE}
+
+// reducing boilerplate
 
 #define nArrayStat(moduleRaw, moduleString, name, numType, caroType, allowed, allowedName, ...)\
     nFunc(moduleRaw##name, moduleString, #name, {\
@@ -142,4 +151,3 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
     nArrayStat(     , ""    , name, double,  CaroDouble, isNumeric, "numeric",    __VA_ARGS__)
 #define nArrayStatInt(name, ...)\
     nArrayStat(math_, "math", name, int64_t, CaroLong,   isInt,     "an integer", __VA_ARGS__)
-

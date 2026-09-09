@@ -3,14 +3,14 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include <random>
 
 #include "../util/natives.hpp"
 
 
-// helpers
+// HELPERS
 
 #define RANDOM_CHECK(low, high)\
     if((low) > (high)) {\
@@ -19,7 +19,7 @@
     }
 
 
-// functions
+// FUNCTIONS
 
 nFunc(random_int, "random", "int", {
     params({
