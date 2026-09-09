@@ -2,16 +2,12 @@
 #pragma once
 
 
-// includes
-
-#include <utility>
+// INCLUDES
 
 #include "common.hpp"
 
-using std::pair;
 
-
-// ANSI escape codes and CSS
+// ESCAPE CODES/CSS
 
 const unordered_map<string, pair<string, string>> codes = {
     {"b",       { "\033[1m" , "font-weight: bold;"                                         }},
@@ -27,8 +23,9 @@ const unordered_map<string, pair<string, string>> codes = {
 };
 
 
-// hex color tags like [#123abc]
+// HELPERS
 
+// like [1.25]
 bool isFontSizeTag(const string& tag) {
     for(const char& c: tag) {
         if(!(isDigit(c) || c == '.')) return false;
@@ -36,6 +33,7 @@ bool isFontSizeTag(const string& tag) {
     return true;
 }
 
+// like [#123abc]
 bool isHexColorTag(const string& tag) {
     if(tag.length() != 7 || tag[0] != '#') return false;    // no # or wrong length
     for(int i = 1; i < 7; ++i) { // check each char
@@ -44,9 +42,7 @@ bool isHexColorTag(const string& tag) {
     return true;
 }
 
-
 // escaping for embedding in a JS string literal
-
 string escapeJS(const string& str) {
     string result = "";
     for(char c: str) {
@@ -71,7 +67,7 @@ string escapeJS(const string& str) {
 }
 
 
-// format
+// FORMAT
 
 // only handles the actual formatting, not the interpolation
 pair<string, vector<string>> formatString(string str) {

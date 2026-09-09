@@ -2,7 +2,7 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #include <type_traits>
 
@@ -11,7 +11,8 @@
 #include "common.hpp"
 
 
-// forward declarations for object functions
+// FORWARD DECLARATIONS
+// for object functions
 
 struct Obj;
 
@@ -23,8 +24,7 @@ size_t sizeofObject  (Obj* object);
 size_t hashObject    (Obj* object);
 
 
-
-// types
+// TYPES
 
 enum ValueType{
 
@@ -56,7 +56,7 @@ enum ValueType{
 };
 
 
-// value struct
+// VALUE
 
 struct Value{
 
@@ -115,8 +115,10 @@ inline constexpr Value CaroSmth                             { TYPE_SMTH,   {}, {
        constexpr Value CaroObj   (    Obj* v) { return Value{ TYPE_OBJ,    {}, { .obj     = v } }; }
 
 
-// number handling functions
-// including 6 very boilerplate switch cases
+// FUNCTIONS
+
+
+// number handling functions, including 6 very boilerplate switch cases
 
 template<typename T>
 Value CaroNumber(ValueType type, T v) {
@@ -269,7 +271,7 @@ void setComponent(Value& v, int component, const Value& to) {
 }
 
 
-// functions
+// is numeric/vector
 
 bool isNumeric (ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_DOUBLE; }
 bool isInt     (ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_LONG;   }
@@ -281,6 +283,9 @@ bool isVec2   (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_VEC2F
 bool isVec3   (ValueType type) { return type >= TYPE_VEC3I && type <= TYPE_VEC3F;  }
 
 int componentCount(ValueType type) { return isVec2(type)? 2: 3; }
+
+
+// truthiness
 
 bool isTruthy(Value value) {
     if(isNumeric(value.type)) {
@@ -309,6 +314,9 @@ bool isTruthy(Value value) {
 bool isFalsy(Value value) {
     return !isTruthy(value);
 }
+
+
+// equality
 
 bool numbersEqual(const Value& a, const Value& b) {
 
@@ -376,6 +384,9 @@ bool valuesEqual(Value a, Value b) {
 
 }
 
+
+// printing
+
 string printValue(Value value) {
     switch(value.type) {
 
@@ -403,6 +414,9 @@ string printValue(Value value) {
 
     }
 }
+
+
+// typeof
 
 string typeofType(ValueType type) {
     switch(type) {
@@ -439,6 +453,9 @@ string typeofValue(Value value) {
         return typeofType(value.type);
     }
 }
+
+
+// sizeof
 
 size_t sizeofType(ValueType type) {
 

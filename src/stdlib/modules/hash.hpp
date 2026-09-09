@@ -3,10 +3,12 @@
 #pragma once
 
 
-// includes
+// INCLUDES
 
 #define XXH_INLINE_ALL
-#include "../../../include/xxHash/xxhash.h"
+namespace xxHash{
+    #include "../../../include/xxHash/xxhash.h"
+}
 
 namespace SHA{
 	#include "../../../include/SHA/SHA256.cpp"
@@ -18,14 +20,14 @@ namespace SHA{
 #include "../util/natives.hpp"
 
 
-// functions
+// FUNCTIONS
 
 nFunc(hash_xxhash, "hash", "xxhash", {
     params({
         {{OBJ_STRING}, true}
     });
     const string& str = asString(args[0])->str;
-    uint64_t hashed = XXH3_64bits(str.data(), str.size());
+    uint64_t hashed = xxHash::XXH3_64bits(str.data(), str.size());
     return CaroObj(copyString(format("{:016x}", hashed)));
 });
 

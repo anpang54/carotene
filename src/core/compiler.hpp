@@ -141,7 +141,9 @@ class Compiler{
 
         vector<FunctionState> states;
         FunctionState& cur() { return this->states.back(); }
-
+        Chunk* currentChunk() { return &cur().function->chunk; }
+            // I guess I do need currentChunk()
+            
         Scanner scanner;
         Token current;
         Token previous;
@@ -151,11 +153,6 @@ class Compiler{
         bool inEval = false;       // affects finishExpression()
 
         inline static set<string> usedModules;
-
-        Chunk* currentChunk() {
-            return &cur().function->chunk;
-        }
-            // I guess I do need currentChunk()
 
 
         // init/compile
@@ -176,8 +173,8 @@ class Compiler{
             local.name.start = "";
             local.name.length = 0;
 
-
         }
+
         ObjFunction* compile(string source, vector<Local>* replLocals = nullptr) {
 
             GCPause pause;
@@ -1690,11 +1687,11 @@ class Compiler{
 };
 
 
-// parse rules
+// PARSE RULES
 
 inline ParseRule rules[] = {
 
-//   token                   prefix                    infix                  precedence
+//   token                    prefix                   infix                     precedence
 
     // 1 char
     [TOKEN_LEFT_PAREN]    = { &Compiler::makeGrouping, &Compiler::makeCall,      PREC_CALL       },    // ( is an infix operator for function calls

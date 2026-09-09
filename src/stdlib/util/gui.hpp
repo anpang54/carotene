@@ -3,7 +3,7 @@
 
 /*
 
-    3 backends:
+    There are 3 separate backends:
       - Windows:               Win32, linked normally
       - macOS, Linux, FreeBSD: GTK 4, with dlopen()
       - Haiku:                 BeAPI, linked normally
