@@ -28,7 +28,7 @@ for i in range(6):
     for language in languages:
 
         start = perf_counter()
-        system(f"{language[1]} tests/benchmarks/find_primes/find_primes.{language[2]}")
+        system(f"{language[1]} tests/benchmarks/find-primes/find-primes.{language[2]}")
         end = perf_counter() - start
 
         if i > 0:    # discard first trial
