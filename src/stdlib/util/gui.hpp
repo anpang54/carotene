@@ -15,9 +15,25 @@
 
 // INCLUDES
 
-#if !defined(_WIN32) && !defined(__HAIKU__)
+#if defined(_WIN32)
+	#define CARO_GUI_WIN32
+	
+	// tba
+	
+#elif defined(__HAIKU__)
+	#define CARO_GUI_BEAPI
+		
+	#include <Application.h>
+	#include <Window.h>
+	#include <StringView.h>
+	#include <Button.h>
+	#include <LayoutBuilder.h>
+
+#else
     #define CARO_GUI_GTK
+	
     #include <dlfcn.h>
+	
 #endif
 
 #include "../../core/format.hpp"
@@ -152,14 +168,69 @@ namespace CaroGui{
         }
 
 
-    #else
-
-
-        string test() {
-            return "The gui module doesn't support this platform yet.";
+	// win32
+	
+	#elifdef CARO_GUI_WIN32
+	
+		string test() {
+            return "The gui module doesn't support Win32 yet.";
         }
+		
+	
+	// beapi
+	
+	#elifdef CARO_GUI_BEAPI
+	
+		class CaroWindow: public BWindow{
+	
+			public:
+			
+				CaroWindow():
+					BWindow(
+						BRect(0, 0, 400, 250),    // gets centered later
+						"Carotene test window",
+						B_TITLED_WINDOW,
+						B_ASYNCHRONOUS_CONTROLS | B_QUIT_ON_WINDOW_CLOSE | B_AUTO_UPDATE_SIZE_LIMITS
+					)
+					{
+						BLayoutBuilder::Group<>(this, B_VERTICAL, B_USE_DEFAULT_SPACING)
+							.SetInsets(B_USE_WINDOW_INSETS)
+							.AddGlue()
+							.AddGroup(B_HORIZONTAL)
+								.AddGlue()
+								.Add(new BStringView("label", "Hello! This is a test window rendered using BeAPI. Pretty cool!"))
+								.AddGlue()
+							.End()
+							.AddGroup(B_HORIZONTAL)
+								.AddGlue()
+								.Add(new BButton("button", "Self-destruct", new BMessage('sfdt')))
+								.AddGlue()
+							.End()
+							.AddGlue();
+								// the glues make everything centered
+						Layout(true);
+						CenterOnScreen();
+					}
+				
+				void MessageReceived(BMessage* message) override{
+					switch (message->what) {
+						case 'sfdt':
+							be_app->PostMessage(B_QUIT_REQUESTED);
+							break;
+						default:
+							BWindow::MessageReceived(message);
+					}
+				}
+				
+		};
 
-
+		string test() {
+			BApplication app("application/x-vnd.Carotene-WindowTest");
+			(new CaroWindow())->Show();
+			app.Run();
+			return "";
+		}
+		
     #endif
 
 

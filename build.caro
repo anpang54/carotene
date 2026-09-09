@@ -1,4 +1,5 @@
 
+use caro;
 use fs;
 
 
@@ -24,7 +25,7 @@ use fs;
         "-Wno-c99-designator -target x86_64-freebsd -Wno-nullability-completeness "
     ],
     "haiku":   ["Haiku",
-        "~/haiku-cross/haiku/generated/cross-tools-x86_64/bin/x86_64-unknown-haiku-g++ ",
+        caro.platform == "haiku"? "g++ ": "~/haiku-cross/haiku/generated/cross-tools-x86_64/bin/x86_64-unknown-haiku-g++",
         "-lbe "
     ],
     "web":     ["web",
@@ -46,7 +47,7 @@ release = null;
 valid = true;
 
 if(_args == 0) {
-    platform = "linux";
+    platform = caro.platform;
     release = false;
 } else {
     if(_1 == "all") {

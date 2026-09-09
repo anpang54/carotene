@@ -8,10 +8,13 @@
 #define XXH_INLINE_ALL
 #include "../../../include/xxHash/xxhash.h"
 
-#include "../../../include/SHA/SHA256.cpp"
-#include "../../../include/SHA/SHA384.cpp"
-#include "../../../include/SHA/SHA512.cpp"
-
+namespace SHA{
+	#include "../../../include/SHA/SHA256.cpp"
+	#include "../../../include/SHA/SHA384.cpp"
+	#include "../../../include/SHA/SHA512.cpp"
+}
+	// wrapped to prevent typedef conflicts with haiku
+	
 #include "../util/natives.hpp"
 
 
@@ -30,20 +33,20 @@ nFunc(hash_sha256, "hash", "sha256", {
     params({
         {{OBJ_STRING}, true}
     });
-    SHA256 hasher;
+    SHA::SHA256 hasher;
     return CaroObj(copyString(hasher.hash(asString(args[0])->str)));
 });
 nFunc(hash_sha384, "hash", "sha384", {
     params({
         {{OBJ_STRING}, true}
     });
-    SHA384 hasher;
+    SHA::SHA384 hasher;
     return CaroObj(copyString(hasher.hash(asString(args[0])->str)));
 });
 nFunc(hash_sha512, "hash", "sha512", {
     params({
         {{OBJ_STRING}, true}
     });
-    SHA512 hasher;
+    SHA::SHA512 hasher;
     return CaroObj(copyString(hasher.hash(asString(args[0])->str)));
 });
