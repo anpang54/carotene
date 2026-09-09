@@ -18,10 +18,10 @@ constexpr char MAGIC_NUMBER[] = "\x7f" "reti";
                              // 7f 72 65 74 69 00
                              // 7f because ELF is cool
                              // also if you open a .reti file in a text editor it's gonna know something's up
-constexpr uint16_t BYTECODE_FORMAT = (0 * 1600) + (2 * 40) + 0 + 23;
+constexpr uint16_t BYTECODE_FORMAT = (0 * 1600) + (2 * 40) + 0 + 1000;
                              //    overhaul      major     minor
                              // the cube root of 65536 is ~40.32, so each number can go 0 - 39
-                             // 23 is added so that 102 (0.1.2) is less than 103 (0.2.0)
+                             // 1000 is added so that 102 (0.1.2) is less than 1080 (0.2.0)
                              // max = (39 * 1600) + (39 * 40) + 39 + 23 = 64022
 
 
