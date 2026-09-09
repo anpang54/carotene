@@ -2,13 +2,10 @@
 
 // INCLUDES
 
+#include "../include/isocline/src/isocline.c"
+
 #include <fstream>
 #include <sstream>
-
-#ifdef __linux__
-#include <readline/readline.h>
-#include <readline/history.h>
-#endif
 
 #include "core/common.hpp"
 #include "core/chunk.hpp"
@@ -34,31 +31,33 @@ void startingMessage() {
 void repl() {
 
     startingMessage();
-    #define READLINE_START "\033[1m\033[38:5:208m> \033[0m"
 
     vm.replMode = true;
+
+    ic_style_def("ic-prompt", "bold #ff8700");
+    ic_set_prompt_marker("> ", NULL);
+
+    int consecutiveEmptyLines = 0;
 
     for(;;) {
 
         cout << '\n';
 
-        // get line
-        string source;
-        #ifdef __linux__
-            // linux uses readline
-            char* line = readline(READLINE_START);
-            if(line == nullptr) break;
-            if(*line) add_history(line);
-            source = line;
-            free(line);
-        #else
-            // windows doesn't have readline so it just gets plain getline
-            cout << READLINE_START;
-            if(!std::getline(cin, source)) break;
-        #endif
+        char* input = ic_readline(NULL);
+        if(input == NULL) break;
 
-        // interpret
-        vm.interpret(source);
+        if(input[0] == '\0') {
+            free(input);
+            if(++consecutiveEmptyLines >= 3) {
+                cout << "\033[2mIf you would like to exit the REPL, please type exit(); or use Ctrl + D.\033[0m\n";
+                consecutiveEmptyLines = 0;
+            };
+            continue;
+        }
+        consecutiveEmptyLines = 0;
+
+        vm.interpret(string(input));
+        free(input);
 
     }
     
