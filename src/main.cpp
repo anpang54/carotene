@@ -12,6 +12,7 @@
 #include "core/vm.hpp"
 #include "core/compiler.hpp"
 #include "core/serialize.hpp"
+#include "core/licenses.hpp"
 
 using std::ifstream, std::ofstream, std::stringstream;
 
@@ -195,6 +196,7 @@ int main(int argc, const char* argv[]) {
                     "  \033[1m     -t\033[0m file.caro    Same as running with no argument, but leaves a bytecode file behind\n"
                     "  \033[1m     -h\033[0m              Shows this help menu\n"
                     "  \033[1m     -v\033[0m              Shows the Carotene version\n"
+                    "  \033[1m     -l\033[0m              Shows the licenses of Carotene and the libraries that it uses\n"
                     "\n"
                     "For more information, please consult the wiki at https://github.com/anpang54/carotene/wiki.\n";
             break;
@@ -202,6 +204,11 @@ int main(int argc, const char* argv[]) {
         // version
         case 'v':
             startingMessage();
+            break;
+
+        // licenses
+        case 'l':
+            cout << LICENSES;
             break;
 
         default:
