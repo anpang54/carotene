@@ -103,6 +103,23 @@ if(valid) {
     command += "-o " + output;
 
 
+    // Embed the licenses
+
+    if(!fs.exists("LICENSE.md")) {
+        print("Couldn't find LICENSE.md.");
+        exit(true);
+    }
+    if(!fs.exists("include/credits.md")) {
+        print("Couldn't find include/credits.md.");
+        exit(true);
+    }
+
+    sh(
+        "( printf '// Generated from LICENSE.md and include/credits.md by build.caro.\n\n#pragma once\n\nconstexpr const char* LICENSES = R\042LICENSES(\n' ; cat LICENSE.md ; cat include/credits.md ; printf ')LICENSES\042;\n' )"
+      + " > src/core/licenses.hpp"
+    );
+
+
     // Build
 
     sh(command);
