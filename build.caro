@@ -25,12 +25,12 @@ use fs;
         "-Wno-c99-designator -target x86_64-freebsd -Wno-nullability-completeness "
     ],
     "haiku":   ["Haiku",
-        caro.platform == "haiku"? "g++ ": "~/haiku-cross/haiku/generated/cross-tools-x86_64/bin/x86_64-unknown-haiku-g++",
+        caro.platform == "haiku"? "g++ ": "~/haiku-cross/haiku/generated/cross-tools-x86_64/bin/x86_64-unknown-haiku-g++ ",
         "-lbe "
     ],
     "web":     ["web",
         "/usr/lib/emscripten/em++ ",
-        "-Wno-c99-designator -sALLOW_MEMORY_GROWTH -sSTACK_SIZE=8388608 -sEXIT_RUNTIME "
+        "-Wno-c99-designator -sALLOW_MEMORY_GROWTH -sSTACK_SIZE=8388608 -sEXIT_RUNTIME -sASYNCIFY "
     ]
 };                                                                             // = 8mb, because linux threads get 8mb
 

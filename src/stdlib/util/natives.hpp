@@ -92,11 +92,32 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
 // definitions
 
-#define nFunc(cppName, module, caroName, ...)\
-    DefineNativeFunction nFunc_##cppName (module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
-    // every native function has the same C++ function signature soo
 #define nConst(cppName, module, caroName, ...)\
     DefineNativeConstant nConst_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, []() -> Value __VA_ARGS__)
+
+#define nFunc(cppName, module, caroName, ...)\
+    DefineNativeFunction nFunc_##cppName (module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
+
+#define nClass(cppName, module, caroName)\
+    DefineNativeClass nClass_##cppName(module, caroName)
+
+#define nMethod(cppClass, caroName, ...)\
+    DefineNativeMethod nMethod_##cppClass##_##caroName(nClass_##cppClass, #caroName, [](VM* vm, vector<Value> args) -> Value {\
+        Value self = args[0];\
+        args.erase(args.begin());\
+        (void)self;\
+        return [&]() -> Value __VA_ARGS__ ();\
+    })
+
+
+// native class instances
+
+template<typename T>
+T* nativeData(VM* vm, Value self) {
+    T* data = isInstance(self)? dynamic_cast<T*>(asInstance(self)->native.get()): nullptr;
+    if(data == nullptr) vm->runtimeError("That %s hasn't been initialized.", typeofValue(self).c_str());
+    return data;
+}
 
 
 // parameters
