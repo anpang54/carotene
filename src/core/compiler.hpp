@@ -55,8 +55,10 @@ struct Local{
 };
 
 enum FunctionType{
+    TYPE_SCRIPT,
     TYPE_FUNCTION,
-    TYPE_SCRIPT
+    TYPE_INITIALIZER,
+    TYPE_METHOD,
 };
 
 struct LoopState{
@@ -151,6 +153,7 @@ class Compiler{
         bool hadError = false;
         bool panicMode = false;    // suppresses other errors
         bool inEval = false;       // affects finishExpression()
+        int classDepth = 0;        // how many class bodies we're inside
 
         inline static set<string> usedModules;
 
@@ -170,8 +173,14 @@ class Compiler{
             Local& local = state.locals.emplace_back();
             state.localCount = 1;
             local.depth = 0;
-            local.name.start = "";
-            local.name.length = 0;
+
+            if(type == TYPE_METHOD || type == TYPE_INITIALIZER) {
+                local.name.start = "this";
+                local.name.length = 4;
+            } else {
+                local.name.start = "";
+                local.name.length = 0;
+            }
 
         }
 
@@ -404,7 +413,15 @@ class Compiler{
         }
 
         void emitReturn() {
-            emitBytes(OP_NULL, OP_RETURN);
+
+            if(cur().type == TYPE_INITIALIZER) {
+                emitBytes(OP_GET_LOCAL, 0);
+            } else {
+                emitByte(OP_NULL);
+            }
+
+            emitByte(OP_RETURN);
+
         }
 
 
@@ -787,6 +804,9 @@ class Compiler{
                 expression();
                 emitByte(compound);
                 emitBytes(OP_SET_PROPERTY, constant);
+            } else if(match(TOKEN_LEFT_PAREN)) {
+                uint8_t argCount = argumentList();
+                emitBytes(OP_INVOKE, constant, argCount);
             } else {
                 emitBytes(OP_GET_PROPERTY, constant);
             }
@@ -1292,6 +1312,9 @@ class Compiler{
             if(match(TOKEN_SEMICOLON)) {
                 emitReturn();
             } else {
+                if(cur().type == TYPE_INITIALIZER) {
+                    error("You can't return a value from an initializer, because it already returns the instance being initialized.");
+                }
                 expression();
                 consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
                 emitByte(OP_RETURN);
@@ -1421,6 +1444,7 @@ class Compiler{
 
         void classDeclaration() {
 
+            // get name
             consume(TOKEN_IDENTIFIER, "Expect class name.");
             if(this->previous.start[0] == '$') {
                 error("Class names can't have a '$' as they are already global.");
@@ -1428,13 +1452,34 @@ class Compiler{
                 error("Class names can't have a '#' as they cannot be constant.");
             }
 
+            // add
+            Token className = this->previous;
             uint8_t global = identifierConstant(&this->previous);
-
             emitBytes(OP_CLASS, global);
             emitBytes(OP_DEFINE_GLOBAL, global);
 
+            namedVariable(className, false);
+
+            // body
+            ++this->classDepth;
             consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+            while(!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+                makeMethod();
+            }
             consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+            --this->classDepth;
+
+            emitByte(OP_POP);    // the class
+
+        }
+
+        void makeMethod() {
+
+            consume(TOKEN_IDENTIFIER, "Expect method name.");
+            uint8_t constant = identifierConstant(&this->previous);
+
+            makeFunction(this->previous.start == "init"? TYPE_INITIALIZER: TYPE_METHOD);
+            emitBytes(OP_METHOD, constant);
 
         }
 
@@ -1764,6 +1809,17 @@ class Compiler{
         }
 
 
+        // this
+
+        void parseThis(bool canAssign) {
+            if(this->classDepth == 0) {
+                error("You can't use 'this' outside of a class.");
+                return;
+            }
+            makeVariable(false);
+        }
+
+
         // end
 
         ObjFunction* endCompiler() {
@@ -1845,7 +1901,7 @@ inline ParseRule rules[] = {
     [TOKEN_FUNC]          = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_RETURN]        = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_CLASS]         = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_THIS]          = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_THIS]          = { &Compiler::parseThis,    NULL,                     PREC_NONE       },
     [TOKEN_SUPER]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_IF]            = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_ELIF]          = { NULL,                    NULL,                     PREC_NONE       },
