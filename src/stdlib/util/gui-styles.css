@@ -49,6 +49,7 @@ body{
     padding: 1em;
     gap: 1em;
     justify-items: center;
+    align-items: center;
     position: absolute;
     top: 50%;
     left: 50%;

@@ -9,18 +9,15 @@ gui.test();
 
 // custom window
 
-window = gui.Window();
+window = gui.Window("Woah it's another window", 400, 250, 50);
 
-func print_yes() {
-    print("Yay!");
-}
-func print_no() {
-    print("bruh");
-}
+func print_yes() { print("Yay!"); }
+func print_no()  { print("bruh"); }
 
-window.label("Hi again! Notice how this window only opened after you closed that one?");
-window.button("Yes", print_yes);
-window.button("No",  print_no );
+window.label ( [0, 2],   0   , "Hi again! Notice how this window only opened after you closed that one?");
+window.label (   0   ,   1   , "Select:");
+window.button(   1   ,   1   , "Yes", print_yes);
+window.button(   2   ,   1   , "No",  print_no );
 
 window.show();
 
