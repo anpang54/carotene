@@ -662,6 +662,14 @@ namespace CaroGui{
 
                         // grid
 						BGridLayout* grid = new BGridLayout(window.spacing, window.spacing);
+						builder.AddGroup(B_HORIZONTAL)
+							        .AddGlue()    // left glue
+							        .Add(grid)    // content
+							        .AddGlue()    // right glue
+                                .End()
+                                .AddGlue();       // bottom glue
+
+                        // widgets
 						for(size_t i = 0; i < window.widgets.size(); ++i) {
 
 							const Widget& widget = window.widgets[i];
@@ -681,18 +689,15 @@ namespace CaroGui{
 
 							}
 
-							grid->AddView(view, widget.x, widget.y, widget.xSpan, widget.ySpan)
-								->SetExplicitAlignment(BAlignment(B_ALIGN_HORIZONTAL_CENTER, B_ALIGN_VERTICAL_CENTER));
+                            // fails if the cells overlap another widget
+							BLayoutItem* item = grid->AddView(view, widget.x, widget.y, widget.xSpan, widget.ySpan);
+							if(item == nullptr) {
+								delete view;
+								continue;
+							}
+							item->SetExplicitAlignment(BAlignment(B_ALIGN_HORIZONTAL_CENTER, B_ALIGN_VERTICAL_CENTER));
 
 						}
-
-                        // end building
-						builder.AddGroup(B_HORIZONTAL)
-							        .AddGlue()    // left glue
-							        .Add(grid)    // content
-							        .AddGlue()    // right glue
-                                .End()
-                                .AddGlue();       // bottom glue
 
                         // layout
 						Layout(true);
