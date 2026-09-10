@@ -380,6 +380,12 @@ Value castToArray(VM* vm, const Value& v) {
         return CaroObj(copyArray(asArray(v)->data));
     }
 
+    // a set
+    if(isSet(v)) {
+        const unordered_set<Value>& items = asSet(v)->data;
+        return CaroObj(copyArray(vector<Value>(items.begin(), items.end())));
+    }
+
     cantCast("array");
 
 }
@@ -397,6 +403,23 @@ Value castToSet(VM* vm, const Value& v) {
     // copy
     if(isSet(v)) {
         return CaroObj(copySet(asSet(v)->data));
+    }
+
+    // an array
+    if(isArray(v)) {
+        GCPause pause;
+        const vector<Value>& items = asArray(v)->data;
+        unordered_set<Value> data;
+        data.reserve(items.size());
+        for(const Value& item: items) {
+            if(!isValidKey(item)) {
+                vm->runtimeError("Arrays, dicts, and sets currently can't be used as set items.");
+                    // todo:
+                return CaroNull;
+            }
+            data.insert(copyIfString(item));
+        }
+        return CaroObj(copySet(std::move(data)));
     }
 
     cantCast("set");
