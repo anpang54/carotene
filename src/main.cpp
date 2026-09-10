@@ -2,7 +2,17 @@
 
 // INCLUDES
 
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #define NOMINMAX
+    #define TokenType WindowsTokenType
+#endif
 #include "../include/isocline/src/isocline.c"
+#ifdef _WIN32
+    #undef TokenType
+    #undef read
+    #undef isatty
+#endif
 
 #include <fstream>
 #include <sstream>

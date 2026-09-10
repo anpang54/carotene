@@ -17,9 +17,13 @@
 
 #if defined(_WIN32)
 	#define CARO_GUI_WIN32
-	
-	// tba
-	
+
+	#define WIN32_LEAN_AND_MEAN 
+	#define NOMINMAX
+	#define TokenType WindowsTokenType
+	#include <windows.h>
+	#undef TokenType
+
 #elif defined(__HAIKU__)
 	#define CARO_GUI_BEAPI
 		
@@ -172,8 +176,158 @@ namespace CaroGui{
 	
 	#elifdef CARO_GUI_WIN32
 	
+        // constants
+        const int labelId  = 100;
+        const int buttonId = 101;
+        const int buttonWidth  = 120;
+        const int buttonHeight = 28;
+        const int spacing      = 25;    // between the label and the button
+
+        // without this, you get the windows 3.1 font
+        HFONT guiFont() {
+            static HFONT font = []{
+                NONCLIENTMETRICSW metrics = {sizeof(metrics)};
+                if(SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0)) {
+                    return CreateFontIndirectW(&metrics.lfMessageFont);
+                }
+                return (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+            }();
+            return font;
+        }
+
+        // callback
+        LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+
+            switch(message) {
+
+                case WM_CREATE: {
+
+                    HWND label = CreateWindowExW(
+                        0,
+                        L"STATIC",
+                        L"Hello! This is a test window rendered using Win32. Pretty NOT cool, this API is a mess, I can see why Microsoft is constantly trying to replace it!",
+                        WS_CHILD | WS_VISIBLE | SS_CENTER,
+                        0, 0, 0, 0,
+                        hwnd,
+                        (HMENU)labelId,
+                        (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
+                        nullptr
+                    );
+                    SendMessageW(label, WM_SETFONT, (WPARAM)guiFont(), true);
+
+                    HWND button = CreateWindowExW(
+                        0,
+                        L"BUTTON",
+                        L"Self-destruct",
+                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+                        0, 0, 0, 0,
+                        hwnd,
+                        (HMENU)buttonId,
+                        (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
+                        nullptr
+                    );
+                    SendMessageW(button, WM_SETFONT, (WPARAM)guiFont(), true);
+
+                    return 0;
+
+                }
+
+                case WM_SIZE: {
+
+                    HWND label  = GetDlgItem(hwnd, labelId);
+                    HWND button = GetDlgItem(hwnd, buttonId);
+                    int  width  = LOWORD(lParam);
+                    int  height = HIWORD(lParam);
+
+                    wchar_t text[256];
+                    GetWindowTextW(label, text, 256);
+
+                    HDC     dc  = GetDC(label);
+                    HGDIOBJ old = SelectObject(dc, guiFont());
+                    RECT    box = {0, 0, width, 0};
+                    DrawTextW(dc, text, -1, &box, DT_CENTER | DT_WORDBREAK | DT_CALCRECT);
+                    SelectObject(dc, old);
+                    ReleaseDC(label, dc);
+
+                    int stack = box.bottom + spacing + buttonHeight;
+                    int top   = (height - stack) / 2;
+
+                    MoveWindow(label,  0,                          top,                          width,       box.bottom,   true);
+                    MoveWindow(button, (width - buttonWidth) / 2,  top + box.bottom + spacing,   buttonWidth, buttonHeight, true);
+
+                    return 0;
+
+                }
+
+                case WM_COMMAND:
+                    if(LOWORD(wParam) == buttonId) {
+                        DestroyWindow(hwnd);
+                        return 0;
+                    }
+                    break;
+
+                case WM_DESTROY:
+                    PostQuitMessage(0);
+                    return 0;
+
+            }
+
+            return DefWindowProcW(hwnd, message, wParam, lParam);
+
+        }
+        
 		string test() {
-            return "The gui module doesn't support Win32 yet.";
+
+            // make class
+            const wchar_t CLASS_NAME[]  = L"Carotene window class";
+            HINSTANCE hInstance = GetModuleHandleW(nullptr);
+            WNDCLASSW wc = {};
+            wc.lpfnWndProc   = windowProc;
+            wc.hInstance     = hInstance;
+            wc.lpszClassName = CLASS_NAME;
+            wc.hCursor       = LoadCursorW(nullptr, IDC_ARROW);
+            wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);    // without this the client area is never erased
+
+            // register class
+            static bool registered = false;
+            if(!registered) {
+                if(!RegisterClassW(&wc)) return "Couldn't register the window class.";
+                registered = true;
+            }
+
+            // make window
+            HWND hwnd = CreateWindowExW(
+
+                0,                                         // Optional window styles.
+                CLASS_NAME,                                // Window class
+                L"Carotene test window",                   // Window text
+                WS_OVERLAPPEDWINDOW,                       // Window style
+
+                CW_USEDEFAULT, CW_USEDEFAULT, 450, 250,    // Size and position
+
+                nullptr,                                   // Parent window    
+                nullptr,                                   // Menu
+                hInstance,                                 // Instance handle
+                nullptr                                    // Additional application data
+                
+            );
+            if(hwnd == NULL) return "Couldn't make window.";
+
+            // show window
+            ShowWindow(hwnd, SW_SHOWNORMAL);
+
+            // block execution
+            MSG message;
+            while(GetMessageW(&message, nullptr, 0, 0) > 0) {
+                if(IsDialogMessageW(hwnd, &message)) continue;    // so the button can be pressed with the keyboard too
+                TranslateMessage(&message);
+                DispatchMessageW(&message);
+            }
+
+            return "";
+
+            // based on https://learn.microsoft.com/en-us/windows/win32/learnwin32/creating-a-window
+            
         }
 		
 	
