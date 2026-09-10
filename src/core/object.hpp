@@ -40,6 +40,7 @@ enum ObjType{
     OBJ_FUNCTION,
     OBJ_CLASS,
     OBJ_INSTANCE,
+    OBJ_BOUND_METHOD,
 
     OBJ_NATIVE,
 
@@ -174,6 +175,7 @@ ObjFunction* newFunction() {
 
 struct ObjClass: Obj{
     string name;
+    unordered_map<string, Value> methods;
 };
 
 bool isClass(Value value) {
@@ -211,6 +213,30 @@ ObjInstance* newInstance(ObjClass* klass) {
     objects.push_back(instance);
     return instance;
 }
+
+
+// bound methods
+
+struct ObjBoundMethod: Obj{
+    Value receiver;
+    ObjFunction* method;    // no closures so this is just a function
+};
+
+bool isBoundMethod(Value value) {
+    return value.type == TYPE_OBJ && value.as.obj->type == OBJ_BOUND_METHOD;
+}
+ObjBoundMethod* asBoundMethod(Value value) {
+    return static_cast<ObjBoundMethod*>(value.as.obj);
+}
+
+ObjBoundMethod* newBoundMethod(Value receiver, ObjFunction* method) {
+    maybeCollect();
+    ObjBoundMethod* boundMethod = new ObjBoundMethod({OBJ_BOUND_METHOD}, receiver, method);
+    objects.push_back(boundMethod);
+    return boundMethod;
+}
+
+// this is getting really boilerplaty
 
 
 // native functions
@@ -261,14 +287,15 @@ ObjNative* newNative(NativeFn function) {
 
 void freeObject(Obj* object) {
     switch(object->type) {
-        case OBJ_STRING:   delete static_cast<ObjString*>  (object); break;
-        case OBJ_ARRAY:    delete static_cast<ObjArray*>   (object); break;
-        case OBJ_DICT:     delete static_cast<ObjDict*>    (object); break;
-        case OBJ_SET:      delete static_cast<ObjSet*>     (object); break;
-        case OBJ_FUNCTION: delete static_cast<ObjFunction*>(object); break;
-        case OBJ_CLASS:    delete static_cast<ObjClass*>   (object); break;
-        case OBJ_INSTANCE: delete static_cast<ObjInstance*>(object); break;
-        case OBJ_NATIVE:   delete static_cast<ObjNative*>  (object); break;
+        case OBJ_STRING:       delete static_cast<ObjString*>     (object); break;
+        case OBJ_ARRAY:        delete static_cast<ObjArray*>      (object); break;
+        case OBJ_DICT:         delete static_cast<ObjDict*>       (object); break;
+        case OBJ_SET:          delete static_cast<ObjSet*>        (object); break;
+        case OBJ_FUNCTION:     delete static_cast<ObjFunction*>   (object); break;
+        case OBJ_CLASS:        delete static_cast<ObjClass*>      (object); break;
+        case OBJ_INSTANCE:     delete static_cast<ObjInstance*>   (object); break;
+        case OBJ_BOUND_METHOD: delete static_cast<ObjBoundMethod*>(object); break;
+        case OBJ_NATIVE:       delete static_cast<ObjNative*>     (object); break;
     }
 }
 void freeObjects() {
@@ -391,6 +418,10 @@ string printObject(Obj* object) {
             return "<" + static_cast<ObjInstance*>(object)->klass->name + ">";
         }
 
+        case OBJ_BOUND_METHOD: {
+            return "<bound method>";    // todo:
+        }
+
         case OBJ_NATIVE: {
             return "<native func>";
         }
@@ -403,14 +434,15 @@ string printObject(Obj* object) {
 
 string typeofObjType(ObjType type) {
     switch(type) {
-        case OBJ_STRING:   return "str";
-        case OBJ_ARRAY:    return "array";
-        case OBJ_DICT:     return "dict";
-        case OBJ_SET:      return "set";
-        case OBJ_FUNCTION: return "func";
-        case OBJ_CLASS:    return "class";
-        case OBJ_INSTANCE: return "instance";
-        case OBJ_NATIVE:   return "native";
+        case OBJ_STRING:       return "str";
+        case OBJ_ARRAY:        return "array";
+        case OBJ_DICT:         return "dict";
+        case OBJ_SET:          return "set";
+        case OBJ_FUNCTION:     return "func";
+        case OBJ_CLASS:        return "class";
+        case OBJ_INSTANCE:     return "instance";
+        case OBJ_BOUND_METHOD: return "bound_method";
+        case OBJ_NATIVE:       return "native";
     }
     return "unknown";    // should be unreachable
 }
@@ -426,7 +458,7 @@ bool isTruthyObject(Obj* object) {
         case OBJ_DICT:     return !static_cast<ObjDict*>  (object)->data.empty();
         case OBJ_SET:      return !static_cast<ObjSet*>   (object)->data.empty();
 
-        case OBJ_FUNCTION: case OBJ_CLASS: case OBJ_NATIVE:
+        case OBJ_FUNCTION: case OBJ_CLASS: case OBJ_BOUND_METHOD: case OBJ_NATIVE:
             return true;
             
         default:           return false;
@@ -512,10 +544,11 @@ bool objectsEqual(Obj* a, Obj* b) {
 
         }
 
-        case OBJ_CLASS:    return a == b;
-        case OBJ_INSTANCE: return a == b;
-        case OBJ_FUNCTION: return a == b;
-        case OBJ_NATIVE:   return a == b;    // ?
+        case OBJ_CLASS:        return a == b;
+        case OBJ_INSTANCE:     return a == b;
+        case OBJ_BOUND_METHOD: return a == b;
+        case OBJ_FUNCTION:     return a == b;
+        case OBJ_NATIVE:       return a == b;    // ?
 
     }
     return false;    // should be unreachable
@@ -523,14 +556,15 @@ bool objectsEqual(Obj* a, Obj* b) {
 
 size_t sizeofObject(Obj* object) {
     switch(object->type) {
-        case OBJ_STRING:   return static_cast<ObjString*>  (object)->str.size();
-        case OBJ_ARRAY:    return static_cast<ObjArray*>   (object)->data.size();
-        case OBJ_DICT:     return static_cast<ObjDict*>    (object)->data.size();
-        case OBJ_SET:      return static_cast<ObjSet*>     (object)->data.size();
-        case OBJ_FUNCTION: return static_cast<ObjFunction*>(object)->chunk.code.size();
-        case OBJ_CLASS:    return 0;    // todo: make this the total size of members when added
-        case OBJ_INSTANCE: return 0;    // todo:
-        case OBJ_NATIVE:   return 0;
+        case OBJ_STRING:       return static_cast<ObjString*>  (object)->str.size();
+        case OBJ_ARRAY:        return static_cast<ObjArray*>   (object)->data.size();
+        case OBJ_DICT:         return static_cast<ObjDict*>    (object)->data.size();
+        case OBJ_SET:          return static_cast<ObjSet*>     (object)->data.size();
+        case OBJ_FUNCTION:     return static_cast<ObjFunction*>(object)->chunk.code.size();
+        case OBJ_CLASS:        return 0;    // todo: make this the total size of members when added
+        case OBJ_INSTANCE:     return 0;    // todo:
+        case OBJ_BOUND_METHOD: return 0;    // todo:
+        case OBJ_NATIVE:       return 0;
     }
     return 0;    // should be unreachable
 }
@@ -579,12 +613,26 @@ void markObject(Obj* object) {
             break;
         }
 
+        case OBJ_CLASS: {
+            for(auto& [name, method]: static_cast<ObjClass*>(object)->methods) {
+                markValue(method);
+            }
+            break;
+        }
+
         case OBJ_INSTANCE: {
             ObjInstance* instance = static_cast<ObjInstance*>(object);
             markObject(instance->klass);
             for(auto& [name, value]: instance->fields) {
                 markValue(value);
             }
+            break;
+        }
+
+        case OBJ_BOUND_METHOD: {
+            ObjBoundMethod* bound = static_cast<ObjBoundMethod*>(object);
+            markValue(bound->receiver);
+            markObject(bound->method);
             break;
         }
 

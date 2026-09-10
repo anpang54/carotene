@@ -75,6 +75,8 @@ enum OpCode{
     OP_SET_PROPERTY,
     OP_GET_MEMBER,
     OP_SET_MEMBER,
+    OP_METHOD,
+    OP_INVOKE,
 
     // specific functions
     OP_TYPEOF,
@@ -148,6 +150,12 @@ class Chunk{
             uint8_t component = this->code[offset + 1];
             uint8_t constant = this->code[offset + 2];
             cout << format("{:<16} {:4d} {:4d} '", name, component, constant) << printValue(this->constants[constant]) << "'\n";
+            return offset + 3;
+        }
+        int invokeInstruction(string name, int offset) {
+            uint8_t constant = this->code[offset + 1];
+            uint8_t argCount = this->code[offset + 2];
+            cout << format("{:<16} ({} args) {:4d} '", name, argCount, constant) << printValue(this->constants[constant]) << "'\n";
             return offset + 3;
         }
         int setMemberInstruction(string name, int offset) {
@@ -304,11 +312,14 @@ class Chunk{
                     return constantInstruction("OP_GET_PROPERTY", offset);
                 case OP_SET_PROPERTY:
                     return constantInstruction("OP_SET_PROPERTY", offset);
-
                 case OP_GET_MEMBER:
                     return memberInstruction("OP_GET_MEMBER", offset);
                 case OP_SET_MEMBER:
                     return setMemberInstruction("OP_SET_MEMBER", offset);
+                case OP_METHOD:
+                    return constantInstruction("OP_METHOD", offset);
+                case OP_INVOKE:
+                    return invokeInstruction("OP_INVOKE", offset);
 
                 case OP_JUMP:
                     return jumpInstruction("OP_JUMP", 1, offset);

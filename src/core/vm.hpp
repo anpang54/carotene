@@ -603,9 +603,25 @@ class VM{
                     }
 
                     case OBJ_CLASS: {
+
                         ObjClass* klass = asClass(callee);
                         this->stackTop[-argCount - 1] = CaroObj(newInstance(klass));
+
+                        auto initializer = klass->methods.find("init");
+                        if(initializer != klass->methods.end()) {
+                            return call(asFunction(initializer->second), argCount);
+                        } else if(argCount != 0) {
+                            runtimeError("Expected 0 arguments but got %d.", argCount);
+                            return false;
+                        }
+
                         return true;
+                    }
+
+                    case OBJ_BOUND_METHOD: {
+                        ObjBoundMethod* boundMethod = asBoundMethod(callee);
+                        this->stackTop[-argCount - 1] = boundMethod->receiver;
+                        return call(boundMethod->method, argCount);
                     }
 
                     case OBJ_NATIVE: {
@@ -623,6 +639,62 @@ class VM{
             }
             runtimeError("Can only call functions and classes.");
             return false;
+        }
+
+        bool invoke(ObjString* name, int argCount) {
+
+            Value receiver = peek(argCount);
+
+            if(!isInstance(receiver)) {
+                runtimeError("Only instances have methods.");
+                return false;
+            }
+
+            ObjInstance* instance = asInstance(receiver);
+
+            auto field = instance->fields.find(name->str);
+            if(field != instance->fields.end()) {
+                this->stackTop[-argCount - 1] = field->second;
+                return callValue(field->second, argCount);
+            }
+
+            return invokeFromClass(instance->klass, name, argCount);
+
+        }
+
+        bool invokeFromClass(ObjClass* klass, ObjString* name, int argCount) {
+
+            auto method = klass->methods.find(name->str);
+            if(method == klass->methods.end()) {
+                runtimeError("Undefined property '%s'.", name->str.c_str());
+                return false;
+            }
+
+            return call(asFunction(method->second), argCount);
+
+        }
+
+
+        // defining methods
+
+        void defineMethod(const string& name) {
+            Value method = peek(0);
+            ObjClass* klass = asClass(peek(1));
+            klass->methods[name] = method;
+            pop();
+        }
+
+        bool bindMethod(ObjClass* klass, const string& name) {
+
+            auto found = klass->methods.find(name);
+            if(found == klass->methods.end()) {
+                runtimeError("A %s doesn't have a property '%s'.", klass->name.c_str(), name.c_str());
+                return false;
+            }
+
+            top() = CaroObj(newBoundMethod(peek(0), asFunction(found->second)));
+            return true;
+
         }
 
 
@@ -877,12 +949,12 @@ class VM{
                         } \
                         ObjInstance* instance = asInstance(peek(0)); \
                         auto found = instance->fields.find((name)->str); \
-                        if(found == instance->fields.end()) { \
+                        if(found != instance->fields.end()) { \
+                            top() = found->second; \
+                        } else { \
                             SYNC(); \
-                            runtimeError("A %s doesn't have a property '%s'.", instance->klass->name.c_str(), (name)->str.c_str()); \
-                            return INTERPRET_RUNTIME_ERROR; \
+                            if(!bindMethod(instance->klass, (name)->str)) return INTERPRET_RUNTIME_ERROR; \
                         } \
-                        top() = found->second; \
                     }
                     #define setProperty(name) { \
                         if(!isInstance(peek(1))) { \
@@ -900,6 +972,7 @@ class VM{
                         getProperty(name);
                         break;
                     }
+
                     case OP_SET_PROPERTY: {
 
                         ObjString* name = asString(constants[READ_BYTE()]);
@@ -930,6 +1003,7 @@ class VM{
 
                         break;
                     }
+
                     case OP_SET_MEMBER: {
 
                         uint8_t component = READ_BYTE();
@@ -959,6 +1033,11 @@ class VM{
 
                         top() = assigned;
 
+                        break;
+                    }
+
+                    case OP_METHOD: {
+                        defineMethod(asString(constants[READ_BYTE()])->str);
                         break;
                     }
 
@@ -1175,6 +1254,17 @@ class VM{
                         SYNC();
                         CHECK_OVERFLOW();
                         if(!callValue(peek(argCount), argCount)) {
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+                        LOAD_FRAME();
+                        break;
+                    }
+                    case OP_INVOKE: {
+                        ObjString* method = asString(constants[READ_BYTE()]);
+                        int argCount = READ_BYTE();
+                        SYNC();
+                        CHECK_OVERFLOW();
+                        if(!invoke(method, argCount)) {
                             return INTERPRET_RUNTIME_ERROR;
                         }
                         LOAD_FRAME();
