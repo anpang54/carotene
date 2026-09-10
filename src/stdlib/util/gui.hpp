@@ -593,17 +593,17 @@ namespace CaroGui{
             // make window
             HWND hwnd = CreateWindowExW(
 
-                0,                             // Optional window styles.
-                CLASS_NAME,                    // Window class
-                wide(window.title).c_str(),    // Window text
-                WS_OVERLAPPEDWINDOW,           // Window style
+                0,                                        // Optional window styles.
+                CLASS_NAME,                               // Window class
+                wide(window.title).c_str(),               // Window text
+                WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,    // Window style
 
                 CW_USEDEFAULT, CW_USEDEFAULT, window.width, window.height,    // Size and position
 
-                nullptr,                       // Parent window    
-                nullptr,                       // Menu
-                hInstance,                     // Instance handle
-                nullptr                        // Additional application data
+                nullptr,      // Parent window    
+                nullptr,      // Menu
+                hInstance,    // Instance handle
+                nullptr       // Additional application data
                 
             );
             if(hwnd == NULL) return "Couldn't make window.";
