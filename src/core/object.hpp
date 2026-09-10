@@ -36,6 +36,7 @@ enum ObjType{
     OBJ_DICT,
     OBJ_SET,
     OBJ_FUNCTION,
+    OBJ_CLASS,
     OBJ_NATIVE,
 };
 
@@ -164,6 +165,27 @@ ObjFunction* newFunction() {
 }
 
 
+// classes
+
+struct ObjClass: Obj{
+    string name;
+};
+
+bool isClass(Value value) {
+    return value.type == TYPE_OBJ && value.as.obj->type == OBJ_CLASS;
+}
+ObjClass* asClass(Value value) {
+    return static_cast<ObjClass*>(value.as.obj);
+}
+
+ObjClass* newClass(string name) {
+    maybeCollect();
+    ObjClass* klass = new ObjClass({OBJ_CLASS}, std::move(name));    // crafting interpreters names it klass so why not lol
+    objects.push_back(klass);
+    return klass;
+}
+
+
 // native functions
 
 typedef Value (*NativeFn)   (VM* vm, vector<Value> args);
@@ -217,6 +239,7 @@ void freeObject(Obj* object) {
         case OBJ_DICT:     delete static_cast<ObjDict*>    (object); break;
         case OBJ_SET:      delete static_cast<ObjSet*>     (object); break;
         case OBJ_FUNCTION: delete static_cast<ObjFunction*>(object); break;
+        case OBJ_CLASS:    delete static_cast<ObjClass*>   (object); break;
         case OBJ_NATIVE:   delete static_cast<ObjNative*>  (object); break;
     }
 }
@@ -332,9 +355,12 @@ string printObject(Obj* object) {
             return "<func " + function->name + ">";
         }
 
+        case OBJ_CLASS: {
+            return "<class " + static_cast<ObjClass*>(object)->name + ">";
+        }
+
         case OBJ_NATIVE: {
             return "<native func>";
-            break;
         }
 
     }
@@ -350,6 +376,7 @@ string typeofObjType(ObjType type) {
         case OBJ_DICT:     return "dict";
         case OBJ_SET:      return "set";
         case OBJ_FUNCTION: return "func";
+        case OBJ_CLASS:    return "class";
         case OBJ_NATIVE:   return "native";
     }
     return "unknown";    // should be unreachable
@@ -360,12 +387,15 @@ string typeofObject(Obj* object) {
 
 bool isTruthyObject(Obj* object) {
     switch(object->type) {
+
         case OBJ_STRING:   return !static_cast<ObjString*>(object)->str .empty();
         case OBJ_ARRAY:    return !static_cast<ObjArray*> (object)->data.empty();
         case OBJ_DICT:     return !static_cast<ObjDict*>  (object)->data.empty();
         case OBJ_SET:      return !static_cast<ObjSet*>   (object)->data.empty();
-        case OBJ_FUNCTION: return true;
-        case OBJ_NATIVE:   return true;
+
+        case OBJ_FUNCTION: case OBJ_CLASS: case OBJ_NATIVE:
+            return true;
+            
         default:           return false;
     }
 }
@@ -449,6 +479,7 @@ bool objectsEqual(Obj* a, Obj* b) {
 
         }
 
+        case OBJ_CLASS:    return a == b;
         case OBJ_FUNCTION: return a == b;
         case OBJ_NATIVE:   return a == b;    // ?
 
@@ -463,6 +494,7 @@ size_t sizeofObject(Obj* object) {
         case OBJ_DICT:     return static_cast<ObjDict*>    (object)->data.size();
         case OBJ_SET:      return static_cast<ObjSet*>     (object)->data.size();
         case OBJ_FUNCTION: return static_cast<ObjFunction*>(object)->chunk.code.size();
+        case OBJ_CLASS:    return 0;    // todo: make this the total size of members when added
         case OBJ_NATIVE:   return 0;
     }
     return 0;    // should be unreachable
@@ -482,12 +514,14 @@ void markObject(Obj* object) {
 
     // mark more values
     switch(object->type) {
+
         case OBJ_ARRAY: {
             for(Value& item: static_cast<ObjArray*>(object)->data) {
                 markValue(item);
             }
             break;
         }
+
         case OBJ_DICT: {
             for(auto& [key, value]: static_cast<ObjDict*>(object)->data) {
                 markValue(key);
@@ -495,17 +529,20 @@ void markObject(Obj* object) {
             }
             break;
         }
+
         case OBJ_SET: {
             for(const Value& item: static_cast<ObjSet*>(object)->data) {
                 markValue(item);
             }
             break;
         }
+        
         case OBJ_FUNCTION: {
             for(Value& constant: static_cast<ObjFunction*>(object)->chunk.constants) {
                 markValue(constant);
             }
         }
+
         default: break;
     }
 

@@ -73,6 +73,9 @@ enum OpCode{
     OP_CALL,
     OP_RETURN,
 
+    // classes
+    OP_CLASS,
+
     // specific functions
     OP_TYPEOF,
     OP_SIZEOF,
@@ -283,6 +286,9 @@ class Chunk{
                     return byteInstruction("OP_CALL", offset);
                 case OP_RETURN:
                     return simpleInstruction("OP_RETURN", offset);
+
+                case OP_CLASS:
+                    return constantInstruction("OP_CLASS", offset);
 
                 case OP_JUMP:
                     return jumpInstruction("OP_JUMP", 1, offset);
