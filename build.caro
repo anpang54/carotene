@@ -103,7 +103,7 @@ if(valid) {
     command += "-o " + output;
 
 
-    // Embed the licenses
+    // Embed files
 
     if(!fs.exists("LICENSE.md")) {
         print("Couldn't find LICENSE.md.");
@@ -113,12 +113,22 @@ if(valid) {
         print("Couldn't find include/credits.md.");
         exit(true);
     }
-
     sh(
         "( printf '// Generated from LICENSE.md and include/credits.md by build.caro.\n\n#pragma once\n\nconstexpr const char* LICENSES = R\042LICENSES(\n' ; cat LICENSE.md ; cat include/credits.md ; printf ')LICENSES\042;\n' )"
       + " > src/core/licenses.hpp"
     );
 
+    if(platform == "web") {
+        if(!fs.exists("src/stdlib/util/gui-styles.css")) {
+            print("Couldn't find src/stdlib/util/gui-styles.css.");
+            exit(true);
+        }
+        sh(
+            "( printf '// Generated from src/stdlib/util/gui-styles.css by build.caro.\n\n#pragma once\n\nconstexpr const char* GUI_STYLES = R\042GUI_STYLES(\n' ; cat src/stdlib/util/gui-styles.css ; printf ')GUI_STYLES\042;\n' )"
+          + " > src/stdlib/util/gui-styles.hpp"
+        );
+    }
+    
 
     // Build
 

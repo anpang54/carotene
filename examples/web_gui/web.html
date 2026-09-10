@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Carotene web GUI example</title>
+    </head>
+    <body>
+        <script>
+            var Module = {
+                preRun: [() => {
+                    addRunDependency("main.caro");
+                    fetch("main.caro")
+                        .then(response => response.text())
+                        .then(code => {
+                            FS.writeFile("main.caro", code);
+                            removeRunDependency("main.caro");
+                        });
+                }],
+                arguments: ["main.caro"],
+            };
+        </script>
+        <script src="../../builds/web/caro-web.js"></script>
+    </body>
+</html>

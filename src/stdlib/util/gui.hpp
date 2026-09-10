@@ -3,10 +3,11 @@
 
 /*
 
-    There are 3 separate backends:
+    There are 4 separate backends:
       - Windows:               Win32, linked normally
       - macOS, Linux, FreeBSD: GTK 4, with dlopen()
       - Haiku:                 BeAPI, linked normally
+      - Web:                   DOM
     
     Maybe Cocoa and Qt later.
 
@@ -15,7 +16,12 @@
 
 // INCLUDES
 
-#if defined(_WIN32)
+#if defined(__EMSCRIPTEN__)
+    #define CARO_GUI_WEB
+
+    #include "gui-styles.hpp"
+
+#elif defined(_WIN32)
 	#define CARO_GUI_WIN32
 
 	#define WIN32_LEAN_AND_MEAN 
@@ -49,9 +55,89 @@ namespace CaroGui{
     // BACKENDS
 
 
+    // web (acrylic elements)
+
+    #ifdef CARO_GUI_WEB
+
+        // add gui-styles.css and the google fonts it needs
+        void addStyles() {
+            EM_ASM({
+
+                if(document.getElementById("caro-gui-styles")) return;    // already has the styles
+
+                const link1 = document.createElement("link");
+                link1.rel         = "preconnect";
+                link1.href        = "https://fonts.googleapis.com";
+                document.head.appendChild(link1);
+
+                const link2 = document.createElement("link");
+                link2.rel         = "preconnect";
+                link2.href        = "https://fonts.gstatic.com";
+                link2.crossOrigin = "";
+                document.head.appendChild(link2);
+
+                const link3 = document.createElement("link");
+                link3.rel         = "stylesheet";
+                link3.href        = "https://fonts.googleapis.com/css2?family=Inter&family=Roboto+Mono&family=Schibsted+Grotesk&display=swap";
+                document.head.appendChild(link3);
+
+                const style = document.createElement("style");
+                style.id          = "caro-gui-styles";
+                style.textContent = UTF8ToString($0);
+                document.head.appendChild(style);
+
+            }, GUI_STYLES);
+        }
+
+        string test() {
+
+            addStyles();
+
+            EM_ASM({
+
+                let clicked = 0;
+                const buttonTexts = ([
+                    "Well, due to web security reasons, I can't close this tab.",
+                    "So go close it yourself.",
+                    "What?",
+                    "Go away!",
+                    "Why are you still here?",
+                    "Y'know what?",
+                    "I can't delete the tab, but I can delete myself."
+                ]);
+                
+                const div = document.createElement("div");
+                div.classList.add("center-box");
+                div.style.gridTemplateRows = "auto 2.25em";
+
+                const label = document.createElement("span");
+                label.innerText = "Hello! This is a test webpage rendered using the DOM with Acrylic components. Pretty cool!";
+                div.appendChild(label);
+
+                const button = document.createElement("button");
+                button.innerText = "Self-destruct";
+                button.addEventListener("click", () => {
+                    ++clicked;
+                    if(clicked > buttonTexts.length) {
+                        button.remove();
+                    } else {
+                        button.innerText = buttonTexts[clicked - 1];
+                    }
+                });
+                div.appendChild(button);
+
+                document.body.appendChild(div);
+                
+            });
+
+            return "";
+
+        }
+
+
     // gtk
 
-    #ifdef CARO_GUI_GTK
+    #elifdef CARO_GUI_GTK
 
 
         // gtk functions

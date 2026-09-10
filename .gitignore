@@ -3,3 +3,4 @@ builds
 optimization_notes
 .genio.yaml
 src/core/licenses.hpp
+src/stdlib/util/gui-styles.hpp

@@ -157,7 +157,7 @@ namespace CaroHttp{
 
             // make js
             string js =
-                "() => {"
+                "(() => {"
                     "try{"
                         "let request = new XMLHttpRequest();"
                         "request.open(\"" + method + "\", \"" + escapeJS(url) + "\", false);";    // false = synchronous
@@ -169,7 +169,7 @@ namespace CaroHttp{
                     "} catch(error){"
                         "return \"!\"+(error&&error.message? error.message: error);"
                     "}"
-                "}()";
+                "})()";
 
             // run
             string result = runJS(js);
