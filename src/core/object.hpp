@@ -201,6 +201,8 @@ void markValue(Value value);    // forward declaration
 struct NativeData{
     virtual ~NativeData() = default;
     virtual void mark() {}
+    virtual bool readProperty (const string& name, Value& result)              { (void)name; (void)result; return false; }
+    virtual bool writeProperty(const string& name, Value value, string& error) { (void)name; (void)value; (void)error; return false; }
 };
     // C++ state that instances of native classes can own
 

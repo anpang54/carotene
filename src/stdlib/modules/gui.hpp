@@ -33,6 +33,33 @@ void setWidgetText(VM* vm, Value self, const vector<Value>& args) {
 }
 
 
+// gui.Label and gui.Button
+
+struct TextWidgetData: WidgetData{
+
+    bool readProperty(const string& name, Value& result) override{
+        if(name == "text") {
+            result = CaroObj(copyString(widget.text));
+            return true;
+        }
+        return false;
+    }
+
+    bool writeProperty(const string& name, Value value, string& error) override{
+        if(name == "text") {
+            if(!matchesType(OBJ_STRING, value)) {
+                error = format("The text should be {:s}, but {:s} was given.", typeofObjType(OBJ_STRING), typeofValue(value));
+                return true;
+            }
+            CaroGui::setText(widget, asString(value)->str);
+            return true;
+        }
+        return false;
+    }
+
+};
+
+
 // label
 
 nClass(gui_Label, "gui", "Label");
@@ -42,7 +69,7 @@ nMethod(gui_Label, init, {
         {{OBJ_STRING}, true}
     });
     if(alreadyInitialized(vm, self)) return CaroNull;
-    auto data = std::make_unique<WidgetData>();
+    auto data = std::make_unique<TextWidgetData>();
     data->widget = {CaroGui::WIDGET_LABEL, asString(args[0])->str};
     asInstance(self)->native = std::move(data);
     return CaroNull;
@@ -67,7 +94,7 @@ nMethod(gui_Button, init, {
         {{OBJ_FUNCTION, OBJ_NATIVE, OBJ_BOUND_METHOD}, false}
     });
     if(alreadyInitialized(vm, self)) return CaroNull;
-    auto data = std::make_unique<WidgetData>();
+    auto data = std::make_unique<TextWidgetData>();
     data->widget = {CaroGui::WIDGET_BUTTON, asString(args[0])->str};
     if(args.size() >= 2) data->callback = args[1];
     asInstance(self)->native = std::move(data);
@@ -79,6 +106,148 @@ nMethod(gui_Button, set_text, {
         {{OBJ_STRING}, true}
     });
     setWidgetText(vm, self, args);
+    return CaroNull;
+});
+
+
+// textbox and textarea
+
+struct TextInputData: WidgetData{
+
+    bool readProperty(const string& name, Value& result) override{
+        if(name == "value") {
+            result = CaroObj(copyString(widget.text));
+            return true;
+        }
+        return false;
+    }
+
+    bool writeProperty(const string& name, Value value, string& error) override{
+        if(name == "value") {
+            if(!matchesType(OBJ_STRING, value)) {
+                error = format("The value should be {:s}, but {:s} was given.", typeofObjType(OBJ_STRING), typeofValue(value));
+                return true;
+            }
+            CaroGui::setText(widget, asString(value)->str);
+            return true;
+        }
+        return false;
+    }
+
+};
+
+Value initTextInput(VM* vm, Value self, const vector<Value>& args, CaroGui::WidgetType type) {
+    if(alreadyInitialized(vm, self)) return CaroNull;
+    auto data = std::make_unique<TextInputData>();
+    data->widget = {type, args.size() >= 1? asString(args[0])->str: ""};
+    asInstance(self)->native = std::move(data);
+    return CaroNull;
+}
+
+nClass(gui_Textbox, "gui", "Textbox");
+
+nMethod(gui_Textbox, init, {
+    params({
+        {{OBJ_STRING}, false}
+    });
+    return initTextInput(vm, self, args, CaroGui::WIDGET_TEXTBOX);
+});
+
+nClass(gui_Textarea, "gui", "Textarea");
+
+nMethod(gui_Textarea, init, {
+    params({
+        {{OBJ_STRING}, false}
+    });
+    return initTextInput(vm, self, args, CaroGui::WIDGET_TEXTAREA);
+});
+
+
+// select and combobox
+
+bool widgetOptions(VM* vm, Value array, const char* widgetName, vector<string>& options) {
+    for(const Value& option: asArray(array)->data) {
+        if(!matchesType(OBJ_STRING, option)) {
+            vm->runtimeError("The options should be %s, but there's %s.", typeofObjType(OBJ_STRING).c_str(), typeofValue(option).c_str());
+            return false;
+        }
+        options.push_back(asString(option)->str);
+    }
+    if(options.empty()) {
+        vm->runtimeError("A %s needs at least 1 option.", widgetName);
+        return false;
+    }
+    return true;
+}
+
+struct SelectData: WidgetData{
+
+    bool readProperty(const string& name, Value& result) override {
+        if(name == "value") {
+            result = CaroObj(copyString(widget.options[widget.selected]));
+            return true;
+        }
+        return false;
+    }
+
+    bool writeProperty(const string& name, Value value, string& error) override {
+        if(name == "value") {
+            if(!matchesType(OBJ_STRING, value)) {
+                error = format("The value should be {:s}, but {:s} was given.", typeofObjType(OBJ_STRING), typeofValue(value));
+                return true;
+            }
+            auto found = std::ranges::find(widget.options, asString(value)->str);
+            if(found == widget.options.end()) {
+                error = format("\"{:s}\" isn't an option.", asString(value)->str);
+                return true;
+            }
+            CaroGui::setSelected(widget, (int)(found - widget.options.begin()));
+            return true;
+        }
+        return false;
+    }
+
+};
+
+nClass(gui_Select, "gui", "Select");
+
+nMethod(gui_Select, init, {
+    params({
+        {{OBJ_ARRAY}, true},
+        {{OBJ_FUNCTION, OBJ_NATIVE, OBJ_BOUND_METHOD}, false}
+    });
+    if(alreadyInitialized(vm, self)) return CaroNull;
+
+    vector<string> options;
+    if(!widgetOptions(vm, args[0], "select", options)) return CaroNull;
+
+    auto data = std::make_unique<SelectData>();
+    data->widget = {CaroGui::WIDGET_SELECT, ""};
+    data->widget.options = std::move(options);
+    if(args.size() >= 2) data->callback = args[1];
+    asInstance(self)->native = std::move(data);
+
+    return CaroNull;
+});
+
+nClass(gui_ComboBox, "gui", "ComboBox");
+
+nMethod(gui_ComboBox, init, {
+    params({
+        {{OBJ_ARRAY}, true},
+        {{OBJ_FUNCTION, OBJ_NATIVE, OBJ_BOUND_METHOD}, false}
+    });
+    if(alreadyInitialized(vm, self)) return CaroNull;
+
+    vector<string> options;
+    if(!widgetOptions(vm, args[0], "combobox", options)) return CaroNull;
+
+    auto data = std::make_unique<TextInputData>();
+    data->widget = {CaroGui::WIDGET_COMBOBOX, ""};
+    data->widget.options = std::move(options);
+    if(args.size() >= 2) data->callback = args[1];
+    asInstance(self)->native = std::move(data);
+
     return CaroNull;
 });
 
