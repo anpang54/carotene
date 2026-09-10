@@ -40,6 +40,7 @@
 	#include <StringView.h>
 	#include <Button.h>
 	#include <LayoutBuilder.h>
+	#include <GridLayout.h>
 
 #else
     #define CARO_GUI_GTK
@@ -51,7 +52,7 @@
 #include "../../core/format.hpp"
 
 
-// block execution with asyncify
+// ASYNCIFY
 
 #ifdef CARO_GUI_WEB
     EM_ASYNC_JS(int, caroWaitForEvent, (), {
@@ -72,12 +73,15 @@ namespace CaroGui{
     struct Widget{
         WidgetType type;
         string text;
+        int x     = 0, y     = 0,
+            xSpan = 1, ySpan = 1;    // counts, not end position
     };
 
     struct Window{
         string title;
-        int width  = 400;
-        int height = 250;
+        int width   = 400;
+        int height  = 250;
+        int spacing = 25;
         vector<Widget> widgets;
     };
 
@@ -134,16 +138,11 @@ namespace CaroGui{
 
             addStyles();
 
-            string rows;
-            for(const Widget& widget: window.widgets) {
-                rows += widget.type == WIDGET_BUTTON? "2.25em ": "auto ";
-            }
-
             EM_ASM({
 
                 const div = document.createElement("div");
                 div.id = "caro-container";
-                div.style.gridTemplateRows = UTF8ToString($1);
+                div.style.gap = `${$1}px`;
                 document.title = UTF8ToString($0);
                 document.body.appendChild(div);
                 Module.caroContainer = div;
@@ -159,7 +158,7 @@ namespace CaroGui{
                     }
                 };
                 
-            }, window.title.c_str(), rows.c_str());
+            }, window.title.c_str(), window.spacing);
 
             for(size_t i = 0; i < window.widgets.size(); ++i) {
 
@@ -182,9 +181,11 @@ namespace CaroGui{
                     }
 
                     element.innerText = UTF8ToString($1);
+                    element.style.gridColumn = `${$3 + 1} / span ${$4}`;
+                    element.style.gridRow    = `${$5 + 1} / span ${$6}`;
                     Module.caroContainer.appendChild(element);
 
-                }, widget.type, widget.text.c_str(), (int)i);
+                }, widget.type, widget.text.c_str(), (int)i, widget.x, widget.xSpan, widget.y, widget.ySpan);
 
             }
 
@@ -219,8 +220,10 @@ namespace CaroGui{
             f(windowDestroy,        "gtk_window_destroy",          void,          (void*))\
             f(labelNew,             "gtk_label_new",               void*,         (const char*))\
             f(buttonNewWithLabel,   "gtk_button_new_with_label",   void*,         (const char*))\
-            f(boxNew,               "gtk_box_new",                 void*,         (int, int))\
-            f(boxAppend,            "gtk_box_append",              void,          (void*, void*))\
+            f(gridNew,              "gtk_grid_new",                void*,         (void))\
+            f(gridAttach,           "gtk_grid_attach",             void,          (void*, void*, int, int, int, int))\
+            f(gridSetRowSpacing,    "gtk_grid_set_row_spacing",    void,          (void*, unsigned int))\
+            f(gridSetColumnSpacing, "gtk_grid_set_column_spacing", void,          (void*, unsigned int))\
             f(widgetSetHalign,      "gtk_widget_set_halign",       void,          (void*, int))\
             f(widgetSetValign,      "gtk_widget_set_valign",       void,          (void*, int))\
             \
@@ -311,35 +314,38 @@ namespace CaroGui{
             vector<Click> clicks(window.widgets.size());
 
             // add widgets
-            void* box = gtk().boxNew(1, 25);
+            void* grid = gtk().gridNew();
+            gtk().gridSetRowSpacing   (grid, window.spacing);
+            gtk().gridSetColumnSpacing(grid, window.spacing);
             for(size_t i = 0; i < window.widgets.size(); ++i) {
                 const Widget& widget = window.widgets[i];
 
                 switch(widget.type) {
 
                     case WIDGET_LABEL:
-                        gtk().boxAppend(box, gtk().labelNew(widget.text.c_str()));
+                        gtk().gridAttach(grid, gtk().labelNew(widget.text.c_str()), widget.x, widget.y, widget.xSpan, widget.ySpan);
                         break;
 
                     case WIDGET_BUTTON:
                         void* button = gtk().buttonNewWithLabel(widget.text.c_str());
-                        gtk().widgetSetHalign  (button, 3);
+                        gtk().widgetSetHalign(button, 3);
+                        gtk().widgetSetValign(button, 3);
                         clicks[i] = {i, &onClick};
                         gtk().signalConnectData(button, "clicked", (void(*)())onClicked, &clicks[i], nullptr, 0);
-                        gtk().boxAppend        (box, button);
+                        gtk().gridAttach(grid, button, widget.x, widget.y, widget.xSpan, widget.ySpan);
                         break;
 
                 }
                 
             }
-            gtk().widgetSetHalign(box, 3);
-            gtk().widgetSetValign(box, 3);
+            gtk().widgetSetHalign(grid, 3);
+            gtk().widgetSetValign(grid, 3);
 
             // make window
             void* gtkWindow = gtk().windowNew();
             gtk().windowSetTitle      (gtkWindow, window.title.c_str());
             gtk().windowSetDefaultSize(gtkWindow, window.width, window.height);
-            gtk().windowSetChild      (gtkWindow, box);
+            gtk().windowSetChild      (gtkWindow, grid);
             gtk().signalConnectData   (gtkWindow, "destroy", (void(*)())onDestroy, &closed, nullptr, 0);
             gtk().windowPresent       (gtkWindow);
             currentWindow = gtkWindow;
@@ -367,7 +373,7 @@ namespace CaroGui{
         const int firstId      = 100;
         const int buttonWidth  = 120;
         const int buttonHeight = 28;
-        const int spacing      = 25;     // between widgets
+        const int buttonInset  = 24;
 
         // the window being shown
         HWND                currentWindow = nullptr;
@@ -395,6 +401,45 @@ namespace CaroGui{
             return result;
         }
 
+        SIZE measureText(HWND hwnd, const string& text, int maxWidth) {
+            std::wstring wideText = wide(text);
+            HDC     dc  = GetDC(hwnd);
+            HGDIOBJ old = SelectObject(dc, guiFont());
+            RECT    box = {0, 0, maxWidth, 0};
+            DrawTextW(dc, wideText.c_str(), -1, &box, DT_CENTER | DT_WORDBREAK | DT_CALCRECT);
+            SelectObject(dc, old);
+            ReleaseDC(hwnd, dc);
+            return {box.right, box.bottom};
+        }
+
+        int trackStart(const vector<int>& tracks, int start) {
+            int position = 0;
+            for(int i = 0; i < start; ++i) position += tracks[i] + currentLayout->spacing;
+            return position;
+        }
+        int trackSize(const vector<int>& tracks, int start, int span) {
+            return std::max(trackStart(tracks, start + span) - trackStart(tracks, start) - currentLayout->spacing, 0);
+        }
+
+        struct Span{
+            int start, span, size;
+        };
+
+        vector<int> fitTracks(const vector<Span>& spans) {
+            int count = 0;
+            for(const Span& s: spans) count = std::max(count, s.start + s.span);
+            vector<int> tracks(count, 0);
+            for(bool single: {true, false}) {
+                for(const Span& s: spans) {
+                    if((s.span == 1) != single) continue;
+                    int missing = s.size - trackSize(tracks, s.start, s.span);
+                    if(missing <= 0) continue;
+                    for(int i = 0; i < s.span; ++i) tracks[s.start + i] += (missing + s.span - 1) / s.span;
+                }
+            }
+            return tracks;
+        }
+
         // callback
         LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
 
@@ -411,7 +456,7 @@ namespace CaroGui{
                         switch(widget.type) {
                             
                             case WIDGET_LABEL:
-                                CreateWindowExW(
+                                control = CreateWindowExW(
                                     0,
                                     L"STATIC",
                                     wide(widget.text).c_str(),
@@ -425,7 +470,7 @@ namespace CaroGui{
                                 break;
 
                             case WIDGET_BUTTON:
-                                CreateWindowExW(
+                                control = CreateWindowExW(
                                     0,
                                     L"BUTTON",
                                     wide(widget.text).c_str(),
@@ -452,45 +497,49 @@ namespace CaroGui{
 
                     int width  = LOWORD(lParam);
                     int height = HIWORD(lParam);
-                    size_t count = currentLayout->widgets.size();
+                    const vector<Widget>& widgets = currentLayout->widgets;
+                    int spacing = currentLayout->spacing;
+                    int available = std::max(width - 2 * spacing, 0);
 
-                    // measure every widget
-                    vector<int> heights(count);
-                    for(size_t i = 0; i < count; ++i) {
+                    vector<Span> xSpans;
+                    for(const Widget& widget: widgets) {
+                        int textWidth = measureText(hwnd, widget.text, available).cx;
+                        int size = widget.type == WIDGET_BUTTON? std::max(buttonWidth, textWidth + buttonInset): textWidth;
+                        xSpans.push_back({widget.x, widget.xSpan, size});
+                    }
+                    vector<int> columns = fitTracks(xSpans);
 
-                        if(currentLayout->widgets[i].type == WIDGET_BUTTON) {
-                            heights[i] = buttonHeight;
-                            continue;
-                        }
-
-                        HWND label = GetDlgItem(hwnd, firstId + i);
-                        std::wstring text = wide(currentLayout->widgets[i].text);
-
-                        HDC     dc  = GetDC(label);
-                        HGDIOBJ old = SelectObject(dc, guiFont());
-                        RECT    box = {0, 0, width, 0};
-                        DrawTextW(dc, text.c_str(), -1, &box, DT_CENTER | DT_WORDBREAK | DT_CALCRECT);
-                        SelectObject(dc, old);
-                        ReleaseDC(label, dc);
-
-                        heights[i] = box.bottom;
-
+                    int gaps    = spacing * std::max((int)columns.size() - 1, 0);
+                    int content = trackSize(columns, 0, (int)columns.size()) - gaps;
+                    if(content > available - gaps && content > 0) {
+                        int target = std::max(available - gaps, 0);
+                        for(int& column: columns) column = column * target / content;
                     }
 
-                    // stack them in the middle
-                    int stack = 0;
-                    for(int h: heights) stack += h;
-                    if(count > 0) stack += spacing * (int)(count - 1);
+                    vector<Span> ySpans;
+                    vector<int>  heights;
+                    for(const Widget& widget: widgets) {
+                        int cellWidth = trackSize(columns, widget.x, widget.xSpan);
+                        heights.push_back(widget.type == WIDGET_BUTTON? buttonHeight: measureText(hwnd, widget.text, cellWidth).cy);
+                        ySpans.push_back({widget.y, widget.ySpan, heights.back()});
+                    }
+                    vector<int> rows = fitTracks(ySpans);
 
-                    int top = (height - stack) / 2;
-                    for(size_t i = 0; i < count; ++i) {
+                    int left = (width  - trackSize(columns, 0, (int)columns.size())) / 2;
+                    int top  = (height - trackSize(rows,    0, (int)rows.size()   )) / 2;
+                    for(size_t i = 0; i < widgets.size(); ++i) {
+                        const Widget& widget = widgets[i];
+                        int cellX      = left + trackStart(columns, widget.x);
+                        int cellY      = top  + trackStart(rows,    widget.y);
+                        int cellWidth  = trackSize(columns, widget.x, widget.xSpan);
+                        int cellHeight = trackSize(rows,    widget.y, widget.ySpan);
                         HWND control = GetDlgItem(hwnd, firstId + i);
-                        if(currentLayout->widgets[i].type == WIDGET_BUTTON) {
-                            MoveWindow(control, (width - buttonWidth) / 2, top, buttonWidth, buttonHeight, true);
+                        if(widget.type == WIDGET_BUTTON) {
+                            int buttonW = std::min(xSpans[i].size, cellWidth);
+                            MoveWindow(control, cellX + (cellWidth - buttonW) / 2, cellY + (cellHeight - buttonHeight) / 2, buttonW, buttonHeight, true);
                         } else {
-                            MoveWindow(control, 0, top, width, heights[i], true);
+                            MoveWindow(control, cellX, cellY + (cellHeight - heights[i]) / 2, cellWidth, heights[i], true);
                         }
-                        top += heights[i] + spacing;
                     }
 
                     return 0;
@@ -605,10 +654,14 @@ namespace CaroGui{
                     // add widgets
 					{
 
+                        // start building
 						BLayoutBuilder::Group<> builder(this, B_VERTICAL, B_USE_DEFAULT_SPACING);
+						builder
+                            .SetInsets(B_USE_WINDOW_INSETS)    // set insets
+                            .AddGlue();                        // top glue
 
-						builder.SetInsets(B_USE_WINDOW_INSETS).AddGlue();
-
+                        // grid
+						BGridLayout* grid = new BGridLayout(window.spacing, window.spacing);
 						for(size_t i = 0; i < window.widgets.size(); ++i) {
 
 							const Widget& widget = window.widgets[i];
@@ -628,28 +681,35 @@ namespace CaroGui{
 
 							}
 
-							builder.AddGroup(B_HORIZONTAL)
-								.AddGlue()
-								.Add(view)
-								.AddGlue()
-							.End();
+							grid->AddView(view, widget.x, widget.y, widget.xSpan, widget.ySpan)
+								->SetExplicitAlignment(BAlignment(B_ALIGN_HORIZONTAL_CENTER, B_ALIGN_VERTICAL_CENTER));
 
 						}
 
-						builder.AddGlue();
-                            // the glues make everything centered
+                        // end building
+						builder.AddGroup(B_HORIZONTAL)
+							        .AddGlue()    // left glue
+							        .Add(grid)    // content
+							        .AddGlue()    // right glue
+                                .End()
+                                .AddGlue();       // bottom glue
 
+                        // layout
 						Layout(true);
 						CenterOnScreen();
+
 					}
 				
 				void MessageReceived(BMessage* message) override{
 					switch (message->what) {
+
 						case 'clik':
 							if(!(*currentClick)(message->GetInt32("widget", 0))) be_app->PostMessage(B_QUIT_REQUESTED);
 							break;
+
 						default:
 							BWindow::MessageReceived(message);
+
 					}
 				}
 				

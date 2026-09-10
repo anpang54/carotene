@@ -30,12 +30,14 @@ nMethod(gui_Window, init, {
     params({
         {{OBJ_STRING}, false},
         {ANY_NUMERIC,  false},
-        {ANY_NUMERIC,  false}
+        {ANY_NUMERIC,  false},
+        {ANY_NUMERIC,  false},
     });
     auto data = std::make_unique<WindowData>();
-    if(args.size() >= 1) data->window.title  = asString(args[0])->str;
-    if(args.size() >= 2) data->window.width  = asNumberTo<int>(args[1]);
-    if(args.size() >= 3) data->window.height = asNumberTo<int>(args[2]);
+    if(args.size() >= 1) data->window.title   = asString(args[0])->str;
+    if(args.size() >= 2) data->window.width   = asNumberTo<int>(args[1]);
+    if(args.size() >= 3) data->window.height  = asNumberTo<int>(args[2]);
+    if(args.size() >= 4) data->window.spacing = asNumberTo<int>(args[3]);
     asInstance(self)->native = std::move(data);
     return CaroNull;
 });
@@ -68,31 +70,74 @@ nMethod(gui_Window, close, {
 
 // WIDGETS
 
-nMethod(gui_Window, label, {
-    params({
-        {{OBJ_STRING}, true}
-    });
+
+// grid positions
+
+#define GRID_POSITION {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, OBJ_ARRAY}
+
+bool gridPosition(VM* vm, const Value& value, const char* name, int& start, int& span) {
+
+    int first, last;
+    if(isArray(value)) {
+        const vector<Value>& data = asArray(value)->data;
+        if(data.size() != 2 || !isInt(data[0].type) || !isInt(data[1].type)) {
+            vm->runtimeError("The %s should be an integer to signify a single position, or an array of 2 integers to signify a range.", name);
+            return false;
+        }
+        first = asNumberTo<int>(data[0]);
+        last  = asNumberTo<int>(data[1]);
+    } else {
+        first = last = asNumberTo<int>(value);
+    }
+
+    if(first < 0 || last < first) {
+        vm->runtimeError("The %s should be positive, with the first before the last.", name);
+        return false;
+    }
+
+    start = first;
+    span  = last - first + 1;
+    return true;
+
+}
+
+bool addWidget(VM* vm, Value self, const vector<Value>& args, CaroGui::WidgetType type, Value callback) {
 
     WindowData* data = nativeData<WindowData>(vm, self);
-    if(data == nullptr) return CaroNull;
-    data->window.widgets.push_back({CaroGui::WIDGET_LABEL, asString(args[0])->str});
-    data->callbacks.push_back(CaroNull);
-    return CaroNull;
+    if(data == nullptr) return false;
 
+    CaroGui::Widget widget{type, asString(args[2])->str};
+    if(!gridPosition(vm, args[0], "x", widget.x, widget.xSpan)) return false;
+    if(!gridPosition(vm, args[1], "y", widget.y, widget.ySpan)) return false;
+
+    data->window.widgets.push_back(widget);
+    data->callbacks.push_back(callback);
+    return true;
+
+}
+
+
+// widgets
+
+nMethod(gui_Window, label, {
+    params({
+        {GRID_POSITION, true},
+        {GRID_POSITION, true},
+        {{OBJ_STRING},  true}
+    });
+    addWidget(vm, self, args, CaroGui::WIDGET_LABEL, CaroNull);
+    return CaroNull;
 });
 
 nMethod(gui_Window, button, {
     params({
-        {{OBJ_STRING}, true},
+        {GRID_POSITION, true},
+        {GRID_POSITION, true},
+        {{OBJ_STRING},  true},
         {{OBJ_FUNCTION, OBJ_NATIVE, OBJ_BOUND_METHOD}, false}
     });
-
-    WindowData* data = nativeData<WindowData>(vm, self);
-    if(data == nullptr) return CaroNull;
-    data->window.widgets.push_back({CaroGui::WIDGET_BUTTON, asString(args[0])->str});
-    data->callbacks.push_back(args.size() >= 2? args[1]: CaroNull);
+    addWidget(vm, self, args, CaroGui::WIDGET_BUTTON, args.size() >= 4? args[3]: CaroNull);
     return CaroNull;
-
 });
 
 
@@ -101,7 +146,7 @@ nMethod(gui_Window, button, {
 nFunc(gui_test, "gui", "test", {
     params({});
 
-    CaroGui::Window window{"Carotene test window", 400, 250, {
+    CaroGui::Window window{"Carotene test window", 400, 250, 25, {
         {
             CaroGui::WIDGET_LABEL,  
             #if defined(CARO_GUI_WEB)
@@ -113,10 +158,12 @@ nFunc(gui_test, "gui", "test", {
             #elif defined(CARO_GUI_BEAPI)
                 "Hello! This is a test window rendered using BeAPI. Pretty cool!"
             #endif
+            , 0, 0
         },
         {
             CaroGui::WIDGET_BUTTON,
-            "Self-destruct"
+            "Self-destruct",
+            0, 1
         }
     }};
 
