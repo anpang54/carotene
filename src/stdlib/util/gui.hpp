@@ -16,6 +16,7 @@
 
 // INCLUDES
 
+#include <algorithm>
 #include <functional>
 
 #if defined(__EMSCRIPTEN__)
@@ -1135,7 +1136,6 @@ namespace CaroGui{
 
 							Widget& widget = *window.widgets[i];
 							BView* view;
-							BView* handle = nullptr;
 
 							switch(widget.type) {
 
@@ -1166,7 +1166,13 @@ namespace CaroGui{
                                     break;
                                 }
 
-                                case WIDGET_SELECT: {
+                                // beapi doesn't have a combobox and the "workaround" doesn't really work so just make it a select
+                                case WIDGET_SELECT: case WIDGET_COMBOBOX: {
+                                    if(widget.type == WIDGET_COMBOBOX) {
+                                        auto found = std::ranges::find(widget.options, widget.text);
+                                        widget.selected = found == widget.options.end()? 0: (int)(found - widget.options.begin());
+                                        widget.text = widget.options[widget.selected];
+                                    }
                                     BPopUpMenu* menu = new BPopUpMenu("select");
                                     for(size_t j = 0; j < widget.options.size(); ++j) {
                                         BMessage* message = new BMessage('slct');
@@ -1180,28 +1186,6 @@ namespace CaroGui{
                                     break;
                                 }
 
-                                // BeAPI has no combobox, so it's a textbox with a menu next to it.
-                                case WIDGET_COMBOBOX: {
-                                    BTextControl* textbox = new BTextControl("combobox", nullptr, widget.text.c_str(), nullptr);
-                                    BMessage* change = new BMessage('chtx');
-                                    change->AddPointer("widget", &widget);
-                                    textbox->SetModificationMessage(change);
-                                    BPopUpMenu* menu = new BPopUpMenu("", false, false);
-                                    for(size_t j = 0; j < widget.options.size(); ++j) {
-                                        BMessage* message = new BMessage('cmbo');
-                                        message->AddPointer("widget", &widget);
-                                        message->AddInt32("index",  (int32)i);
-                                        message->AddInt32("option", (int32)j);
-                                        menu->AddItem(new BMenuItem(widget.options[j].c_str(), message));
-                                    }
-                                    BGroupView* group = new BGroupView(B_HORIZONTAL, 0);
-                                    group->GroupLayout()->AddView(textbox);
-                                    group->GroupLayout()->AddView(new BMenuField("options", nullptr, menu));
-                                    view   = group;
-                                    handle = textbox;
-                                    break;
-                                }
-
 							}
 
                             // fails if the cells overlap another widget
@@ -1211,10 +1195,10 @@ namespace CaroGui{
 								continue;
 							}
 							item->SetExplicitAlignment(BAlignment(
-                                widget.type == WIDGET_TEXTBOX || widget.type == WIDGET_TEXTAREA || widget.type == WIDGET_COMBOBOX? B_ALIGN_USE_FULL_WIDTH:  B_ALIGN_HORIZONTAL_CENTER,
-                                widget.type == WIDGET_TEXTAREA?                                                                    B_ALIGN_USE_FULL_HEIGHT: B_ALIGN_VERTICAL_CENTER
+                                widget.type == WIDGET_TEXTBOX || widget.type == WIDGET_TEXTAREA? B_ALIGN_USE_FULL_WIDTH:  B_ALIGN_HORIZONTAL_CENTER,
+                                widget.type == WIDGET_TEXTAREA?                                  B_ALIGN_USE_FULL_HEIGHT: B_ALIGN_VERTICAL_CENTER
                             ));
-                            widget.handle = handle? handle: view;
+                            widget.handle = view;
 
 						}
 
@@ -1239,6 +1223,7 @@ namespace CaroGui{
 							Widget* widget = nullptr;
 							if(message->FindPointer("widget", (void**)&widget) != B_OK) break;
 							widget->selected = message->GetInt32("option", 0);
+							if(widget->type == WIDGET_COMBOBOX) widget->text = widget->options[widget->selected];
 							if(!(*currentClick)(message->GetInt32("index", 0))) be_app->PostMessage(B_QUIT_REQUESTED);
 							break;
 						}
@@ -1279,7 +1264,18 @@ namespace CaroGui{
                 case WIDGET_TEXTBOX:  static_cast<BTextControl*>(view)->SetText (text.c_str());                                  break;
                 case WIDGET_TEXTAREA: static_cast<BTextView*>(static_cast<BScrollView*>(view)->Target())->SetText(text.c_str()); break;
                 case WIDGET_SELECT:                                                                                              break;
-                case WIDGET_COMBOBOX: static_cast<BTextControl*>(view)->SetText (text.c_str());                                  break;
+                case WIDGET_COMBOBOX: {
+                    BMenu* menu = static_cast<BMenuField*>(view)->Menu();
+                    auto found = std::ranges::find(widget.options, text);
+                    if(found != widget.options.end()) {
+                        widget.selected = (int)(found - widget.options.begin());
+                        if(BMenuItem* item = menu->ItemAt(widget.selected)) item->SetMarked(true);
+                    } else {
+                        if(BMenuItem* marked = menu->FindMarked()) marked->SetMarked(false);
+                        if(BMenuItem* super = menu->Superitem()) super->SetLabel(text.c_str());
+                    }
+                    break;
+                }
             }
             view->UnlockLooper();
         }
