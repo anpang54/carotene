@@ -31,13 +31,18 @@ struct GCPause{
 };
 
 enum ObjType{
+
     OBJ_STRING,
     OBJ_ARRAY,
     OBJ_DICT,
     OBJ_SET,
+
     OBJ_FUNCTION,
     OBJ_CLASS,
+    OBJ_INSTANCE,
+
     OBJ_NATIVE,
+
 };
 
 struct Obj{
@@ -186,6 +191,28 @@ ObjClass* newClass(string name) {
 }
 
 
+// instances
+
+struct ObjInstance: Obj{
+    ObjClass* klass;
+    unordered_map<string, Value> fields;
+};
+
+bool isInstance(Value value) {
+    return value.type == TYPE_OBJ && value.as.obj->type == OBJ_INSTANCE;
+}
+ObjInstance* asInstance(Value value) {
+    return static_cast<ObjInstance*>(value.as.obj);
+}
+
+ObjInstance* newInstance(ObjClass* klass) {
+    maybeCollect();
+    ObjInstance* instance = new ObjInstance({OBJ_INSTANCE}, klass);
+    objects.push_back(instance);
+    return instance;
+}
+
+
 // native functions
 
 typedef Value (*NativeFn)   (VM* vm, vector<Value> args);
@@ -240,6 +267,7 @@ void freeObject(Obj* object) {
         case OBJ_SET:      delete static_cast<ObjSet*>     (object); break;
         case OBJ_FUNCTION: delete static_cast<ObjFunction*>(object); break;
         case OBJ_CLASS:    delete static_cast<ObjClass*>   (object); break;
+        case OBJ_INSTANCE: delete static_cast<ObjInstance*>(object); break;
         case OBJ_NATIVE:   delete static_cast<ObjNative*>  (object); break;
     }
 }
@@ -359,6 +387,10 @@ string printObject(Obj* object) {
             return "<class " + static_cast<ObjClass*>(object)->name + ">";
         }
 
+        case OBJ_INSTANCE: {
+            return "<" + static_cast<ObjInstance*>(object)->klass->name + ">";
+        }
+
         case OBJ_NATIVE: {
             return "<native func>";
         }
@@ -377,6 +409,7 @@ string typeofObjType(ObjType type) {
         case OBJ_SET:      return "set";
         case OBJ_FUNCTION: return "func";
         case OBJ_CLASS:    return "class";
+        case OBJ_INSTANCE: return "instance";
         case OBJ_NATIVE:   return "native";
     }
     return "unknown";    // should be unreachable
@@ -480,6 +513,7 @@ bool objectsEqual(Obj* a, Obj* b) {
         }
 
         case OBJ_CLASS:    return a == b;
+        case OBJ_INSTANCE: return a == b;
         case OBJ_FUNCTION: return a == b;
         case OBJ_NATIVE:   return a == b;    // ?
 
@@ -495,6 +529,7 @@ size_t sizeofObject(Obj* object) {
         case OBJ_SET:      return static_cast<ObjSet*>     (object)->data.size();
         case OBJ_FUNCTION: return static_cast<ObjFunction*>(object)->chunk.code.size();
         case OBJ_CLASS:    return 0;    // todo: make this the total size of members when added
+        case OBJ_INSTANCE: return 0;    // todo:
         case OBJ_NATIVE:   return 0;
     }
     return 0;    // should be unreachable
@@ -541,6 +576,16 @@ void markObject(Obj* object) {
             for(Value& constant: static_cast<ObjFunction*>(object)->chunk.constants) {
                 markValue(constant);
             }
+            break;
+        }
+
+        case OBJ_INSTANCE: {
+            ObjInstance* instance = static_cast<ObjInstance*>(object);
+            markObject(instance->klass);
+            for(auto& [name, value]: instance->fields) {
+                markValue(value);
+            }
+            break;
         }
 
         default: break;

@@ -57,10 +57,6 @@ enum OpCode{
     OP_INCREMENT_LOCAL,
     OP_DECREMENT_LOCAL,
 
-    // vectors
-    OP_GET_COMPONENT,
-    OP_SET_COMPONENT,
-    
     // collections
     OP_MAKE_ARRAY,
     OP_MAKE_DICT,
@@ -75,6 +71,10 @@ enum OpCode{
 
     // classes
     OP_CLASS,
+    OP_GET_PROPERTY,
+    OP_SET_PROPERTY,
+    OP_GET_MEMBER,
+    OP_SET_MEMBER,
 
     // specific functions
     OP_TYPEOF,
@@ -95,6 +95,7 @@ enum OpCode{
     // misc
     OP_POP,
     OP_COPY,
+    OP_DUPLICATE,
 
 };
 
@@ -142,6 +143,21 @@ class Chunk{
             uint8_t slot = this->code[offset + 1];
             cout << format("{:<16} {:4d}\n", name, slot);
             return offset + 2; 
+        }
+        int memberInstruction(string name, int offset) {
+            uint8_t component = this->code[offset + 1];
+            uint8_t constant = this->code[offset + 2];
+            cout << format("{:<16} {:4d} {:4d} '", name, component, constant) << printValue(this->constants[constant]) << "'\n";
+            return offset + 3;
+        }
+        int setMemberInstruction(string name, int offset) {
+            uint8_t component = this->code[offset + 1];
+            uint8_t constant = this->code[offset + 2];
+            uint8_t setOp = this->code[offset + 3];
+            uint8_t arg = this->code[offset + 4];
+            cout << format("{:<16} {:4d} {:4d} '", name, component, constant) << printValue(this->constants[constant]);
+            cout << format("' -> {:d} {:4d}\n", setOp, arg);
+            return offset + 5;
         }
         int incrementInstruction(string name, bool global, int offset) {
             uint8_t variable = this->code[offset + 1];
@@ -259,11 +275,6 @@ class Chunk{
                 case OP_DECREMENT_LOCAL:
                     return incrementInstruction("OP_DECREMENT_LOCAL", false, offset);
     
-                case OP_GET_COMPONENT:
-                    return byteInstruction("OP_GET_COMPONENT", offset);
-                case OP_SET_COMPONENT:
-                    return byteInstruction("OP_SET_COMPONENT", offset);
-
                 case OP_MAKE_ARRAY:
                     return byteInstruction("OP_MAKE_ARRAY", offset);
                 case OP_MAKE_DICT:
@@ -289,6 +300,15 @@ class Chunk{
 
                 case OP_CLASS:
                     return constantInstruction("OP_CLASS", offset);
+                case OP_GET_PROPERTY:
+                    return constantInstruction("OP_GET_PROPERTY", offset);
+                case OP_SET_PROPERTY:
+                    return constantInstruction("OP_SET_PROPERTY", offset);
+
+                case OP_GET_MEMBER:
+                    return memberInstruction("OP_GET_MEMBER", offset);
+                case OP_SET_MEMBER:
+                    return setMemberInstruction("OP_SET_MEMBER", offset);
 
                 case OP_JUMP:
                     return jumpInstruction("OP_JUMP", 1, offset);
@@ -316,6 +336,8 @@ class Chunk{
                     return simpleInstruction("OP_POP", offset);
                 case OP_COPY:
                     return simpleInstruction("OP_COPY", offset);
+                case OP_DUPLICATE:
+                    return simpleInstruction("OP_DUPLICATE", offset);
 
                 default:
                     cout << "Unknown opcode " << instruction << '\n';

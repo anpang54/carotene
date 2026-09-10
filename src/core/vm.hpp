@@ -597,9 +597,17 @@ class VM{
         bool callValue(Value callee, int argCount) {
             if(callee.type == TYPE_OBJ) {
                 switch(callee.as.obj->type) {
+
                     case OBJ_FUNCTION: {
                         return call(asFunction(callee), argCount);
                     }
+
+                    case OBJ_CLASS: {
+                        ObjClass* klass = asClass(callee);
+                        this->stackTop[-argCount - 1] = CaroObj(newInstance(klass));
+                        return true;
+                    }
+
                     case OBJ_NATIVE: {
                         NativeFn native = asNative(callee)->function;
                         this->hadError = false;
@@ -609,8 +617,8 @@ class VM{
                         push(result);
                         return true;
                     }
-                    default:
-                        break;    // non-callable object type
+
+                    default: break;    // non-callable object type
                 }
             }
             runtimeError("Can only call functions and classes.");
@@ -854,11 +862,6 @@ class VM{
                     }
 
                     #define checkComponent(vec, component) { \
-                        if(!isVector((vec).type)) { \
-                            SYNC(); \
-                            runtimeError("You can only get a component from a vector."); \
-                            return INTERPRET_RUNTIME_ERROR; \
-                        } \
                         if((component) == 2 && isVec2((vec).type)) { \
                             SYNC(); \
                             runtimeError("A %s doesn't have a Z component.", typeofType((vec).type).c_str()); \
@@ -866,18 +869,79 @@ class VM{
                         } \
                     }
 
-                    case OP_GET_COMPONENT: {
+                    #define getProperty(name) { \
+                        if(!isInstance(peek(0))) { \
+                            SYNC(); \
+                            runtimeError("You can only get a property from an instance, not %s.", typeofValue(peek(0)).c_str()); \
+                            return INTERPRET_RUNTIME_ERROR; \
+                        } \
+                        ObjInstance* instance = asInstance(peek(0)); \
+                        auto found = instance->fields.find((name)->str); \
+                        if(found == instance->fields.end()) { \
+                            SYNC(); \
+                            runtimeError("A %s doesn't have a property '%s'.", instance->klass->name.c_str(), (name)->str.c_str()); \
+                            return INTERPRET_RUNTIME_ERROR; \
+                        } \
+                        top() = found->second; \
+                    }
+                    #define setProperty(name) { \
+                        if(!isInstance(peek(1))) { \
+                            SYNC(); \
+                            runtimeError("You can only set a property on an instance, not %s.", typeofValue(peek(1)).c_str()); \
+                            return INTERPRET_RUNTIME_ERROR; \
+                        } \
+                        asInstance(peek(1))->fields[(name)->str] = copyIfString(peek(0)); \
+                        Value assigned = pop(); \
+                        top() = assigned; \
+                    }
+
+                    case OP_GET_PROPERTY: {
+                        ObjString* name = asString(constants[READ_BYTE()]);
+                        getProperty(name);
+                        break;
+                    }
+                    case OP_SET_PROPERTY: {
+
+                        ObjString* name = asString(constants[READ_BYTE()]);
+
+                        if(isVector(peek(1).type)) {
+                            SYNC();
+                            runtimeError("You can only assign to a component of a variable.");
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+
+                        setProperty(name);
+
+                        break;
+                    }
+
+                    case OP_GET_MEMBER: {
 
                         uint8_t component = READ_BYTE();
-                        checkComponent(peek(0), component);
+                        ObjString* name = asString(constants[READ_BYTE()]);
 
+                        if(!isVector(peek(0).type)) {
+                            getProperty(name);
+                            break;
+                        }
+
+                        checkComponent(peek(0), component);
                         top() = getComponent(top(), component);
 
                         break;
                     }
-                    case OP_SET_COMPONENT: {
+                    case OP_SET_MEMBER: {
 
                         uint8_t component = READ_BYTE();
+                        ObjString* name = asString(constants[READ_BYTE()]);
+                        uint8_t setOp = READ_BYTE();
+                        uint8_t arg = READ_BYTE();
+
+                        if(!isVector(peek(1).type)) {
+                            setProperty(name);
+                            break;
+                        }
+
                         checkComponent(peek(1), component);
 
                         ValueType wanted = componentType(peek(1).type);
@@ -887,8 +951,13 @@ class VM{
                             return INTERPRET_RUNTIME_ERROR;
                         }
 
-                        Value value = pop();
-                        setComponent(top(), component, value);
+                        Value assigned = pop();
+                        setComponent(top(), component, assigned);
+
+                        if(setOp == OP_SET_LOCAL) slots[arg] = top();
+                        else                      this->globals[asString(constants[arg])->str] = top();
+
+                        top() = assigned;
 
                         break;
                     }
@@ -1231,6 +1300,10 @@ class VM{
                     }
                     case OP_COPY: {
                         top() = copyIfString(top());
+                        break;
+                    }
+                    case OP_DUPLICATE: {
+                        push(peek(0));
                         break;
                     }
 
