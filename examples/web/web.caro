@@ -9,6 +9,8 @@ log("i", "Very important log message!", true);
 print("Hi from wasm!");
 js("console.log('Hi from JS from wasm!')");
 
+js("document.body.innerHTML += `<div style='padding: 4em'><p>This is the Carotene web example.</p><p>Check the DevTools console!</p></div>`;");
+
 print("Let's solve a random quadratic equation to test things out.");
 
 a = random.int(1, 10);

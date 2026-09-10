@@ -8,6 +8,81 @@
 #include "../util/gui.hpp"
 
 
+// WIDGETS
+
+
+// widget object
+
+struct WidgetData: NativeData{
+    CaroGui::Widget widget;
+    Value callback = CaroNull;
+    bool added = false;
+    void mark() override{
+        markValue(callback);
+    }
+};
+
+WidgetData* widgetData(Value value) {
+    return isInstance(value)? dynamic_cast<WidgetData*>(asInstance(value)->native.get()): nullptr;
+}
+
+void setWidgetText(VM* vm, Value self, const vector<Value>& args) {
+    WidgetData* data = nativeData<WidgetData>(vm, self);
+    if(data == nullptr) return;
+    CaroGui::setText(data->widget, asString(args[0])->str);
+}
+
+
+// label
+
+nClass(gui_Label, "gui", "Label");
+
+nMethod(gui_Label, init, {
+    params({
+        {{OBJ_STRING}, true}
+    });
+    if(alreadyInitialized(vm, self)) return CaroNull;
+    auto data = std::make_unique<WidgetData>();
+    data->widget = {CaroGui::WIDGET_LABEL, asString(args[0])->str};
+    asInstance(self)->native = std::move(data);
+    return CaroNull;
+});
+
+nMethod(gui_Label, set_text, {
+    params({
+        {{OBJ_STRING}, true}
+    });
+    setWidgetText(vm, self, args);
+    return CaroNull;
+});
+
+
+// button
+
+nClass(gui_Button, "gui", "Button");
+
+nMethod(gui_Button, init, {
+    params({
+        {{OBJ_STRING}, true},
+        {{OBJ_FUNCTION, OBJ_NATIVE, OBJ_BOUND_METHOD}, false}
+    });
+    if(alreadyInitialized(vm, self)) return CaroNull;
+    auto data = std::make_unique<WidgetData>();
+    data->widget = {CaroGui::WIDGET_BUTTON, asString(args[0])->str};
+    if(args.size() >= 2) data->callback = args[1];
+    asInstance(self)->native = std::move(data);
+    return CaroNull;
+});
+
+nMethod(gui_Button, set_text, {
+    params({
+        {{OBJ_STRING}, true}
+    });
+    setWidgetText(vm, self, args);
+    return CaroNull;
+});
+
+
 // WINDOW
 
 
@@ -15,9 +90,10 @@
 
 struct WindowData: NativeData{
     CaroGui::Window window;
-    vector<Value> callbacks;    // 1 per widget
+    vector<Value> widgets;
+    bool shown = false;
     void mark() override {
-        for(const Value& callback: callbacks) markValue(callback);
+        for(const Value& widget: widgets) markValue(widget);
     }
 };
 
@@ -33,6 +109,7 @@ nMethod(gui_Window, init, {
         {ANY_NUMERIC,  false},
         {ANY_NUMERIC,  false},
     });
+    if(alreadyInitialized(vm, self)) return CaroNull;
     auto data = std::make_unique<WindowData>();
     if(args.size() >= 1) data->window.title   = asString(args[0])->str;
     if(args.size() >= 2) data->window.width   = asNumberTo<int>(args[1]);
@@ -48,12 +125,14 @@ nMethod(gui_Window, show, {
     WindowData* data = nativeData<WindowData>(vm, self);
     if(data == nullptr) return CaroNull;
 
+    data->shown = true;
     string error = CaroGui::show(data->window, [&](size_t widget) {
-        Value callback = data->callbacks[widget];
+        Value callback = widgetData(data->widgets[widget])->callback;
         if(callback.type == TYPE_NULL) return true;
         Value result;
         return vm->callFromNative(callback, {}, &result);
     });
+    data->shown = false;
 
     if(vm->hadError) return CaroNull;
     if(!error.empty()) vm->runtimeError("%s", error.c_str());
@@ -66,9 +145,6 @@ nMethod(gui_Window, close, {
     CaroGui::close();
     return CaroNull;
 });
-
-
-// WIDGETS
 
 
 // grid positions
@@ -101,42 +177,44 @@ bool gridPosition(VM* vm, const Value& value, const char* name, int& start, int&
 
 }
 
-bool addWidget(VM* vm, Value self, const vector<Value>& args, CaroGui::WidgetType type, Value callback) {
+
+// adding widgets
+
+nMethod(gui_Window, add, {
+    params({
+        {{OBJ_INSTANCE}, true},
+        {GRID_POSITION,  true},
+        {GRID_POSITION,  true}
+    });
 
     WindowData* data = nativeData<WindowData>(vm, self);
-    if(data == nullptr) return false;
+    if(data == nullptr) return CaroNull;
 
-    CaroGui::Widget widget{type, asString(args[2])->str};
-    if(!gridPosition(vm, args[0], "x", widget.x, widget.xSpan)) return false;
-    if(!gridPosition(vm, args[1], "y", widget.y, widget.ySpan)) return false;
+    // check widget
+    WidgetData* widget = widgetData(args[0]);
+    if(widget == nullptr) {
+        vm->runtimeError("%s is not a widget.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
+    if(widget->added) {
+        vm->runtimeError("That %s is already in a window.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
+    if(data->shown) {
+        vm->runtimeError("Widgets can't be added while the window is open.");
+        return CaroNull;
+    }
 
-    data->window.widgets.push_back(widget);
-    data->callbacks.push_back(callback);
-    return true;
+    // check positions
+    CaroGui::Widget& w = widget->widget;
+    if(!gridPosition(vm, args[1], "x", w.x, w.xSpan)) return CaroNull;
+    if(!gridPosition(vm, args[2], "y", w.y, w.ySpan)) return CaroNull;
 
-}
-
-
-// widgets
-
-nMethod(gui_Window, label, {
-    params({
-        {GRID_POSITION, true},
-        {GRID_POSITION, true},
-        {{OBJ_STRING},  true}
-    });
-    addWidget(vm, self, args, CaroGui::WIDGET_LABEL, CaroNull);
-    return CaroNull;
-});
-
-nMethod(gui_Window, button, {
-    params({
-        {GRID_POSITION, true},
-        {GRID_POSITION, true},
-        {{OBJ_STRING},  true},
-        {{OBJ_FUNCTION, OBJ_NATIVE, OBJ_BOUND_METHOD}, false}
-    });
-    addWidget(vm, self, args, CaroGui::WIDGET_BUTTON, args.size() >= 4? args[3]: CaroNull);
+    // add
+    widget->added = true;
+    data->window.widgets.push_back(&w);
+    data->widgets.push_back(args[0]);
+    
     return CaroNull;
 });
 
@@ -146,26 +224,22 @@ nMethod(gui_Window, button, {
 nFunc(gui_test, "gui", "test", {
     params({});
 
-    CaroGui::Window window{"Carotene test window", 400, 250, 25, {
-        {
-            CaroGui::WIDGET_LABEL,  
-            #if defined(CARO_GUI_WEB)
-                "Hello! This is a test webpage rendered using the DOM with Acrylic components. Pretty cool!"
-            #elif defined(CARO_GUI_GTK)
-                "Hello! This is a test window rendered using GTK 4. Pretty cool!"
-            #elif defined(CARO_GUI_WIN32)
-                "Hello! This is a test window rendered using Win32. Pretty NOT cool, this API is a mess, I can see why Microsoft is constantly trying to replace it!"
-            #elif defined(CARO_GUI_BEAPI)
-                "Hello! This is a test window rendered using BeAPI. Pretty cool!"
-            #endif
-            , 0, 0
-        },
-        {
-            CaroGui::WIDGET_BUTTON,
-            "Self-destruct",
-            0, 1
-        }
-    }};
+    CaroGui::Widget label{
+        CaroGui::WIDGET_LABEL,
+        #if defined(CARO_GUI_WEB)
+            "Hello! This is a test webpage rendered using the DOM with Acrylic components. Pretty cool!"
+        #elif defined(CARO_GUI_GTK)
+            "Hello! This is a test window rendered using GTK 4. Pretty cool!"
+        #elif defined(CARO_GUI_WIN32)
+            "Hello! This is a test window rendered using Win32. Pretty NOT cool, this API is a mess, I can see why Microsoft is constantly trying to replace it!"
+        #elif defined(CARO_GUI_BEAPI)
+            "Hello! This is a test window rendered using BeAPI. Pretty cool!"
+        #endif
+        , 0, 0
+    };
+    CaroGui::Widget button{CaroGui::WIDGET_BUTTON, "Self-destruct", 0, 1};
+
+    CaroGui::Window window{"Carotene test window", 400, 250, 25, {&label, &button}};
 
     #ifdef CARO_GUI_WEB
         const char* buttonTexts[] = {
@@ -180,9 +254,7 @@ nFunc(gui_test, "gui", "test", {
         size_t clicked = 0;
         auto onClick = [&](size_t) {
             if(clicked < std::size(buttonTexts)) {
-                EM_ASM({
-                    Module.caroContainer.querySelector("button").innerText = UTF8ToString($0);
-                }, buttonTexts[clicked++]);
+                CaroGui::setText(button, buttonTexts[clicked++]);
             } else {
                 CaroGui::close();
             }

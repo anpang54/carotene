@@ -119,6 +119,12 @@ T* nativeData(VM* vm, Value self) {
     return data;
 }
 
+bool alreadyInitialized(VM* vm, Value self) {
+    if(!asInstance(self)->native) return false;
+    vm->runtimeError("That %s has already been initialized.", typeofValue(self).c_str());
+    return true;
+}
+
 
 // parameters
 

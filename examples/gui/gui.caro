@@ -1,0 +1,25 @@
+
+use gui;
+
+
+// test window
+
+gui.test();
+
+
+// custom window
+
+$window = gui.Window("Woah it's another window", 400, 250, 50);
+
+$answer = gui.Label("Select:");
+
+func yes() { $answer.set_text("Yay!"); }
+func no()  { $answer.set_text("bruh"); }
+
+$window.add(gui.Label("Hi again! Notice how this window only opened after you closed that one?"), [0, 2], 0);
+$window.add($answer,                 0, 1);
+$window.add(gui.Button("Yes", yes),  1, 1);
+$window.add(gui.Button("No",  no ),  2, 1);
+
+$window.show();
+

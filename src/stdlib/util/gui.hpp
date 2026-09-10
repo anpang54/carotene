@@ -75,6 +75,7 @@ namespace CaroGui{
         string text;
         int x     = 0, y     = 0,
             xSpan = 1, ySpan = 1;    // counts, not end position
+        void* handle = nullptr;      // the native control
     };
 
     struct Window{
@@ -82,7 +83,7 @@ namespace CaroGui{
         int width   = 400;
         int height  = 250;
         int spacing = 25;
-        vector<Widget> widgets;
+        vector<Widget*> widgets;
     };
 
     typedef std::function<bool(size_t widget)> ClickHandler;
@@ -127,6 +128,7 @@ namespace CaroGui{
                 if(!Module.caroContainer) return;
                 Module.caroContainer.remove();
                 Module.caroContainer = null;
+                Module.caroElements = null;
                 Module.caroEvents = [];
                 Module.caroPush(-1);
             });
@@ -146,6 +148,7 @@ namespace CaroGui{
                 document.title = UTF8ToString($0);
                 document.body.appendChild(div);
                 Module.caroContainer = div;
+                Module.caroElements = new Map();
 
                 // event queue
                 Module.caroEvents = [];
@@ -162,7 +165,7 @@ namespace CaroGui{
 
             for(size_t i = 0; i < window.widgets.size(); ++i) {
 
-                const Widget& widget = window.widgets[i];
+                const Widget& widget = *window.widgets[i];
 
                 EM_ASM({
 
@@ -184,8 +187,9 @@ namespace CaroGui{
                     element.style.gridColumn = `${$3 + 1} / span ${$4}`;
                     element.style.gridRow    = `${$5 + 1} / span ${$6}`;
                     Module.caroContainer.appendChild(element);
+                    Module.caroElements.set($7, element);
 
-                }, widget.type, widget.text.c_str(), (int)i, widget.x, widget.xSpan, widget.y, widget.ySpan);
+                }, widget.type, widget.text.c_str(), (int)i, widget.x, widget.xSpan, widget.y, widget.ySpan, &widget);
 
             }
 
@@ -198,6 +202,14 @@ namespace CaroGui{
 
             return "";
 
+        }
+
+        void setText(Widget& widget, const string& text) {
+            widget.text = text;
+            EM_ASM({
+                const element = Module.caroElements && Module.caroElements.get($0);
+                if(element) element.innerText = UTF8ToString($1);
+            }, &widget, text.c_str());
         }
 
 
@@ -219,7 +231,9 @@ namespace CaroGui{
             f(windowPresent,        "gtk_window_present",          void,          (void*))\
             f(windowDestroy,        "gtk_window_destroy",          void,          (void*))\
             f(labelNew,             "gtk_label_new",               void*,         (const char*))\
+            f(labelSetText,         "gtk_label_set_text",          void,          (void*, const char*))\
             f(buttonNewWithLabel,   "gtk_button_new_with_label",   void*,         (const char*))\
+            f(buttonSetLabel,       "gtk_button_set_label",        void,          (void*, const char*))\
             f(gridNew,              "gtk_grid_new",                void*,         (void))\
             f(gridAttach,           "gtk_grid_attach",             void,          (void*, void*, int, int, int, int))\
             f(gridSetRowSpacing,    "gtk_grid_set_row_spacing",    void,          (void*, unsigned int))\
@@ -318,12 +332,13 @@ namespace CaroGui{
             gtk().gridSetRowSpacing   (grid, window.spacing);
             gtk().gridSetColumnSpacing(grid, window.spacing);
             for(size_t i = 0; i < window.widgets.size(); ++i) {
-                const Widget& widget = window.widgets[i];
+                Widget& widget = *window.widgets[i];
 
                 switch(widget.type) {
 
                     case WIDGET_LABEL:
-                        gtk().gridAttach(grid, gtk().labelNew(widget.text.c_str()), widget.x, widget.y, widget.xSpan, widget.ySpan);
+                        widget.handle = gtk().labelNew(widget.text.c_str());
+                        gtk().gridAttach(grid, widget.handle, widget.x, widget.y, widget.xSpan, widget.ySpan);
                         break;
 
                     case WIDGET_BUTTON:
@@ -333,10 +348,11 @@ namespace CaroGui{
                         clicks[i] = {i, &onClick};
                         gtk().signalConnectData(button, "clicked", (void(*)())onClicked, &clicks[i], nullptr, 0);
                         gtk().gridAttach(grid, button, widget.x, widget.y, widget.xSpan, widget.ySpan);
+                        widget.handle = button;
                         break;
 
                 }
-                
+
             }
             gtk().widgetSetHalign(grid, 3);
             gtk().widgetSetValign(grid, 3);
@@ -356,12 +372,20 @@ namespace CaroGui{
             // without this, the window might not close properly
             while(gtk().mainContextIteration(nullptr, false));
 
+            for(Widget* widget: window.widgets) widget->handle = nullptr;
             return "";
 
         }
 
         void close() {
             if(currentWindow) gtk().windowDestroy(currentWindow);
+        }
+
+        void setText(Widget& widget, const string& text) {
+            widget.text = text;
+            if(!currentWindow || !widget.handle) return;
+            if(widget.type == WIDGET_LABEL) gtk().labelSetText  (widget.handle, text.c_str());
+            else                            gtk().buttonSetLabel(widget.handle, text.c_str());
         }
 
 
@@ -449,7 +473,7 @@ namespace CaroGui{
 
                     for(size_t i = 0; i < currentLayout->widgets.size(); ++i) {
 
-                        const Widget& widget = currentLayout->widgets[i];
+                        Widget& widget = *currentLayout->widgets[i];
 
                         HWND control;
                         
@@ -486,6 +510,7 @@ namespace CaroGui{
                         }
 
                         SendMessageW(control, WM_SETFONT, (WPARAM)guiFont(), true);
+                        widget.handle = control;
 
                     }
 
@@ -497,15 +522,15 @@ namespace CaroGui{
 
                     int width  = LOWORD(lParam);
                     int height = HIWORD(lParam);
-                    const vector<Widget>& widgets = currentLayout->widgets;
+                    const vector<Widget*>& widgets = currentLayout->widgets;
                     int spacing = currentLayout->spacing;
                     int available = std::max(width - 2 * spacing, 0);
 
                     vector<Span> xSpans;
-                    for(const Widget& widget: widgets) {
-                        int textWidth = measureText(hwnd, widget.text, available).cx;
-                        int size = widget.type == WIDGET_BUTTON? std::max(buttonWidth, textWidth + buttonInset): textWidth;
-                        xSpans.push_back({widget.x, widget.xSpan, size});
+                    for(const Widget* widget: widgets) {
+                        int textWidth = measureText(hwnd, widget->text, available).cx;
+                        int size = widget->type == WIDGET_BUTTON? std::max(buttonWidth, textWidth + buttonInset): textWidth;
+                        xSpans.push_back({widget->x, widget->xSpan, size});
                     }
                     vector<int> columns = fitTracks(xSpans);
 
@@ -518,17 +543,17 @@ namespace CaroGui{
 
                     vector<Span> ySpans;
                     vector<int>  heights;
-                    for(const Widget& widget: widgets) {
-                        int cellWidth = trackSize(columns, widget.x, widget.xSpan);
-                        heights.push_back(widget.type == WIDGET_BUTTON? buttonHeight: measureText(hwnd, widget.text, cellWidth).cy);
-                        ySpans.push_back({widget.y, widget.ySpan, heights.back()});
+                    for(const Widget* widget: widgets) {
+                        int cellWidth = trackSize(columns, widget->x, widget->xSpan);
+                        heights.push_back(widget->type == WIDGET_BUTTON? buttonHeight: measureText(hwnd, widget->text, cellWidth).cy);
+                        ySpans.push_back({widget->y, widget->ySpan, heights.back()});
                     }
                     vector<int> rows = fitTracks(ySpans);
 
                     int left = (width  - trackSize(columns, 0, (int)columns.size())) / 2;
                     int top  = (height - trackSize(rows,    0, (int)rows.size()   )) / 2;
                     for(size_t i = 0; i < widgets.size(); ++i) {
-                        const Widget& widget = widgets[i];
+                        const Widget& widget = *widgets[i];
                         int cellX      = left + trackStart(columns, widget.x);
                         int cellY      = top  + trackStart(rows,    widget.y);
                         int cellWidth  = trackSize(columns, widget.x, widget.xSpan);
@@ -548,7 +573,7 @@ namespace CaroGui{
 
                 case WM_COMMAND: {
                     int id = LOWORD(wParam) - firstId;
-                    if(id >= 0 && id < (int)currentLayout->widgets.size() && currentLayout->widgets[id].type == WIDGET_BUTTON) {
+                    if(id >= 0 && id < (int)currentLayout->widgets.size() && currentLayout->widgets[id]->type == WIDGET_BUTTON) {
                         if(!(*currentClick)(id) && currentWindow) DestroyWindow(currentWindow);
                         return 0;
                     }
@@ -620,6 +645,7 @@ namespace CaroGui{
                 DispatchMessageW(&message);
             }
 
+            for(Widget* widget: window.widgets) widget->handle = nullptr;
             return "";
 
             // based on https://learn.microsoft.com/en-us/windows/win32/learnwin32/creating-a-window
@@ -628,6 +654,17 @@ namespace CaroGui{
 		
         void close() {
             if(currentWindow) DestroyWindow(currentWindow);
+        }
+
+        void setText(Widget& widget, const string& text) {
+
+            widget.text = text;
+            if(!currentWindow || !widget.handle) return;
+            SetWindowTextW((HWND)widget.handle, wide(text).c_str());
+
+            RECT client;
+            GetClientRect(currentWindow, &client);
+            SendMessageW(currentWindow, WM_SIZE, SIZE_RESTORED, MAKELPARAM(client.right, client.bottom));
         }
 
 	
@@ -672,7 +709,7 @@ namespace CaroGui{
                         // widgets
 						for(size_t i = 0; i < window.widgets.size(); ++i) {
 
-							const Widget& widget = window.widgets[i];
+							Widget& widget = *window.widgets[i];
 							BView* view;
 
 							switch(widget.type) {
@@ -696,6 +733,7 @@ namespace CaroGui{
 								continue;
 							}
 							item->SetExplicitAlignment(BAlignment(B_ALIGN_HORIZONTAL_CENTER, B_ALIGN_VERTICAL_CENTER));
+                            widget.handle = view;
 
 						}
 
@@ -726,11 +764,21 @@ namespace CaroGui{
             currentClick = &onClick;
 			(new CaroWindow(window))->Show();
 			app.Run();
+            for(Widget* widget: window.widgets) widget->handle = nullptr;
 			return "";
 		}
-		
+
         void close() {
             if(be_app) be_app->PostMessage(B_QUIT_REQUESTED);
+        }
+
+        void setText(Widget& widget, const string& text) {
+            widget.text = text;
+            BView* view = (BView*)widget.handle;
+            if(view == nullptr || !view->LockLooper()) return;
+            if(widget.type == WIDGET_LABEL) static_cast<BStringView*>(view)->SetText (text.c_str());
+            else                            static_cast<BButton*>    (view)->SetLabel(text.c_str());
+            view->UnlockLooper();
         }
 
         // the haiku convention is to use 4 char chars for ints, which seems kinda funny but we'll follow it
