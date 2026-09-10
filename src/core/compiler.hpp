@@ -661,6 +661,7 @@ class Compiler{
         }
 
         void parseArray(bool canAssign) {
+
             uint8_t elementCount = 0;
             if(!check(TOKEN_RIGHT_SQUARE)) {
                 do{
@@ -674,24 +675,63 @@ class Compiler{
             }
             consume(TOKEN_RIGHT_SQUARE, "Expect ']' after array contents.");
             emitBytes(OP_MAKE_ARRAY, elementCount);
+
         }
 
-        void parseDict(bool canAssign) {
-            uint8_t elementCount = 0;
-            if(!check(TOKEN_RIGHT_BRACE)) {
-                do{
-                    expression();    // key
-                    consume(TOKEN_COLON, "Expect ':' between key and value.");
-                    expression();    // value
-                    if(elementCount == 255) {
-                        error("A dict literal can currently only have 255 pairs.");
-                    }
-                        // todo: allow more than 255 pairs in a literal
-                    ++elementCount;
-                } while(match(TOKEN_COMMA));
+        void parseBraces(bool canAssign) {
+            // either a dict or a set
+
+            // {} is an empty dict
+            if(match(TOKEN_RIGHT_BRACE)) {
+                emitBytes(OP_MAKE_DICT, 0);
+                return;
+            }
+
+            expression();    // the first key or item
+
+            if(match(TOKEN_COLON)) {    // there's a colon, so dict
+                expression();    // the first value
+                parseDict();
+            } else {    // there isn't a colon, so set
+                parseSet();
+            }
+
+        }
+
+        void parseDict() {
+            // the first pair already got compiled by parseBraces()
+
+            uint8_t elementCount = 1;
+            while(match(TOKEN_COMMA)) {
+                expression();    // key
+                consume(TOKEN_COLON, "Expect ':' between key and value.");
+                expression();    // value
+                if(elementCount == 255) {
+                    error("A dict literal can currently only have 255 pairs.");
+                }
+                    // todo: allow more than 255 pairs in a literal
+                ++elementCount;
             }
             consume(TOKEN_RIGHT_BRACE, "Expect '}' after dict contents.");
             emitBytes(OP_MAKE_DICT, elementCount);
+
+        }
+
+        void parseSet() {
+            // the first item already got compiled by parseBraces()
+
+            uint8_t elementCount = 1;
+            while(match(TOKEN_COMMA)) {
+                expression();
+                if(elementCount == 255) {
+                    error("A set literal can currently only have 255 items.");
+                }
+                    // todo: allow more than 255 items in a literal
+                ++elementCount;
+            }
+            consume(TOKEN_RIGHT_BRACE, "Expect '}' after set contents.");
+            emitBytes(OP_MAKE_SET, elementCount);
+
         }
 
         void makeSubscript(bool canAssign) {
@@ -1698,7 +1738,7 @@ inline ParseRule rules[] = {
     [TOKEN_RIGHT_PAREN]   = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_LEFT_SQUARE]   = { &Compiler::parseArray,   &Compiler::makeSubscript, PREC_CALL       },    // [ is an infix operator for indexing
     [TOKEN_RIGHT_SQUARE]  = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_LEFT_BRACE]    = { &Compiler::parseDict,    NULL,                     PREC_NONE       },
+    [TOKEN_LEFT_BRACE]    = { &Compiler::parseBraces,  NULL,                     PREC_NONE       },
     [TOKEN_RIGHT_BRACE]   = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_DOT]           = { NULL,                    &Compiler::makeComponent, PREC_CALL       },
     [TOKEN_COMMA]         = { NULL,                    NULL,                     PREC_NONE       },

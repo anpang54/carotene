@@ -18,7 +18,7 @@ Carotene currently has:
 - A working tokenizer, compiler, and VM, accessible by loading a file or using the REPL
 - Functions
 - Variables, scoped and global, as well as constants
-- Booleans, 7 numeric types, 6 vector types, strings, arrays, and dictionaries
+- Booleans, 7 numeric types, 6 vector types, strings, arrays, dicts, and sets
 - Type casting
 - All the arithmetic and comparison operators you'd expect
 - `for` and `while`, as well as unique `repeat` and `forever`, with `break` and `continue`

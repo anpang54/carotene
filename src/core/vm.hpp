@@ -5,8 +5,6 @@
 // INCLUDES
 
 #include <array>
-#include <unordered_map>
-#include <utility>
 #include <algorithm>
 
 #include <cstdarg>
@@ -17,7 +15,7 @@
 #include "object.hpp"
 #include "compiler.hpp"
 
-using std::array, std::pair, std::unordered_map;
+using std::array;
 
 
 // SETUP
@@ -907,6 +905,7 @@ class VM{
 
                         break;
                     }
+
                     case OP_MAKE_DICT: {
 
                         uint8_t elementCount = READ_BYTE();
@@ -926,6 +925,29 @@ class VM{
                         ObjDict* dict = copyDict(std::move(data));
                         this->stackTop -= 2 * elementCount;
                         push(CaroObj(dict));
+
+                        break;
+                    }
+
+                    case OP_MAKE_SET: {
+
+                        uint8_t elementCount = READ_BYTE();
+                        GCPause pause;
+                        unordered_set<Value> data;
+                        data.reserve(elementCount);
+                        Value* start = this->stackTop - elementCount;
+                        for(int i = 0; i < elementCount; ++i) {
+                            if(!isValidKey(start[i])) {
+                                SYNC();
+                                runtimeError("Arrays, dicts, and sets currently can't be used as set items.");
+                                    // todo:
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+                            data.insert(copyIfString(start[i]));
+                        }
+                        ObjSet* set = copySet(std::move(data));
+                        this->stackTop -= elementCount;
+                        push(CaroObj(set));
 
                         break;
                     }
@@ -976,7 +998,7 @@ class VM{
 
                             if(!isValidKey(peek(0))) {
                                 SYNC();
-                                runtimeError("Arrays and dicts currently can't be used as dict keys.");
+                                runtimeError("Arrays, dicts, and sets currently can't be used as dict keys.");
                                 return INTERPRET_RUNTIME_ERROR;
                             }
 
@@ -992,7 +1014,7 @@ class VM{
 
                         } else {
                             SYNC();
-                            runtimeError("The left side must be an array or dict.");
+                            runtimeError("The left side must be an array, dict, or string.");
                             return INTERPRET_RUNTIME_ERROR;
                         }
 
@@ -1060,7 +1082,7 @@ class VM{
 
                             if(!isValidKey(peek(1))) {
                                 SYNC();
-                                runtimeError("Arrays and dicts currently can't be used as dict keys.");
+                                runtimeError("Arrays, dicts, and sets currently can't be used as dict keys.");
                                 return INTERPRET_RUNTIME_ERROR;
                             }
 
@@ -1072,7 +1094,7 @@ class VM{
 
                         } else {
                             SYNC();
-                            runtimeError("The left side must be an array or dict.");
+                            runtimeError("The left side must be an array, dict, or string.");
                             return INTERPRET_RUNTIME_ERROR;
                         }
 

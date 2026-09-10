@@ -392,6 +392,18 @@ Value castToDict(VM* vm, const Value& v) {
     cantCast("dict");
 }
 
+Value castToSet(VM* vm, const Value& v) {
+
+    // copy
+    if(isSet(v)) {
+        return CaroObj(copySet(asSet(v)->data));
+    }
+
+    cantCast("set");
+
+}
+
+
 
 // actual casting functions
 
@@ -434,9 +446,12 @@ nFunc(main_array, "", "array", {
     params({{{}, true}});
     return castToArray(vm, args[0]);
 });
-
 nFunc(main_dict, "", "dict", {
     params({{{}, true}});
     return castToDict(vm, args[0]);
+});
+nFunc(main_set, "", "set", {
+    params({{{}, true}});
+    return castToSet(vm, args[0]);
 });
 
