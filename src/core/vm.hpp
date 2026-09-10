@@ -1135,6 +1135,12 @@ class VM{
 
                     }
 
+                    case OP_CLASS: {
+                        ObjString* name = asString(constants[READ_BYTE()]);
+                        push(CaroObj(newClass(name->str)));
+                        break;
+                    }
+
                     case OP_TYPEOF: {
                         top() = CaroObj(copyString(typeofValue(top())));
                         break;

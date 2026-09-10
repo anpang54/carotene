@@ -1356,6 +1356,8 @@ class Compiler{
 
             if(match(TOKEN_FUNC)) {
                 funcDeclaration();
+            } else if(match(TOKEN_CLASS)) {
+                classDeclaration();
             } else if(check(TOKEN_IDENTIFIER)) {
                 identifierStatement();
             } else {
@@ -1367,17 +1369,38 @@ class Compiler{
         }
 
         void funcDeclaration() {
+
             consume(TOKEN_IDENTIFIER, "Expect function name.");
             if(this->previous.start[0] == '$') {
                 error("Function names can't have a '$' as they are already global.");
             } else if(this->previous.start[0] == '#') {
                 error("Function names can't have a '#' as they are already constant.");
             }
+
             uint8_t global = identifierConstant(&this->previous);
             makeFunction(TYPE_FUNCTION);
             emitBytes(OP_DEFINE_GLOBAL, global);
+
         }
-            // functions are first-class values
+
+        void classDeclaration() {
+
+            consume(TOKEN_IDENTIFIER, "Expect class name.");
+            if(this->previous.start[0] == '$') {
+                error("Class names can't have a '$' as they are already global.");
+            } else if(this->previous.start[0] == '#') {
+                error("Class names can't have a '#' as they cannot be constant.");
+            }
+
+            uint8_t global = identifierConstant(&this->previous);
+
+            emitBytes(OP_CLASS, global);
+            emitBytes(OP_DEFINE_GLOBAL, global);
+
+            consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+            consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+
+        }
 
         void identifierStatement() {
 
