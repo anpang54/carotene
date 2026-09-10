@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Carotene web example</title>
+    </head>
+    <body>
+        <script>
+            
+            let example = "web/web.caro";
+
+            let file = `../${example}`.split("/").pop();
+            var Module = {
+                preRun: [() => {
+                    addRunDependency(file);
+                    fetch(`../${example}`)
+                        .then(response => {
+                            if (!response.ok) throw new Error(`Failed to fetch ../${example}: ${response.status}`);
+                            return response.text();
+                        })
+                        .then(code => {
+                            FS.writeFile(file, code);
+                            removeRunDependency(file);
+                        });
+                }],
+                arguments: [file],
+            };
+
+        </script>
+        <script src="../../builds/web/caro-web.js"></script>
+    </body>
+</html>
