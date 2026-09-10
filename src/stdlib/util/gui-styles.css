@@ -42,14 +42,17 @@ body{
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.1) rgba(255, 255, 255, 0.1);
 }
-.screen{
-    display: none;
+
+#caro-container{
+    text-align: center;
+    display: grid;
+    padding: 1em;
+    gap: 1em;
+    justify-items: center;
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    box-sizing: border-box;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 
@@ -61,17 +64,6 @@ body{
 /* sections */
 .section, section{ margin-bottom: 1em; }
 .centered{ text-align: center; }
-.center-box{
-    text-align: center;
-    display: grid;
-    padding: 1em;
-    gap: 1em;
-    justify-items: center;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
 
 /* headings */
 h1, h2, h3, h4, h5, h6{ font-family: var(--caro-font-heading); }

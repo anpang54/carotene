@@ -6,12 +6,13 @@
 
 #include <set>
 #include <unordered_set>
+#include <memory>
 
 #include "common.hpp"
 #include "chunk.hpp"
 #include "format.hpp"
 
-using std::set, std::unordered_set;
+using std::set, std::unordered_set, std::unique_ptr;
 
 
 // OBJECTS
@@ -195,9 +196,18 @@ ObjClass* newClass(string name) {
 
 // instances
 
+void markValue(Value value);    // forward declaration
+
+struct NativeData{
+    virtual ~NativeData() = default;
+    virtual void mark() {}
+};
+    // C++ state that instances of native classes can own
+
 struct ObjInstance: Obj{
     ObjClass* klass;
     unordered_map<string, Value> fields;
+    unique_ptr<NativeData> native;    // only for native classes
 };
 
 bool isInstance(Value value) {
@@ -219,7 +229,7 @@ ObjInstance* newInstance(ObjClass* klass) {
 
 struct ObjBoundMethod: Obj{
     Value receiver;
-    ObjFunction* method;    // no closures so this is just a function
+    Obj* method;    // either an ObjFunction or an ObjNative
 };
 
 bool isBoundMethod(Value value) {
@@ -229,7 +239,7 @@ ObjBoundMethod* asBoundMethod(Value value) {
     return static_cast<ObjBoundMethod*>(value.as.obj);
 }
 
-ObjBoundMethod* newBoundMethod(Value receiver, ObjFunction* method) {
+ObjBoundMethod* newBoundMethod(Value receiver, Obj* method) {
     maybeCollect();
     ObjBoundMethod* boundMethod = new ObjBoundMethod({OBJ_BOUND_METHOD}, receiver, method);
     objects.push_back(boundMethod);
@@ -237,6 +247,9 @@ ObjBoundMethod* newBoundMethod(Value receiver, ObjFunction* method) {
 }
 
 // this is getting really boilerplaty
+
+
+// NATIVES
 
 
 // native functions
@@ -267,6 +280,36 @@ struct DefineNativeConstant{
         nativeConstants.push_back({std::move(name), value});
     }
 };
+
+
+// native classes
+
+struct NativeClass{
+    string name;
+    string global;
+    vector<pair<string, NativeFn>> methods;
+};
+
+vector<NativeClass> nativeClasses;
+
+struct DefineNativeClass{
+    size_t index;
+    DefineNativeClass(string module, string name) {
+        string global = module.empty()? name: module + "." + name;
+        if(!module.empty()) modules.insert(std::move(module));
+        nativeNames.insert(global);
+        this->index = nativeClasses.size();
+        nativeClasses.push_back({std::move(name), std::move(global), {}});
+    }
+};
+struct DefineNativeMethod{
+    DefineNativeMethod(const DefineNativeClass& klass, string name, NativeFn method) {
+        nativeClasses[klass.index].methods.push_back({std::move(name), method});
+    }
+};
+
+
+// checking functions
 
 bool isNative(Value value) {
     return value.type == TYPE_OBJ && value.as.obj->type == OBJ_NATIVE;
@@ -458,7 +501,7 @@ bool isTruthyObject(Obj* object) {
         case OBJ_DICT:     return !static_cast<ObjDict*>  (object)->data.empty();
         case OBJ_SET:      return !static_cast<ObjSet*>   (object)->data.empty();
 
-        case OBJ_FUNCTION: case OBJ_CLASS: case OBJ_BOUND_METHOD: case OBJ_NATIVE:
+        case OBJ_FUNCTION: case OBJ_CLASS: case OBJ_INSTANCE: case OBJ_BOUND_METHOD: case OBJ_NATIVE:
             return true;
             
         default:           return false;
@@ -626,6 +669,7 @@ void markObject(Obj* object) {
             for(auto& [name, value]: instance->fields) {
                 markValue(value);
             }
+            if(instance->native) instance->native->mark();
             break;
         }
 

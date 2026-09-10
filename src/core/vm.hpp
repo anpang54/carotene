@@ -114,11 +114,18 @@ class VM{
             }
             
             // add natives
+            for(const pair<string, NativeConst>& native: nativeConstants) {
+                this->globals[native.first] = native.second();
+            }
             for(const pair<string, NativeFn>& native: nativeFunctions) {
                 defineNative(native.first, native.second);
             }
-            for(const pair<string, NativeConst>& native: nativeConstants) {
-                this->globals[native.first] = native.second();
+            for(const NativeClass& native: nativeClasses) {
+                ObjClass* klass = newClass(native.name);
+                this->globals[native.global] = CaroObj(klass);
+                for(const pair<string, NativeFn>& method: native.methods) {
+                    klass->methods[method.first] = CaroObj(newNative(method.second));
+                }
             }
 
             // actually reuse
@@ -605,11 +612,14 @@ class VM{
                     case OBJ_CLASS: {
 
                         ObjClass* klass = asClass(callee);
-                        this->stackTop[-argCount - 1] = CaroObj(newInstance(klass));
+                        Value instance = CaroObj(newInstance(klass));
+                        this->stackTop[-argCount - 1] = instance;
 
                         auto initializer = klass->methods.find("init");
                         if(initializer != klass->methods.end()) {
-                            return call(asFunction(initializer->second), argCount);
+                            if(!callMethod(initializer->second.as.obj, argCount)) return false;
+                            if(isNative(initializer->second)) top() = instance;
+                            return true;
                         } else if(argCount != 0) {
                             runtimeError("Expected 0 arguments but got %d.", argCount);
                             return false;
@@ -621,26 +631,52 @@ class VM{
                     case OBJ_BOUND_METHOD: {
                         ObjBoundMethod* boundMethod = asBoundMethod(callee);
                         this->stackTop[-argCount - 1] = boundMethod->receiver;
-                        return call(boundMethod->method, argCount);
+                        return callMethod(boundMethod->method, argCount);
                     }
 
                     case OBJ_NATIVE: {
-                        NativeFn native = asNative(callee)->function;
-                        this->hadError = false;
-                        Value result = native(this, vector<Value>(this->stackTop - argCount, this->stackTop));
-                        if(this->hadError) return false;
-                        this->stackTop -= argCount + 1;
-                        push(result);
-                        return true;
+                        return callNative(asNative(callee), argCount, false);
                     }
 
-                    default: break;    // non-callable object type
+                    default: break;
                 }
             }
             runtimeError("Can only call functions and classes.");
             return false;
         }
 
+        bool callNative(ObjNative* native, int argCount, bool withReceiver) {
+            Value* first = this->stackTop - argCount - (withReceiver? 1: 0);
+            this->hadError = false;
+            Value result = native->function(this, vector<Value>(first, this->stackTop));
+            if(this->hadError) return false;
+            this->stackTop -= argCount + 1;
+            push(result);
+            return true;
+        }
+
+        bool callMethod(Obj* method, int argCount) {
+            if(method->type == OBJ_NATIVE) return callNative(static_cast<ObjNative*>(method), argCount, true);
+            return call(static_cast<ObjFunction*>(method), argCount);
+        }
+
+        bool callFromNative(Value callee, const vector<Value>& args, Value* result) {
+
+            size_t depth = this->frames.size();
+
+            push(callee);
+            for(const Value& arg: args) push(arg);
+            if(!callValue(callee, (int)args.size())) return false;
+
+            if(this->frames.size() > depth) {
+                return run(depth, result) == INTERPRET_OK;
+            }
+
+            *result = pop();
+            return true;
+
+        }
+        
         bool invoke(ObjString* name, int argCount) {
 
             Value receiver = peek(argCount);
@@ -670,7 +706,7 @@ class VM{
                 return false;
             }
 
-            return call(asFunction(method->second), argCount);
+            return callMethod(method->second.as.obj, argCount);
 
         }
 
@@ -692,7 +728,7 @@ class VM{
                 return false;
             }
 
-            top() = CaroObj(newBoundMethod(peek(0), asFunction(found->second)));
+            top() = CaroObj(newBoundMethod(peek(0), found->second.as.obj));
             return true;
 
         }

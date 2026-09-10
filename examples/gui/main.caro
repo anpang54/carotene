@@ -1,0 +1,26 @@
+
+use gui;
+
+
+// test window
+
+gui.test();
+
+
+// custom window
+
+window = gui.Window();
+
+func print_yes() {
+    print("Yay!");
+}
+func print_no() {
+    print("bruh");
+}
+
+window.label("Hi again! Notice how this window only opened after you closed that one?");
+window.button("Yes", print_yes);
+window.button("No",  print_no );
+
+window.show();
+
