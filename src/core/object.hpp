@@ -5,12 +5,13 @@
 // INCLUDES
 
 #include <set>
+#include <unordered_set>
 
 #include "common.hpp"
 #include "chunk.hpp"
 #include "format.hpp"
 
-using std::set;
+using std::set, std::unordered_set;
 
 
 // OBJECTS
@@ -33,6 +34,7 @@ enum ObjType{
     OBJ_STRING,
     OBJ_ARRAY,
     OBJ_DICT,
+    OBJ_SET,
     OBJ_FUNCTION,
     OBJ_NATIVE,
 };
@@ -118,6 +120,27 @@ ObjDict* copyDict(unordered_map<Value, Value> data) {
 }
 
 
+// sets
+
+struct ObjSet: Obj{
+    unordered_set<Value> data;
+};
+
+bool isSet(Value value) {
+    return value.type == TYPE_OBJ && value.as.obj->type == OBJ_SET;
+}
+ObjSet* asSet(Value value) {
+    return static_cast<ObjSet*>(value.as.obj);
+}
+
+ObjSet* copySet(unordered_set<Value> data) {
+    maybeCollect();
+    ObjSet* object = new ObjSet({OBJ_SET}, std::move(data));
+    objects.push_back(object);
+    return object;
+}
+
+
 // functions
 
 struct ObjFunction: Obj{
@@ -192,6 +215,7 @@ void freeObject(Obj* object) {
         case OBJ_STRING:   delete static_cast<ObjString*>  (object); break;
         case OBJ_ARRAY:    delete static_cast<ObjArray*>   (object); break;
         case OBJ_DICT:     delete static_cast<ObjDict*>    (object); break;
+        case OBJ_SET:      delete static_cast<ObjSet*>     (object); break;
         case OBJ_FUNCTION: delete static_cast<ObjFunction*>(object); break;
         case OBJ_NATIVE:   delete static_cast<ObjNative*>  (object); break;
     }
@@ -273,6 +297,33 @@ string printObject(Obj* object) {
 
         }
 
+        case OBJ_SET: {
+
+            string printed = "";
+
+            // print [...] if an array contains itself
+            static set<Obj*> beingPrinted;
+            if(!beingPrinted.insert(object).second) {
+                return "[...]";
+            }
+
+            printed += "{";
+            unordered_set<Value>& set = static_cast<ObjSet*>(object)->data;
+            for(auto it = set.begin(); it != set.end(); ++it) {
+                const auto& type = *it;
+                printed += printValue(type);
+                if(std::next(it) != set.end()) {
+                    printed += ", ";
+                }
+            }
+            printed += "}";
+
+            beingPrinted.erase(object);
+
+            return printed;
+
+        }
+
         case OBJ_FUNCTION: {
             ObjFunction* function = static_cast<ObjFunction*>(object);
             if(function->name.empty()) {
@@ -297,6 +348,7 @@ string typeofObjType(ObjType type) {
         case OBJ_STRING:   return "str";
         case OBJ_ARRAY:    return "array";
         case OBJ_DICT:     return "dict";
+        case OBJ_SET:      return "set";
         case OBJ_FUNCTION: return "func";
         case OBJ_NATIVE:   return "native";
     }
@@ -311,6 +363,7 @@ bool isTruthyObject(Obj* object) {
         case OBJ_STRING:   return !static_cast<ObjString*>(object)->str .empty();
         case OBJ_ARRAY:    return !static_cast<ObjArray*> (object)->data.empty();
         case OBJ_DICT:     return !static_cast<ObjDict*>  (object)->data.empty();
+        case OBJ_SET:      return !static_cast<ObjSet*>   (object)->data.empty();
         case OBJ_FUNCTION: return true;
         case OBJ_NATIVE:   return true;
         default:           return false;
@@ -373,6 +426,29 @@ bool objectsEqual(Obj* a, Obj* b) {
 
         }
 
+        case OBJ_SET: {
+
+            unordered_set<Value>& dataA = static_cast<ObjSet*>(a)->data;
+            unordered_set<Value>& dataB = static_cast<ObjSet*>(b)->data;
+
+            if(dataA.size() != dataB.size()) return false;
+
+            static set<pair<Obj*, Obj*>> beingCompared;
+            if(!beingCompared.insert({a, b}).second) return true;
+            bool equal = true;
+            for(const Value& item: dataA) {
+                if(dataB.find(item) == dataB.end()) {
+                    equal = false;
+                    break;
+                }
+            }
+
+            beingCompared.erase({a, b});
+
+            return equal;
+
+        }
+
         case OBJ_FUNCTION: return a == b;
         case OBJ_NATIVE:   return a == b;    // ?
 
@@ -385,6 +461,7 @@ size_t sizeofObject(Obj* object) {
         case OBJ_STRING:   return static_cast<ObjString*>  (object)->str.size();
         case OBJ_ARRAY:    return static_cast<ObjArray*>   (object)->data.size();
         case OBJ_DICT:     return static_cast<ObjDict*>    (object)->data.size();
+        case OBJ_SET:      return static_cast<ObjSet*>     (object)->data.size();
         case OBJ_FUNCTION: return static_cast<ObjFunction*>(object)->chunk.code.size();
         case OBJ_NATIVE:   return 0;
     }
@@ -415,6 +492,12 @@ void markObject(Obj* object) {
             for(auto& [key, value]: static_cast<ObjDict*>(object)->data) {
                 markValue(key);
                 markValue(value);
+            }
+            break;
+        }
+        case OBJ_SET: {
+            for(const Value& item: static_cast<ObjSet*>(object)->data) {
+                markValue(item);
             }
             break;
         }

@@ -64,6 +64,7 @@ enum OpCode{
     // collections
     OP_MAKE_ARRAY,
     OP_MAKE_DICT,
+    OP_MAKE_SET,
     OP_GET_INDEX,
     OP_SET_INDEX,
     OP_DUPLICATE_INDEX,
@@ -264,6 +265,8 @@ class Chunk{
                     return byteInstruction("OP_MAKE_ARRAY", offset);
                 case OP_MAKE_DICT:
                     return byteInstruction("OP_MAKE_DICT", offset);
+                case OP_MAKE_SET:
+                    return byteInstruction("OP_MAKE_SET", offset);
                 case OP_GET_INDEX:
                     return simpleInstruction("OP_GET_INDEX", offset);
                 case OP_SET_INDEX:
