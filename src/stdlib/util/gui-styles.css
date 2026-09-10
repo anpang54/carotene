@@ -133,7 +133,7 @@ code, pre{
 /* buttons/inputs */
 
 /* common rectangle design */
-button, select, .textbox, input[type=text], input[type=datetime-local], input[type=date], input[type=time], input[type=file]{
+button, select, .textbox, input[type=text], input[type=datetime-local], input[type=date], input[type=time], input[type=file], textarea{
     display: inline-block;
     color: #fff;
     cursor: pointer;
@@ -146,10 +146,10 @@ button, select, .textbox, input[type=text], input[type=datetime-local], input[ty
     font-family: var(--caro-font-main);
     padding: 0.25em 1em;
 }
-button:hover, select:hover, .textbox:hover, input[type=text]:hover, input[type=datetime-local]:hover, input[type=date]:hover, input[type=time]:hover, input[type=file]:hover{
+button:hover, select:hover, .textbox:hover, input[type=text]:hover, input[type=datetime-local]:hover, input[type=date]:hover, input[type=time]:hover, input[type=file]:hover, textarea:hover{
     background-color: rgba(255, 255, 255, 0.05);
 }
-button:active, select:active, .textbox:active, input[type=text]:active, input[type=datetime-local]:active, input[type=date]:active, input[type=time]:active, input[type=file]:active{
+button:active, select:active, .textbox:active, input[type=text]:active, input[type=datetime-local]:active, input[type=date]:active, input[type=time]:active, input[type=file]:active, textarea:active{
     animation: 0.15s button-press;
 }
 @keyframes button-press{
@@ -158,8 +158,13 @@ button:active, select:active, .textbox:active, input[type=text]:active, input[ty
     100%{ transform: none; }
 }
 
-/* textbox placeholders */
+/* textboxes */
+input[type=text], textarea{ cursor: text; }
+textarea{ resize: none; }
 input[type=text]::placeholder{ color: rgba(255, 255, 255, 0.5); }
+
+/* select */
+option{ background-color: var(--caro-background); }
 
 /* checkboxes, radio buttons, and sliders */
 input[type=checkbox], input[type=radio], input[type=range]{

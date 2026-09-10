@@ -9,7 +9,7 @@
 
 A bytecode-interpreted programming language coded in C++23. It is currently functional, but doesn't have many features. It serves as a place for me to learn how to make a programming language, but the end goal is that it'll have built-in tools to make applications, both text-based and graphical.
 
-The chemical [Carotene](https://en.wikipedia.org/wiki/Carotene), found in carrots, turns into [Retinol](https://en.wikipedia.org/wiki/Retinol), which maintains eye health, so that you can see the GUI programs made with (future) Carotene. Source code files are `.caro`, and bytecode files are `.reti`.
+The chemical [Carotene](https://en.wikipedia.org/wiki/Carotene), found in carrots, turns into [Retinol](https://en.wikipedia.org/wiki/Retinol), which maintains eye health, so that you can see the GUI programs made with Carotene. Source code files are `.caro`, and bytecode files are `.reti`.
 
 
 ## Features
@@ -46,14 +46,14 @@ Binaries are provided in [Releases](https://github.com/anpang54/carotene/release
 
 The build script uses `zig c++` for Windows and Linux, and is written in Carotene itself. Therefore, to compile Carotene, run:
 ```
-./caro-release build.caro
+./caro build.caro
 ```
 
 Examples of usage:
 ```
-./caro-release            Open the interactive REPL
-./caro-release main.caro  Run the file "main.caro"
-./caro-release -v         Get the current version
+./caro            Open the interactive REPL
+./caro main.caro  Run the file "main.caro"
+./caro -v         Get the current version
 ```
 
 For some examples of Carotene code, please see the `examples/` folder.
@@ -61,11 +61,11 @@ For some examples of Carotene code, please see the `examples/` folder.
 
 ## Development
 
-I made the base for this by following the [*clox*](https://craftinginterpreters.com/a-bytecode-virtual-machine.html) section of [Robert Nystrom](https://journal.stuffwithstuff.com/)'s [Crafting Interpreters](https://craftinginterpreters.com/), a book which he generously makes completely free. I am currently at chapter 26, opting to add some more stuff before classes.
+I made the base for this by following the [*clox*](https://craftinginterpreters.com/a-bytecode-virtual-machine.html) section of [Robert Nystrom](https://journal.stuffwithstuff.com/)'s [Crafting Interpreters](https://craftinginterpreters.com/), a book which he generously makes completely free. I am currently at chapter 28, but the stable 0.1.2 is still stuck at chapter 26.
 
 The main difference, of course, is that Carotene uses C++ and therefore gets to use its features. Carotene also has a plethora of its own additions and changes, so much so that it is not backward compatible with clox.
 
-My use of AI in this project is to let me skip the boring stuff like debugging and low-level optimization, so that I can do the fun stuff like adding features. Therefore, most of the code is either adapted from Crafting Interpreters or written by me.
+My use of AI in this project is to let me skip the boring stuff like debugging, low-level optimization, and dealing with weird APIs like Win32, so that I can do the fun stuff like adding features. Therefore, most of the code is either adapted from Crafting Interpreters or written by me.
 
 
 ## Performance
@@ -79,15 +79,15 @@ Node.js, Lua, and PHP are in their non-JIT modes.
 Trial 0 1 2 3 4 5 
 
                   min      max
-  Lua            26 ms    28 ms
-  PHP            39 ms    40 ms
-  Node.js        79 ms    93 ms
-  Carotene      100 ms   108 ms
-  Python        145 ms   146 ms
-  Wren          151 ms   170 ms
-  clox with %   188 ms   207 ms
+  Lua            27 ms    28 ms
+  PHP            39 ms    42 ms
+  Node.js        85 ms    89 ms
+  Carotene      106 ms   111 ms
+  Python        144 ms   157 ms
+  Wren          148 ms   167 ms
+  clox with %   170 ms   195 ms
 
 ```
 
-Do note that performance varies significantly between versions.
+Do note that performance varies significantly between platforms and versions.
 

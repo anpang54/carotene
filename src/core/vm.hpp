@@ -984,8 +984,11 @@ class VM{
                             return INTERPRET_RUNTIME_ERROR; \
                         } \
                         ObjInstance* instance = asInstance(peek(0)); \
+                        Value nativeValue; \
                         auto found = instance->fields.find((name)->str); \
-                        if(found != instance->fields.end()) { \
+                        if(instance->native && instance->native->readProperty((name)->str, nativeValue)) { \
+                            top() = nativeValue; \
+                        } else if(found != instance->fields.end()) { \
                             top() = found->second; \
                         } else { \
                             SYNC(); \
@@ -998,7 +1001,17 @@ class VM{
                             runtimeError("You can only set a property on an instance, not %s.", typeofValue(peek(1)).c_str()); \
                             return INTERPRET_RUNTIME_ERROR; \
                         } \
-                        asInstance(peek(1))->fields[(name)->str] = copyIfString(peek(0)); \
+                        ObjInstance* instance = asInstance(peek(1)); \
+                        string nativeError; \
+                        if(instance->native && instance->native->writeProperty((name)->str, peek(0), nativeError)) { \
+                            if(!nativeError.empty()) { \
+                                SYNC(); \
+                                runtimeError("%s", nativeError.c_str()); \
+                                return INTERPRET_RUNTIME_ERROR; \
+                            } \
+                        } else { \
+                            instance->fields[(name)->str] = copyIfString(peek(0)); \
+                        } \
                         Value assigned = pop(); \
                         top() = assigned; \
                     }

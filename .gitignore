@@ -1,6 +1,7 @@
-caro
-builds
-optimization_notes
 .genio.yaml
+CLAUDE.md
+builds
+caro
+optimization_notes
 src/core/licenses.hpp
 src/stdlib/util/gui-styles.hpp

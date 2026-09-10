@@ -30,7 +30,7 @@ use fs;
     ],
     "web":     ["web",
         "/usr/lib/emscripten/em++ ",
-        "-Wno-c99-designator -sALLOW_MEMORY_GROWTH -sSTACK_SIZE=8388608 -sEXIT_RUNTIME -sASYNCIFY "
+        "-Wno-c99-designator -sALLOW_MEMORY_GROWTH -sSTACK_SIZE=8388608 -sEXIT_RUNTIME -sASYNCIFY '-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=$stringToNewUTF8' "
     ]
 };                                                                             // = 8mb, because linux threads get 8mb
 
