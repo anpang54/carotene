@@ -269,6 +269,11 @@ class Compiler{
             emitByte(byte1);
             emitByte(byte2);
         }
+        void emitBytes(uint8_t byte1, uint8_t byte2, uint8_t byte3) {
+            emitByte(byte1);
+            emitByte(byte2);
+            emitByte(byte3);
+        }
 
         void emitConstant(Value value) {
             emitBytes(OP_CONSTANT, makeConstant(value));
@@ -754,29 +759,56 @@ class Compiler{
         }
 
 
-        // vector components
+        // dot
 
-        void makeComponent(bool canAssign) {
+        void makeDot(bool canAssign) {
 
-            consume(TOKEN_IDENTIFIER, "Expect 'x', 'y', or 'z' after '.'.");
-            const string& name = this->previous.start;
+            consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
+            Token name = this->previous;
 
-            int component = name == "x"? 0: (name == "y"? 1: (name == "z"? 2: -1));
-            if(component == -1) {
-                error("Vectors only have the components 'x', 'y' and 'z'.");
-                return;
+            int component = name.start == "x"? 0: (name.start == "y"? 1: (name.start == "z"? 2: -1));
+            if(component == -1) makeProperty(canAssign, name);
+            else                makeMember(canAssign, name, component);
+
+        }
+
+        void makeProperty(bool canAssign, Token name) {
+
+            uint8_t constant = identifierConstant(&name);
+            int compound = compoundOperator(this->current.type);
+
+            if(canAssign && match(TOKEN_EQUAL)) {
+                expression();
+                emitBytes(OP_SET_PROPERTY, constant);
+            } else if(canAssign && compound != -1) {
+                advance();
+                emitByte(OP_DUPLICATE);
+                emitBytes(OP_GET_PROPERTY, constant);
+                expression();
+                emitByte(compound);
+                emitBytes(OP_SET_PROPERTY, constant);
+            } else {
+                emitBytes(OP_GET_PROPERTY, constant);
             }
 
+        }
+
+        void makeMember(bool canAssign, Token name, int component) {
+
+            uint8_t constant = identifierConstant(&name);
             int compound = compoundOperator(this->current.type);
+
             if(!canAssign || (!check(TOKEN_EQUAL) && compound == -1)) {
-                emitBytes(OP_GET_COMPONENT, component);
+                emitBytes(OP_GET_MEMBER, component, constant);
                 return;
             }
 
             const vector<uint8_t>& code = currentChunk()->code;
             VariableTarget target = cur().lastVariable;
-            if(target.offset < 0 || target.offset + 2 != (int)code.size() || code[target.offset] != target.getOp) {
-                error("You can only assign to a component of a variable.");
+            bool writeBack = target.offset >= 0 && target.offset + 2 == (int)code.size() && code[target.offset] == target.getOp;
+
+            if(writeBack && target.setOp == OP_DEFINE_CONSTANT) {
+                error("You can't edit a constant.");
                 return;
             }
 
@@ -784,14 +816,18 @@ class Compiler{
                 expression();
             } else {
                 advance();
-                emitBytes(target.getOp, target.arg);
-                emitBytes(OP_GET_COMPONENT, component);
+                emitByte(OP_DUPLICATE);
+                emitBytes(OP_GET_MEMBER, component, constant);
                 expression();
                 emitByte(compound);
             }
 
-            emitBytes(OP_SET_COMPONENT, component);
-            emitBytes(target.setOp, target.arg);
+            if(writeBack) {
+                emitBytes(OP_SET_MEMBER, component, constant);
+                emitBytes(target.setOp, target.arg);
+            } else {
+                emitBytes(OP_SET_PROPERTY, constant);
+            }
 
         }
 
@@ -1763,7 +1799,7 @@ inline ParseRule rules[] = {
     [TOKEN_RIGHT_SQUARE]  = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_LEFT_BRACE]    = { &Compiler::parseBraces,  NULL,                     PREC_NONE       },
     [TOKEN_RIGHT_BRACE]   = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_DOT]           = { NULL,                    &Compiler::makeComponent, PREC_CALL       },
+    [TOKEN_DOT]           = { NULL,                    &Compiler::makeDot,       PREC_CALL       },
     [TOKEN_COMMA]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_COLON]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_SEMICOLON]     = { NULL,                    NULL,                     PREC_NONE       },
