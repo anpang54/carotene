@@ -109,6 +109,14 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
         return [&]() -> Value __VA_ARGS__ ();\
     })
 
+#define nBuiltin(objType, caroName, ...)\
+    DefineBuiltinMethod nBuiltin_##objType##_##caroName(objType, #caroName, [](VM* vm, vector<Value> args) -> Value {\
+        Value self = args[0];\
+        args.erase(args.begin());\
+        (void)self;\
+        return [&]() -> Value __VA_ARGS__ ();\
+    })
+
 
 // native class instances
 
