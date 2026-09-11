@@ -41,6 +41,45 @@ struct NodeData: NativeData{
             free(text);
             return true;
 
+        } else if(name == "html") {
+
+            char* text = (char*)EM_ASM_PTR({
+                return stringToNewUTF8(Module.caroNodes.get($0).innerHTML ?? "");
+            }, id);
+            result = CaroObj(copyString(text));
+            free(text);
+            return true;
+
+        } else if(name == "css") {
+
+            int count = EM_ASM_INT({
+                return Module.caroNodes.get($0).style?.length ?? 0;
+            }, id);
+
+            GCPause pause;
+            unordered_map<Value, Value> css;
+            css.reserve(count);
+            
+            for(int i = 0; i < count; i++) {
+
+                char* cssProperty = (char*)EM_ASM_PTR({
+                    return stringToNewUTF8(Module.caroNodes.get($0).style[$1]);
+                }, id, i);
+                char* cssValue = (char*)EM_ASM_PTR({
+                    const style    = Module.caroNodes.get($0).style;
+                    const priority = style.getPropertyPriority(style[$1]);
+                    return stringToNewUTF8(style.getPropertyValue(style[$1]) + (priority ? " !" + priority : ""));
+                }, id, i);
+
+                css.emplace(CaroObj(copyString(cssProperty)), CaroObj(copyString(cssValue)));
+                free(cssProperty);
+                free(cssValue);
+
+            }
+            
+            result = CaroObj(copyDict(std::move(css)));
+            return true;
+
         }
 
         return false;
@@ -57,6 +96,41 @@ struct NodeData: NativeData{
             EM_ASM({
                 Module.caroNodes.get($0).innerText = UTF8ToString($1);
             }, id, asString(value)->str.c_str());
+            return true;
+
+        } else if(name == "html") {
+
+            if(!matchesType(OBJ_STRING, value)) {
+                error = format("The HTML should be {:s}, but {:s} was given.", typeofObjType(OBJ_STRING), typeofValue(value));
+                return true;
+            }
+            EM_ASM({
+                Module.caroNodes.get($0).innerHTML = UTF8ToString($1);
+            }, id, asString(value)->str.c_str());
+            return true;
+
+        } else if(name == "css") {
+
+            if(!matchesType(OBJ_DICT, value)) {
+                error = format("The CSS should be {:s}, but {:s} was given.", typeofObjType(OBJ_DICT), typeofValue(value));
+                return true;
+            }
+
+            string css;
+            for(const auto& [cssProperty, cssValue]: asDict(value)->data) {
+                css += printValue(cssProperty) + ": " + printValue(cssValue) + "; ";
+            }
+            if(!css.empty()) css.pop_back();
+
+            bool success = EM_ASM_INT({
+                try{
+                    Module.caroNodes.get($0).style = UTF8ToString($1);
+                } catch(error) {
+                    return 0;
+                }
+                return 1;
+            }, id, css.c_str());
+            if(!success) error = "This CSS couldn't be edited.";
             return true;
 
         }
