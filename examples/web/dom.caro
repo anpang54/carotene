@@ -14,15 +14,31 @@ func add_node() {
 
     if($other_spans_added == 0) {
         $other_spans_added = 1;
+
         span2 = dom.Node("span");
         span2.html = "Here's another span.. but with CSS on it and <b>HTML tags inside it</b>!";
         span2.css = {"color": "#ffaaaa"};
         dom.id("caro-container").add(span2);
+
     } elif($other_spans_added == 1) {
         $other_spans_added = 2;
-        span3 = dom.Node("span");
-        span3.text = "And here's a third span, but it's outside the GUI box.";
-        dom.body.add(span3);
+
+        dom.body.css = {"padding": "2em"};
+
+        div = dom.Node("div");
+        div.text = "And here's a div, but unlike the spans, it's outside the GUI box, has an ID and a class, and has a list inside it.";
+        div.id = "outside-div";
+        div.classes = ["outside"];
+        dom.body.add(div);
+
+        ul = dom.Node("ul");
+        li1 = dom.Node("li");
+        li1.text = "Item 1";
+        li2 = dom.Node("li");
+        li2.text = "Item 2";
+        ul.children = [li1, li2];
+        div.add(ul);
+
     }
 
 }
