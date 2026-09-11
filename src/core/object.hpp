@@ -311,6 +311,23 @@ struct DefineNativeMethod{
 };
 
 
+// methods on builtin types
+
+struct BuiltinMethod{
+    ObjType type;
+    string name;
+    NativeFn method;
+};
+
+vector<BuiltinMethod> builtinMethods;
+
+struct DefineBuiltinMethod{
+    DefineBuiltinMethod(ObjType type, string name, NativeFn method) {
+        builtinMethods.push_back({type, std::move(name), method});
+    }
+};
+
+
 // checking functions
 
 bool isNative(Value value) {

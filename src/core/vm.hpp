@@ -51,6 +51,7 @@ class VM{
         
         unordered_map<string, Value> globals;
         vector<Local> replLocals;
+        unordered_map<ObjType, ObjClass*> builtinClasses;    // hidden classes for builtin types
         
         CallFrame* frame = nullptr;
         bool replMode = false;
@@ -120,6 +121,12 @@ class VM{
                 for(const pair<string, NativeFn>& method: native.methods) {
                     klass->methods[method.first] = CaroObj(newNative(method.second));
                 }
+            }
+            this->builtinClasses.clear();
+            for(const BuiltinMethod& method: builtinMethods) {
+                ObjClass*& klass = this->builtinClasses[method.type];
+                if(klass == nullptr) klass = newClass(typeofObjType(method.type));
+                klass->methods[method.name] = CaroObj(newNative(method.method));
             }
             for(const pair<string, NativeFn>& native: nativeFunctions) {
                 defineNative(native.first, native.second);
@@ -677,12 +684,20 @@ class VM{
 
         }
         
+        ObjClass* builtinClassFor(Value value) {
+            if(value.type != TYPE_OBJ) return nullptr;
+            auto found = this->builtinClasses.find(value.as.obj->type);
+            return found == this->builtinClasses.end()? nullptr: found->second;
+        }
+
         bool invoke(ObjString* name, int argCount) {
 
             Value receiver = peek(argCount);
 
             if(!isInstance(receiver)) {
-                runtimeError("Only instances have methods.");
+                ObjClass* builtin = builtinClassFor(receiver);
+                if(builtin != nullptr) return invokeFromClass(builtin, name, argCount);
+                runtimeError("A %s doesn't have any methods.", typeofValue(receiver).c_str());
                 return false;
             }
 
@@ -978,21 +993,26 @@ class VM{
                     }
 
                     #define getProperty(name) { \
-                        if(!isInstance(peek(0))) { \
-                            SYNC(); \
-                            runtimeError("You can only get a property from an instance, not %s.", typeofValue(peek(0)).c_str()); \
-                            return INTERPRET_RUNTIME_ERROR; \
-                        } \
-                        ObjInstance* instance = asInstance(peek(0)); \
-                        Value nativeValue; \
-                        auto found = instance->fields.find((name)->str); \
-                        if(instance->native && instance->native->readProperty((name)->str, nativeValue)) { \
-                            top() = nativeValue; \
-                        } else if(found != instance->fields.end()) { \
-                            top() = found->second; \
+                        if(isInstance(peek(0))) { \
+                            ObjInstance* instance = asInstance(peek(0)); \
+                            Value nativeValue; \
+                            auto found = instance->fields.find((name)->str); \
+                            if(instance->native && instance->native->readProperty((name)->str, nativeValue)) { \
+                                top() = nativeValue; \
+                            } else if(found != instance->fields.end()) { \
+                                top() = found->second; \
+                            } else { \
+                                SYNC(); \
+                                if(!bindMethod(instance->klass, (name)->str)) return INTERPRET_RUNTIME_ERROR; \
+                            } \
                         } else { \
+                            ObjClass* builtin = builtinClassFor(peek(0)); \
                             SYNC(); \
-                            if(!bindMethod(instance->klass, (name)->str)) return INTERPRET_RUNTIME_ERROR; \
+                            if(builtin == nullptr) { \
+                                runtimeError("You can only get a property from an instance, not %s.", typeofValue(peek(0)).c_str()); \
+                                return INTERPRET_RUNTIME_ERROR; \
+                            } \
+                            if(!bindMethod(builtin, (name)->str)) return INTERPRET_RUNTIME_ERROR; \
                         } \
                     }
                     #define setProperty(name) { \
@@ -1461,7 +1481,7 @@ class VM{
             if(gcPaused) return;
 
             // mark roots
-            // root = any object that the VM can reach directly, so stack, globals, and call frames
+            // root = any object that the VM can reach directly, so stack, globals, call frames, and builtin type classes
             for(Value* slot = this->stack.data(); slot < this->stackTop; ++slot) {
                 markValue(*slot);
             }
@@ -1470,6 +1490,9 @@ class VM{
             }
             for(CallFrame& callFrame: this->frames) {
                 markObject(callFrame.function);
+            }
+            for(auto& [type, klass]: this->builtinClasses) {
+                markObject(klass);
             }
 
             // sweep
@@ -1513,3 +1536,5 @@ void maybeCollect() {
 #include "../stdlib/modules/math.hpp"
 #include "../stdlib/modules/random.hpp"
 #include "../stdlib/modules/time.hpp"
+
+#include "../stdlib/methods/array.hpp"
