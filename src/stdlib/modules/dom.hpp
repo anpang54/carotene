@@ -211,13 +211,13 @@ nMethod(dom_Node, init, {
 
 // GETTING ELEMENTS
 
-nConst(dom_document, "dom", "document", {
+nConst(dom_body, "dom", "body", {
 
     initNodeMap();
 
     int id = EM_ASM_INT({
         const id = Module.caroNextNode++;
-        Module.caroNodes.set(id, document);
+        Module.caroNodes.set(id, document.body);
         return id;
     });
 

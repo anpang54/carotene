@@ -133,7 +133,9 @@ namespace CaroGui{
         vector<Widget*> widgets;
     };
 
+    // handlers
     typedef std::function<bool(size_t widget)> ClickHandler;
+    typedef std::function<bool()> ShowHandler;
 
 
     // WEB (acrylic elements)
@@ -181,7 +183,7 @@ namespace CaroGui{
             });
         }
 
-        string show(const Window& window, const ClickHandler& onClick) {
+        string show(const Window& window, const ClickHandler& onClick, const ShowHandler& onShow = {}) {
 
             if(EM_ASM_INT({ return Module.caroContainer? 1: 0; })) return "A window is already open.";
 
@@ -288,6 +290,8 @@ namespace CaroGui{
                 if(widget.type == WIDGET_SELECT) EM_ASM({ Module.caroElements.get($0).selectedIndex = $1; }, &widget, widget.selected);
 
             }
+
+            if(onShow && !onShow()) close();
 
             // block execution until the window gets closed
             // events: -1 = closed, -2 - i = textbox/textarea/select/combobox i changed, i = widget i clicked or combobox option picked
@@ -500,7 +504,7 @@ namespace CaroGui{
 
         // show
 
-        string show(const Window& window, const ClickHandler& onClick) {
+        string show(const Window& window, const ClickHandler& onClick, const ShowHandler& onShow = {}) {
 
             if(!gtk().gtk) return "The gui module requires GTK 4. Therefore, please install it.";
             if(!started()) return "Couldn't open a window, is there a display?";
@@ -607,6 +611,7 @@ namespace CaroGui{
             currentWindow = gtkWindow;
 
             // block execution until the window gets closed
+            if(onShow && !onShow() && currentWindow) gtk().windowDestroy(currentWindow);
             while(!closed) gtk().mainContextIteration(nullptr, true);
 
             // without this, the window might not close properly
@@ -981,7 +986,7 @@ namespace CaroGui{
 
         }
         
-		string show(const Window& window, const ClickHandler& onClick) {
+		string show(const Window& window, const ClickHandler& onClick, const ShowHandler& onShow = {}) {
 
             if(currentWindow) return "A window is already open.";
 
@@ -1028,6 +1033,7 @@ namespace CaroGui{
             ShowWindow(hwnd, SW_SHOWNORMAL);
 
             // block execution
+            if(onShow && !onShow() && currentWindow) DestroyWindow(currentWindow);
             MSG message;
             while(GetMessageW(&message, nullptr, 0, 0) > 0) {
                 if(IsDialogMessageW(hwnd, &message)) continue;    // so buttons can be pressed with the keyboard too
@@ -1069,6 +1075,7 @@ namespace CaroGui{
 	#elifdef CARO_GUI_BEAPI
 	
         const ClickHandler* currentClick = nullptr;
+        const ShowHandler*  currentShow  = nullptr;
 
         // BTextView has no modification message, so this keeps the widget's text in sync itself
         class CaroTextView: public BTextView{
@@ -1232,6 +1239,10 @@ namespace CaroGui{
 							if(!(*currentClick)(message->GetInt32("widget", 0))) be_app->PostMessage(B_QUIT_REQUESTED);
 							break;
 
+						case 'show':
+							if(*currentShow && !(*currentShow)()) be_app->PostMessage(B_QUIT_REQUESTED);
+							break;
+
 						default:
 							BWindow::MessageReceived(message);
 
@@ -1240,11 +1251,14 @@ namespace CaroGui{
 				
 		};
 
-		string show(const Window& window, const ClickHandler& onClick) {
+		string show(const Window& window, const ClickHandler& onClick, const ShowHandler& onShow = {}) {
             if(be_app) return "A window is already open.";
 			BApplication app("application/x-vnd.Carotene-Window");
             currentClick = &onClick;
-			(new CaroWindow(window))->Show();
+            currentShow  = &onShow;
+			CaroWindow* caroWindow = new CaroWindow(window);
+			caroWindow->Show();
+			if(onShow) caroWindow->PostMessage('show');
 			app.Run();
             for(Widget* widget: window.widgets) widget->handle = nullptr;
 			return "";

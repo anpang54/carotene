@@ -3,18 +3,30 @@ use dom;
 
 $window = gui.Window("DOM test");
 
-func add_node() {
-
+func shown() {
     span1 = dom.Node("span");
     span1.text = "Node added and text set from Carotene";
     dom.id("caro-container").add(span1);
+}
 
-    span2 = dom.Node("span");
-    span2.html = "Here's another span.. but with CSS on it and <b>HTML tags inside it</b>!";
-    span2.css = {"color": "#ffaaaa"};
-    dom.id("caro-container").add(span2);
+$other_spans_added = 0;
+func add_node() {
+
+    if($other_spans_added == 0) {
+        $other_spans_added = 1;
+        span2 = dom.Node("span");
+        span2.html = "Here's another span.. but with CSS on it and <b>HTML tags inside it</b>!";
+        span2.css = {"color": "#ffaaaa"};
+        dom.id("caro-container").add(span2);
+    } elif($other_spans_added == 1) {
+        $other_spans_added = 2;
+        span3 = dom.Node("span");
+        span3.text = "And here's a third span, but it's outside the GUI box.";
+        dom.body.add(span3);
+    }
 
 }
-$window.add(gui.Button("Add node", add_node), 0, 0);
 
-$window.show();
+$window.add(gui.Button("Add another span!", add_node), 0, 0);
+
+$window.show(shown);
