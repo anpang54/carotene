@@ -4,9 +4,16 @@ use dom;
 $window = gui.Window("DOM test");
 
 func add_node() {
-    span = dom.Node("span");
-    span.text = "Node added and text set from Carotene";
-    dom.id("caro-container").add(span);
+
+    span1 = dom.Node("span");
+    span1.text = "Node added and text set from Carotene";
+    dom.id("caro-container").add(span1);
+
+    span2 = dom.Node("span");
+    span2.html = "Here's another span.. but with CSS on it and <b>HTML tags inside it</b>!";
+    span2.css = {"color": "#ffaaaa"};
+    dom.id("caro-container").add(span2);
+
 }
 $window.add(gui.Button("Add node", add_node), 0, 0);
 
