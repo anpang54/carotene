@@ -93,7 +93,7 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 // definitions
 
 #define nConst(cppName, module, caroName, ...)\
-    DefineNativeConstant nConst_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, []() -> Value __VA_ARGS__)
+    DefineNativeConstant nConst_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, []([[maybe_unused]] VM* vm) -> Value __VA_ARGS__)
 
 #define nFunc(cppName, module, caroName, ...)\
     DefineNativeFunction nFunc_##cppName (module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)

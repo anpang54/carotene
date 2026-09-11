@@ -257,7 +257,7 @@ ObjBoundMethod* newBoundMethod(Value receiver, Obj* method) {
 // native functions
 
 typedef Value (*NativeFn)   (VM* vm, vector<Value> args);
-typedef Value (*NativeConst)();
+typedef Value (*NativeConst)(VM* vm);
 
 struct ObjNative: Obj{
     NativeFn function;
