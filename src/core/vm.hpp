@@ -1538,3 +1538,4 @@ void maybeCollect() {
 #include "../stdlib/modules/time.hpp"
 
 #include "../stdlib/methods/array.hpp"
+#include "../stdlib/methods/string.hpp"
