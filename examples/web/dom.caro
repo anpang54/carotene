@@ -35,6 +35,13 @@ func add_node() {
         ];
         div.add(ul);
 
+    } elif($other_spans_added == 2) {
+        $other_spans_added = 3;
+
+        dom.id("outside-div").children[0].children[0].replace(
+            dom.Node("li", "You thought that was gonna add a new element? Hah, no, this got changed instead.")
+        );
+
     }
 
 }
