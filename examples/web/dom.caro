@@ -39,6 +39,6 @@ func add_node() {
 
 }
 
-$window.add(gui.Button("Add another span!", add_node), 0, 0);
+$window.add(gui.Button("Add another element!", add_node), 0, 0);
 
 $window.show(shown);
