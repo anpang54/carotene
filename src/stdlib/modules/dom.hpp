@@ -424,5 +424,36 @@ nMethod(dom_Node, add, {
     return CaroNull;
 });
 
+nMethod(dom_Node, replace, {
+    params({
+        {{OBJ_INSTANCE}, true}
+    });
+
+    NodeData* data = nativeData<NodeData>(vm, self);
+    if(data == nullptr) return CaroNull;
+
+    // check the replacement
+    NodeData* replacement = dynamic_cast<NodeData*>(asInstance(args[0])->native.get());
+    if(replacement == nullptr) {
+        vm->runtimeError("%s is not a node.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
+
+    // replace
+    bool success = EM_ASM_INT({
+        try{
+            const element = Module.caroNodes.get($0);
+            if(!element.parentNode) return 0;
+            element.replaceWith(Module.caroNodes.get($1));
+        } catch(error) {
+            return 0;
+        }
+        return 1;
+    }, data->id, replacement->id);
+    if(!success) vm->runtimeError("The node couldn't be replaced.");
+
+    return CaroNull;
+});
+
 
 #endif
