@@ -114,18 +114,18 @@ class VM{
             }
             
             // add natives
-            for(const pair<string, NativeConst>& native: nativeConstants) {
-                this->globals[native.first] = native.second();
-            }
-            for(const pair<string, NativeFn>& native: nativeFunctions) {
-                defineNative(native.first, native.second);
-            }
             for(const NativeClass& native: nativeClasses) {
                 ObjClass* klass = newClass(native.name);
                 this->globals[native.global] = CaroObj(klass);
                 for(const pair<string, NativeFn>& method: native.methods) {
                     klass->methods[method.first] = CaroObj(newNative(method.second));
                 }
+            }
+            for(const pair<string, NativeFn>& native: nativeFunctions) {
+                defineNative(native.first, native.second);
+            }
+            for(const pair<string, NativeConst>& native: nativeConstants) {
+                this->globals[native.first] = native.second(this);
             }
 
             // actually reuse
@@ -1505,6 +1505,7 @@ void maybeCollect() {
 #include "../stdlib/modules/main.hpp"
 
 #include "../stdlib/modules/caro.hpp"
+#include "../stdlib/modules/dom.hpp"
 #include "../stdlib/modules/fs.hpp"
 #include "../stdlib/modules/gui.hpp"
 #include "../stdlib/modules/hash.hpp"

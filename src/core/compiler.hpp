@@ -994,6 +994,13 @@ class Compiler{
             consume(TOKEN_IDENTIFIER, "Expect module name after 'use'.");
 
             string name = this->previous.start;
+
+            #ifndef __EMSCRIPTEN__
+                if(name == "dom") {
+                    error("You can only use the dom module on web.");
+                } else
+            #endif
+            
             if(!modules.contains(name)) {
                 error("Module " + name + " doesn't exist.");
             } else {

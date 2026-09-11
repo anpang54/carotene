@@ -1,0 +1,13 @@
+use gui;
+use dom;
+
+$window = gui.Window("DOM test");
+
+func add_node() {
+    span = dom.Node("span");
+    span.text = "Node added and text set from Carotene";
+    dom.id("caro-container").add(span);
+}
+$window.add(gui.Button("Add node", add_node), 0, 0);
+
+$window.show();

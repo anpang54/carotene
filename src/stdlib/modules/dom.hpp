@@ -1,0 +1,211 @@
+
+#pragma once
+#ifdef __EMSCRIPTEN__
+
+
+// INCLUDES
+
+#include "../util/natives.hpp"
+
+
+// NODE OBJECT
+
+/*
+    the JS side has Module.caroNodes, a Map with number keys (ID) and Element values
+    the C++ side just stores the ID
+*/
+
+// create Module.caroNodes if it doesn't exist yet
+void initNodeMap() {
+    EM_ASM({
+        if(!Module.caroNodes) {
+            Module.caroNodes    = new Map();
+            Module.caroNextNode = 0;
+        }
+    });
+}
+
+// data for each node
+struct NodeData: NativeData{
+
+    int id = -1;
+
+    bool readProperty(const string& name, Value& result) override {
+
+        if(name == "text") {
+
+            char* text = (char*)EM_ASM_PTR({
+                return stringToNewUTF8(Module.caroNodes.get($0).innerText ?? "");
+            }, id);
+            result = CaroObj(copyString(text));
+            free(text);
+            return true;
+
+        }
+
+        return false;
+    }
+
+    bool writeProperty(const string& name, Value value, string& error) override {
+
+        if(name == "text") {
+
+            if(!matchesType(OBJ_STRING, value)) {
+                error = format("The text should be {:s}, but {:s} was given.", typeofObjType(OBJ_STRING), typeofValue(value));
+                return true;
+            }
+            EM_ASM({
+                Module.caroNodes.get($0).innerText = UTF8ToString($1);
+            }, id, asString(value)->str.c_str());
+            return true;
+
+        }
+
+        return false;
+    }
+
+    // destructor
+    ~NodeData() override {
+        EM_ASM({
+            Module.caroNodes.delete($0);
+        }, id);
+    }
+
+};
+
+// class
+nClass(dom_Node, "dom", "Node");
+
+Value newNode(VM* vm, int id) {
+
+    auto found = vm->globals.find("dom.Node");
+    if(found == vm->globals.end() || !isClass(found->second)) {
+        EM_ASM({
+            Module.caroNodes.delete($0);
+        }, id);
+        vm->runtimeError("Couldn't find the dom.Node.");
+        return CaroNull;
+    }
+
+    ObjInstance* instance = newInstance(asClass(found->second));
+    auto data = std::make_unique<NodeData>();
+    data->id = id;
+    instance->native = std::move(data);
+    return CaroObj(instance);
+
+}
+
+// constructor
+nMethod(dom_Node, init, {
+    params({
+        {{OBJ_STRING}, true}
+    });
+
+    if(alreadyInitialized(vm, self)) return CaroNull;
+    initNodeMap();
+
+    // create the element and store it in JS
+    int id = EM_ASM_INT({
+
+        let element;
+        try{
+            element = document.createElement(UTF8ToString($0));
+        } catch(error) {
+            return -1; 
+        }
+
+        const id = Module.caroNextNode++;
+        Module.caroNodes.set(id, element);
+        return id;
+
+    }, asString(args[0])->str.c_str());
+
+    // error
+    if(id == -1) {
+        vm->runtimeError("\"%s\" isn't a valid tag.", asString(args[0])->str.c_str());
+        return CaroNull;
+    }
+
+    // store it in C++
+    auto data = std::make_unique<NodeData>();
+    data->id = id;
+    asInstance(self)->native = std::move(data);
+
+    return CaroNull;
+});
+
+
+// GETTING ELEMENTS
+
+nConst(dom_document, "dom", "document", {
+
+    initNodeMap();
+
+    int id = EM_ASM_INT({
+        const id = Module.caroNextNode++;
+        Module.caroNodes.set(id, document);
+        return id;
+    });
+
+    return newNode(vm, id);
+
+});
+
+nFunc(dom_id, "dom", "id", {
+    params({
+        {{OBJ_STRING}, true}
+    });
+
+    initNodeMap();
+
+    // get the element and store it
+    int id = EM_ASM_INT({
+
+        let element = document.getElementById(UTF8ToString($0));
+        if(element === null) return -1;
+
+        const id = Module.caroNextNode++;
+        Module.caroNodes.set(id, element);
+        return id;
+
+    }, asString(args[0])->str.c_str());
+    if(id < 0) return CaroNull;
+
+    return newNode(vm, id);
+
+});
+
+
+// METHODS
+
+nMethod(dom_Node, add, {
+    params({
+        {{OBJ_INSTANCE}, true}
+    });
+
+    NodeData* data = nativeData<NodeData>(vm, self);
+    if(data == nullptr) return CaroNull;
+
+    // check the child
+    NodeData* child = dynamic_cast<NodeData*>(asInstance(args[0])->native.get());
+    if(child == nullptr) {
+        vm->runtimeError("%s is not a node.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
+
+    // append it
+    bool success = EM_ASM_INT({
+        try{
+            Module.caroNodes.get($0).appendChild(Module.caroNodes.get($1));
+        } catch(error) {
+            return 0;
+        }
+        return 1;
+    }, data->id, child->id);
+    if(!success) vm->runtimeError("The node couldn't be added.");
+
+    return CaroNull;
+});
+
+
+#endif
