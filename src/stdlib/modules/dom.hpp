@@ -310,11 +310,15 @@ Value newNode(VM* vm, int id) {
 // constructor
 nMethod(dom_Node, init, {
     params({
-        {{OBJ_STRING}, true}
+        {{OBJ_STRING}, true },
+        {{OBJ_STRING}, false}
     });
 
     if(alreadyInitialized(vm, self)) return CaroNull;
     initNodeMap();
+
+    // optional initial innerHTML
+    const char* html = args.size() >= 2? asString(args[1])->str.c_str(): nullptr;
 
     // create the element and store it in JS
     int id = EM_ASM_INT({
@@ -323,14 +327,15 @@ nMethod(dom_Node, init, {
         try{
             element = document.createElement(UTF8ToString($0));
         } catch(error) {
-            return -1; 
+            return -1;
         }
+        if($1) element.innerHTML = UTF8ToString($1);
 
         const id = Module.caroNextNode++;
         Module.caroNodes.set(id, element);
         return id;
 
-    }, asString(args[0])->str.c_str());
+    }, asString(args[0])->str.c_str(), html);
 
     // error
     if(id == -1) {
