@@ -69,6 +69,10 @@ ObjString* asString(Value value) {
     return static_cast<ObjString*>(value.as.obj);
 }
 
+string renderString(ObjString* str) {
+    return str->fString? formatString(str->str).first: str->str;
+}
+
 ObjString* copyString(string str, bool fString = false) {
     maybeCollect();
     ObjString* object = new ObjString({OBJ_STRING}, std::move(str), fString);
@@ -374,13 +378,8 @@ string printObject(Obj* object) {
     
     switch(object->type) {
 
-        case OBJ_STRING: {
-            ObjString* str = static_cast<ObjString*>(object);
-            if(str->fString) {
-                return formatString(str->str).first;
-            }
-            return str->str;
-        }
+        case OBJ_STRING:
+            return renderString(static_cast<ObjString*>(object));
 
         case OBJ_ARRAY: {
 

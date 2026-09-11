@@ -9,7 +9,11 @@
 
 // METHODS
 
+#define SELF asArray(self)
+
 nBuiltin(OBJ_ARRAY, length, {
     params({});
-    return CaroUint(asArray(self)->data.size());
+    return CaroUint(SELF->data.size());
 });
+
+#undef SELF
