@@ -289,10 +289,22 @@ nMethod(gui_Window, init, {
 });
 
 nMethod(gui_Window, show, {
-    params({});
+    params({
+        {{OBJ_FUNCTION, OBJ_NATIVE, OBJ_BOUND_METHOD}, false}
+    });
 
     WindowData* data = nativeData<WindowData>(vm, self);
     if(data == nullptr) return CaroNull;
+
+    // optional callback that immediately runs once the window is open
+    CaroGui::ShowHandler onShow;
+    if(args.size() >= 1) {
+        Value callback = args[0];
+        onShow = [vm, callback]() {
+            Value result;
+            return vm->callFromNative(callback, {}, &result);
+        };
+    }
 
     data->shown = true;
     string error = CaroGui::show(data->window, [&](size_t widget) {
@@ -300,7 +312,7 @@ nMethod(gui_Window, show, {
         if(callback.type == TYPE_NULL) return true;
         Value result;
         return vm->callFromNative(callback, {}, &result);
-    });
+    }, onShow);
     data->shown = false;
 
     if(vm->hadError) return CaroNull;
