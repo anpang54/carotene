@@ -277,7 +277,7 @@ class Scanner{
 
         // mini-scanners
 
-        void skipWhitespace() {
+        bool skipWhitespace() {
             for(;;) {
                 switch(peek()) {
                     case ' ': case '\r': case '\t':
@@ -290,14 +290,35 @@ class Scanner{
                     case '/':
                         if(peekNext() == '/') {
                             while(peek() != '\n' && !isAtEnd()) advance();
+                        } else if(peekNext() == '*') {
+                            if(!skipBlockComment()) return false;
+                                // unterminated block comment
                         } else {
-                            return;
+                            return true;
                         }
                         break;
                     default:
-                        return;
+                        return true;
                 }
             }
+        }
+        
+        bool skipBlockComment() {
+
+            advance();    // consume /
+            advance();    // consume *
+
+            int depth = 1;
+            while(depth > 0) {
+                if(isAtEnd()) return false;
+                char c = advance();
+                     if(c == '\n')                  { this->line++;       }
+                else if(c == '/' && peek() == '*')  { advance(); ++depth; }
+                else if(c == '*' && peek() == '/')  { advance(); --depth; }
+            }
+
+            return true;
+
         }
 
         Token scanNumber() {
@@ -368,9 +389,11 @@ class Scanner{
 
         Token scanToken() {
 
-            skipWhitespace();
+            bool terminated = skipWhitespace();
 
             this->start = this->current;
+
+            if(!terminated) return errorToken("Unterminated comment.");
 
             // file ended
             if(isAtEnd()) {
