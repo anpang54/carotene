@@ -7,7 +7,7 @@ use gui;
 
 // make window
 
-$window = gui.Window("CaroCalc", 320, 400, 5);
+$window = gui.Window("Calculator", 320, 400, 5);
 
 $label = gui.Label("");
 $window.add($label, [0, 3], 0);
@@ -21,24 +21,28 @@ func button_pressed(button) {
     pressed = button.text;
 
     if(pressed == "=") {
-        $label.text = str(eval($label.text));
+        $label.text = string(eval($label.text));
         $just_calculated = true;
-
-    } elif(pressed == "<") {
+    }
+    
+    elif(pressed == "<") {
         if($label.text.length() > 0) {
             $label.text = $label.text.sub(0, $label.text.length() - 1);
         }
         $just_calculated = false;
+    }
 
-    } elif("+-*/".contains(pressed)) {
+    elif("+-*/".contains(pressed)) {
         $label.text += f" {pressed} ";
         $just_calculated = false;
+    }
 
-    } elif(pressed == "AC") {
+    elif(pressed == "AC") {
         $label.text = "";
         $just_calculated = false;
+    }
 
-    } else {
+    else {
         if($just_calculated) {
             $label.text = "";
             $just_calculated = false;
@@ -52,11 +56,18 @@ func button_pressed(button) {
 
 // put buttons
 
-#buttons = "()<A789/456*123-0.=+";
+#button_letters = "()<A789/456*123-0.=+";
 $buttons = [];
-repeat(#buttons.length()): i{
-    $buttons.append(gui.Button(#buttons[i] == "A"? "AC": #buttons[i], button_pressed));
-    $window.add($buttons[i], i % 4, int(i / 4) + 1);
+repeat(#button_letters.length()): i{
+    $buttons.append(
+        gui.Button(
+            #button_letters[i] == "A"? "AC": #button_letters[i],
+            button_pressed
+        )
+    );
+    $window.add(
+        $buttons[i], i % 4, int(i / 4) + 1
+    );
 }
 
 
