@@ -26,6 +26,13 @@ WidgetData* widgetData(Value value) {
     return isInstance(value)? dynamic_cast<WidgetData*>(asInstance(value)->native.get()): nullptr;
 }
 
+bool callbackTakesWidget(Value callback) {
+    Obj* function = callback.as.obj;
+    if(function->type == OBJ_BOUND_METHOD) function = asBoundMethod(callback)->method;
+    if(function->type != OBJ_FUNCTION) return false;
+    return static_cast<ObjFunction*>(function)->arity >= 1;
+}
+
 void setWidgetText(VM* vm, Value self, const vector<Value>& args) {
     WidgetData* data = nativeData<WidgetData>(vm, self);
     if(data == nullptr) return;
@@ -308,10 +315,13 @@ nMethod(gui_Window, show, {
 
     data->shown = true;
     string error = CaroGui::show(data->window, [&](size_t widget) {
-        Value callback = widgetData(data->widgets[widget])->callback;
+        Value self = data->widgets[widget];
+        Value callback = widgetData(self)->callback;
         if(callback.type == TYPE_NULL) return true;
         Value result;
-        return vm->callFromNative(callback, {}, &result);
+        vector<Value> args;
+        if(callbackTakesWidget(callback)) args.push_back(self);
+        return vm->callFromNative(callback, args, &result);
     }, onShow);
     data->shown = false;
 
