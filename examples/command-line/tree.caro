@@ -6,9 +6,7 @@
 #lines = 7;
 
 func print_line(filled, char) {
-    print(" " * (#lines - filled), false);
-    print(char * ((filled + 1) * 2), false);
-    print("");
+    print(f"{" " * (#lines - filled)}{char * ((filled + 1) * 2)}");
 }
 
 print("");

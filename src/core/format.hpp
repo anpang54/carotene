@@ -39,7 +39,7 @@ const unordered_map<string, pair<string, string>> codes = {
     {"/hide",   { "\033[28m", "color: #fff;"                                             }},
 
     {"invert",  { "\033[7m" , "background-color: #fff; color: #000;"                   }},    // filter: invert(1) doesn't work
-    {"/invert", { "\033[27m", "background-color: #000; color: #fff;"                   }},
+    {"/invert", { "\033[27m", "background-color: transparent; color: #fff;"              }},
     
     {"/",       { ""        , "font-size: 1em;"                                            }},    // remove font size
     {"/#",      { "\033[39m", "color: #fff;"                                             }},    // remove color

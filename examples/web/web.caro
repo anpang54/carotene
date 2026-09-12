@@ -2,6 +2,7 @@
 use math;
 use random;
 use http;
+use dom;
 
 log("o", "The web build is working!");
 log("i", "Very important log message!", true);
@@ -9,7 +10,13 @@ log("i", "Very important log message!", true);
 print("Hi from wasm!");
 js("console.log('Hi from JS from wasm!')");
 
-js("document.body.innerHTML += `<div style='padding: 4em'><p>This is the Carotene web example.</p><p>Check the DevTools console!</p></div>`;");
+div = dom.Node("div");
+div.css = {"padding": "4em"};
+div.children = [
+    dom.Node("p", "This is the Carotene web example."),
+    dom.Node("p", "Check the DevTools console!")
+];
+dom.body.add(div);
 
 print("Let's solve a random quadratic equation to test things out.");
 
@@ -17,27 +24,19 @@ a = random.int(1, 10);
 b = random.int(1, 10);
 c = random.int(1, 10);
 
-print(a, false);
-print("x² - ", false);
-print(b, false);
-print("x + ", false);
-print(c, false);
-print(" = 0");
+print(f"{a}x² - {b}x + {c} = 0");
 
 discriminant = (b ^ 2) - (4 * a * c);
 if(discriminant > 0) {
-    print(((-b) + math.sqrt(discriminant)) / (2 * a), false);
-    print(", ", false);
-    print(((-b) - math.sqrt(discriminant)) / (2 * a), false);
+    print(f"{((-b) + math.sqrt(discriminant)) / (2 * a)}, {((-b) - math.sqrt(discriminant)) / (2 * a)}");
 } else if(discriminant == 0) {
-    print(((-b) + math.sqrt(discriminant)) / (2 * a), false);
+    print(((-b) + math.sqrt(discriminant)) / (2 * a));
 } else {
-    print("No real solution", false);
+    print("No real solution");
 }
-print("");
 
-print(f"[b]Bold[] [i]Italic[] [b][i]Both[] [i]Inverse[] [#ff0000]R[#00ff00]G[#0000ff]B[] [#00ffff]C[#ff00ff]M[#ffff00]Y[#000000]K[] [1.5]Big[] [1]Normal[] [0.67]Small[]");
+print(f"[b]Bold[/b] [i]Italic[/i] [b][i]Both[] [invert]Inverse[/invert] [#ff0000]R[#00ff00]G[#0000ff]B[/#] [#00ffff]C[#ff00ff]M[#ffff00]Y[#000000]K[/#] [1.5]Big[/] [1]Normal[/] [0.67]Small[/]");
 
 print("And finally, let's fetch this file's source code from Github.");
-result = http.get("https://raw.githubusercontent.com/anpang54/carotene/refs/heads/main/examples/web/main.caro");
+result = http.get("https://raw.githubusercontent.com/anpang54/carotene/refs/heads/main/examples/web/web.caro");
 print(result);

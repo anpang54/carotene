@@ -7,14 +7,9 @@
 #pi = 3.141592653589793;
 
 print("");
-print("Radius:        ", false);
-print(#r);
-print("Diameter:      ", false);
-print(#r * 2);
-print("Circumference: ", false);
-print(2 * #pi * #r);
-print("Surface area:  ", false);
-print(4 * #pi * #r^2);
-print("Volume:        ", false);
-print((4/3) * #pi * #r^3);
+print(f"Radius:        {#r}");
+print(f"Diameter:      {#r * 2}");
+print(f"Circumference: {2 * #pi * #r}");
+print(f"Surface area:  {4 * #pi * #r^2}");
+print(f"Volume:        {(4/3) * #pi * #r^3}");
 
