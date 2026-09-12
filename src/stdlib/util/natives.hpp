@@ -8,8 +8,8 @@ struct PType{
     ValueType valueType;
     ObjType   objType;
     bool      isObjType;
-    PType(ValueType type): valueType(type),     objType(),     isObjType(false) {}
-    PType(ObjType   type): valueType(TYPE_OBJ), objType(type), isObjType(true ) {}
+    constexpr PType(ValueType type): valueType(type),     objType(),     isObjType(false) {}
+    constexpr PType(ObjType   type): valueType(TYPE_OBJ), objType(type), isObjType(true ) {}
 };
     // {}                    = any type
     // {TYPE_INT, TYPE_LONG} = int or long
@@ -17,9 +17,12 @@ struct PType{
     // {OBJ_STRING}          = string
 
 struct P{
-    vector<PType> allowedTypes;
+    std::initializer_list<PType> allowedTypes;
     bool required;
 };
+    // the type lists are initializer_lists rather than vectors so that a parameter list written
+    // inline at a params() call site costs no allocation; both backing arrays live for the whole
+    // checkParameters() call expression, which is the only thing that ever reads them
 
 bool matchesType(const PType& allowed, const Value& value) {
     if(value.type != allowed.valueType) return false;
@@ -30,7 +33,7 @@ string typeofPType(const PType& type) {
     return type.isObjType? typeofObjType(type.objType): typeofType(type.valueType);
 }
 
-string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
+string checkParameters(std::initializer_list<P> parameters, Args args) {
 
     // check for too many parameters
     if(args.size() > parameters.size()) {
@@ -42,7 +45,7 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
 
     for(uint i = 0; i < parameters.size(); ++i) {
 
-        const P& parameter = parameters[i];
+        const P& parameter = parameters.begin()[i];
 
         // check for missing parameters
         if(i >= args.size()) {
@@ -56,7 +59,7 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
         }
 
         // check parameter type
-        if(!parameter.allowedTypes.empty() && !std::ranges::any_of(parameter.allowedTypes,
+        if(parameter.allowedTypes.size() != 0 && !std::ranges::any_of(parameter.allowedTypes,
             [&](const PType& allowed) { return matchesType(allowed, args[i]); }
         )) {
 
@@ -96,23 +99,23 @@ string checkParameters(const vector<P>& parameters, const vector<Value>& args) {
     DefineNativeConstant nConst_##cppName(module, string(module).empty()? string(caroName): string(module) + "." + caroName, []([[maybe_unused]] VM* vm) -> Value __VA_ARGS__)
 
 #define nFunc(cppName, module, caroName, ...)\
-    DefineNativeFunction nFunc_##cppName (module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, vector<Value> args) -> Value __VA_ARGS__)
+    DefineNativeFunction nFunc_##cppName (module, string(module).empty()? string(caroName): string(module) + "." + caroName, [](VM* vm, Args args) -> Value __VA_ARGS__)
 
 #define nClass(cppName, module, caroName)\
     DefineNativeClass nClass_##cppName(module, caroName)
 
 #define nMethod(cppClass, caroName, ...)\
-    DefineNativeMethod nMethod_##cppClass##_##caroName(nClass_##cppClass, #caroName, [](VM* vm, vector<Value> args) -> Value {\
+    DefineNativeMethod nMethod_##cppClass##_##caroName(nClass_##cppClass, #caroName, [](VM* vm, Args args) -> Value {\
         Value self = args[0];\
-        args.erase(args.begin());\
+        args = args.rest();\
         (void)self;\
         return [&]() -> Value __VA_ARGS__ ();\
     })
 
 #define nBuiltin(objType, caroName, ...)\
-    DefineBuiltinMethod nBuiltin_##objType##_##caroName(objType, #caroName, [](VM* vm, vector<Value> args) -> Value {\
+    DefineBuiltinMethod nBuiltin_##objType##_##caroName(objType, #caroName, [](VM* vm, Args args) -> Value {\
         Value self = args[0];\
-        args.erase(args.begin());\
+        args = args.rest();\
         (void)self;\
         return [&]() -> Value __VA_ARGS__ ();\
     })

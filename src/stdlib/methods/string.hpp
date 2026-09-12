@@ -190,8 +190,8 @@ nBuiltin(OBJ_STRING, trim_right, {
 #define nStringPad(caroName, joined)\
     nBuiltin(OBJ_STRING, caroName, {\
         params({\
-            {{ANY_NUMERIC}, true },\
-            {{OBJ_STRING},  false}\
+            {ANY_NUMERIC,  true },\
+            {{OBJ_STRING}, false}\
         });\
         \
         /* check requested length */\

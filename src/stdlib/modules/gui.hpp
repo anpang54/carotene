@@ -35,13 +35,13 @@ bool callbackTakesWidget(Value callback) {
     return static_cast<ObjFunction*>(function)->arity >= 1;
 }
 
-void setWidgetText(VM* vm, Value self, const vector<Value>& args) {
+void setWidgetText(VM* vm, Value self, Args args) {
     WidgetData* data = nativeData<WidgetData>(vm, self);
     if(data == nullptr) return;
     CaroGui::setText(data->widget, asString(args[0])->str);
 }
 
-Value replaceWidget(VM* vm, Value self, const vector<Value>& args);
+Value replaceWidget(VM* vm, Value self, Args args);
 
 Value deleteWidget(VM* vm, Value self) {
     WidgetData* data = nativeData<WidgetData>(vm, self);
@@ -177,7 +177,7 @@ struct TextInputData: WidgetData{
 
 };
 
-Value initTextInput(VM* vm, Value self, const vector<Value>& args, CaroGui::WidgetType type) {
+Value initTextInput(VM* vm, Value self, Args args, CaroGui::WidgetType type) {
     if(alreadyInitialized(vm, self)) return CaroNull;
     auto data = std::make_unique<TextInputData>();
     data->widget = {type, args.size() >= 1? asString(args[0])->str: ""};
@@ -465,7 +465,7 @@ nMethod(gui_Window, add, {
 
 // replacing widgets
 
-Value replaceWidget(VM* vm, Value self, const vector<Value>& args) {
+Value replaceWidget(VM* vm, Value self, Args args) {
 
     WidgetData* data = nativeData<WidgetData>(vm, self);
     if(data == nullptr) return CaroNull;

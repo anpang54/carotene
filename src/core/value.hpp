@@ -187,7 +187,7 @@ Value mapNumbers(const Value& a, const Value& b, F f) {
     }
 }
 template<typename F>
-Value mapFloat(Value& v, F f) {
+Value mapFloat(const Value& v, F f) {
     return mapNumber(v, [&](auto x) -> decltype(x) {
         if constexpr(std::is_floating_point_v<decltype(x)>) {
             return f(x);
@@ -197,7 +197,7 @@ Value mapFloat(Value& v, F f) {
     });
 }
 template<typename F>
-Value toFloat(Value& v, F f) {
+Value toFloat(const Value& v, F f) {
     if(v.type == TYPE_FLOAT) {
         return CaroFloat(f(v.as.Afloat));
     } else {
@@ -479,7 +479,7 @@ size_t sizeofType(ValueType type) {
 
     }
 }
-size_t sizeofValue(Value& value) {
+size_t sizeofValue(const Value& value) {
     if(value.type == TYPE_OBJ) {
         return sizeofObject(value.as.obj);
     } else {

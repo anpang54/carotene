@@ -37,7 +37,7 @@ string httpReadHeaders(const Value& dict, vector<pair<string, string>>& headers)
 
 }
 
-Value httpRequest(VM* vm, const vector<Value>& args, const string& method, const string& body, uint first) {
+Value httpRequest(VM* vm, Args args, const string& method, const string& body, uint first) {
 
     string error;
 

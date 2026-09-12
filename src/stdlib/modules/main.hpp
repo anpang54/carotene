@@ -324,7 +324,7 @@ Value castToNumber(VM* vm, const Value& v, ValueType targetType) {
 
 }
 
-Value castToVector(VM* vm, ValueType targetType, const vector<Value>& args) {
+Value castToVector(VM* vm, ValueType targetType, Args args) {
     
     int       size = componentCount(targetType);
     ValueType type = componentType (targetType);
@@ -351,7 +351,7 @@ Value castToVector(VM* vm, ValueType targetType, const vector<Value>& args) {
 
     // same amount of components (either 2 or 3), so construct
     } else if((int)args.size() == size) {
-        components = args;
+        components.assign(args.begin(), args.end());
 
     // neither of those
     } else {
