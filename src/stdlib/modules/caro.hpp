@@ -20,7 +20,7 @@ nConst(caro_magic_number,     "caro", "magic_number",     {
     }
     return CaroObj(copyArray(result));
 });
-nConst(caro_bytecode_version, "caro", "bytecode_version", { return CaroInt(BYTECODE_FORMAT);          });
+nConst(caro_bytecode_version, "caro", "bytecode_version", { return CaroUint(BYTECODE_FORMAT);         });
 
 nConst(caro_platform, "caro", "platform", {
 
