@@ -16,9 +16,11 @@
 struct WidgetData: NativeData{
     CaroGui::Widget widget;
     Value callback = CaroNull;
-    bool added = false;
+    Value window   = CaroNull;
+    size_t index   = 0;
     void mark() override{
         markValue(callback);
+        markValue(window);
     }
 };
 
@@ -38,6 +40,34 @@ void setWidgetText(VM* vm, Value self, const vector<Value>& args) {
     if(data == nullptr) return;
     CaroGui::setText(data->widget, asString(args[0])->str);
 }
+
+Value replaceWidget(VM* vm, Value self, const vector<Value>& args);
+
+Value deleteWidget(VM* vm, Value self) {
+    WidgetData* data = nativeData<WidgetData>(vm, self);
+    if(data == nullptr) return CaroNull;
+    if(data->widget.deleted) {
+        vm->runtimeError("That %s has already been deleted.", typeofValue(self).c_str());
+        return CaroNull;
+    }
+    CaroGui::deleteWidget(data->widget);
+    data->callback = CaroNull;
+    data->window   = CaroNull;
+    return CaroNull;
+}
+
+// every widget class gets these 2 methods as if they inherit from a Widget superclass
+#define nWidgetMethods(cppClass)\
+    nMethod(cppClass, delete, {\
+        params({});\
+        return deleteWidget(vm, self);\
+    });\
+    nMethod(cppClass, replace, {\
+        params({\
+            {{OBJ_INSTANCE}, true}\
+        });\
+        return replaceWidget(vm, self, args);\
+    })
 
 
 // gui.Label and gui.Button
@@ -90,6 +120,8 @@ nMethod(gui_Label, set_text, {
     return CaroNull;
 });
 
+nWidgetMethods(gui_Label);
+
 
 // button
 
@@ -115,6 +147,8 @@ nMethod(gui_Button, set_text, {
     setWidgetText(vm, self, args);
     return CaroNull;
 });
+
+nWidgetMethods(gui_Button);
 
 
 // textbox and textarea
@@ -160,6 +194,8 @@ nMethod(gui_Textbox, init, {
     return initTextInput(vm, self, args, CaroGui::WIDGET_TEXTBOX);
 });
 
+nWidgetMethods(gui_Textbox);
+
 nClass(gui_Textarea, "gui", "Textarea");
 
 nMethod(gui_Textarea, init, {
@@ -168,6 +204,8 @@ nMethod(gui_Textarea, init, {
     });
     return initTextInput(vm, self, args, CaroGui::WIDGET_TEXTAREA);
 });
+
+nWidgetMethods(gui_Textarea);
 
 
 // select and combobox
@@ -237,6 +275,8 @@ nMethod(gui_Select, init, {
     return CaroNull;
 });
 
+nWidgetMethods(gui_Select);
+
 nClass(gui_ComboBox, "gui", "ComboBox");
 
 nMethod(gui_ComboBox, init, {
@@ -258,6 +298,8 @@ nMethod(gui_ComboBox, init, {
     return CaroNull;
 });
 
+nWidgetMethods(gui_ComboBox);
+
 
 // WINDOW
 
@@ -272,6 +314,10 @@ struct WindowData: NativeData{
         for(const Value& widget: widgets) markValue(widget);
     }
 };
+
+WindowData* windowData(Value value) {
+    return isInstance(value)? dynamic_cast<WindowData*>(asInstance(value)->native.get()): nullptr;
+}
 
 nClass(gui_Window, "gui", "Window");
 
@@ -316,7 +362,9 @@ nMethod(gui_Window, show, {
     data->shown = true;
     string error = CaroGui::show(data->window, [&](size_t widget) {
         Value self = data->widgets[widget];
-        Value callback = widgetData(self)->callback;
+        WidgetData* clicked = widgetData(self);
+        if(clicked == nullptr || clicked->widget.deleted) return true;
+        Value callback = clicked->callback;
         if(callback.type == TYPE_NULL) return true;
         Value result;
         vector<Value> args;
@@ -387,8 +435,12 @@ nMethod(gui_Window, add, {
         vm->runtimeError("%s is not a widget.", typeofValue(args[0]).c_str());
         return CaroNull;
     }
-    if(widget->added) {
+    if(widget->window.type != TYPE_NULL) {
         vm->runtimeError("That %s is already in a window.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
+    if(widget->widget.deleted) {
+        vm->runtimeError("That %s has been deleted.", typeofValue(args[0]).c_str());
         return CaroNull;
     }
     if(data->shown) {
@@ -402,12 +454,71 @@ nMethod(gui_Window, add, {
     if(!gridPosition(vm, args[2], "y", w.y, w.ySpan)) return CaroNull;
 
     // add
-    widget->added = true;
+    widget->window = self;
+    widget->index  = data->widgets.size();
     data->window.widgets.push_back(&w);
     data->widgets.push_back(args[0]);
-    
+
     return CaroNull;
 });
+
+
+// replacing widgets
+
+Value replaceWidget(VM* vm, Value self, const vector<Value>& args) {
+
+    WidgetData* data = nativeData<WidgetData>(vm, self);
+    if(data == nullptr) return CaroNull;
+
+    // check the widget being replaced
+    if(data->widget.deleted) {
+        vm->runtimeError("That %s has been deleted.", typeofValue(self).c_str());
+        return CaroNull;
+    }
+    if(data->window.type == TYPE_NULL) {
+        vm->runtimeError("That %s isn't in a window.", typeofValue(self).c_str());
+        return CaroNull;
+    }
+
+    // check the widget replacing it
+    WidgetData* with = widgetData(args[0]);
+    if(with == nullptr) {
+        vm->runtimeError("%s isn't a widget.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
+    if(with->widget.deleted) {
+        vm->runtimeError("That %s has been deleted.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
+    if(with->window.type != TYPE_NULL) {
+        vm->runtimeError("That %s is already in a window.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
+
+    // get window, position, and index
+    WindowData* window = windowData(data->window);
+    if(window == nullptr) return CaroNull;
+    CaroGui::Widget& w = with->widget;
+    w.x     = data->widget.x;
+    w.y     = data->widget.y;
+    w.xSpan = data->widget.xSpan;
+    w.ySpan = data->widget.ySpan;
+    size_t index = data->index;
+
+    // replace
+    CaroGui::replaceWidget(data->widget, w, index);
+
+    // bookkeeping
+    with->window   = data->window;
+    with->index    = index;
+    data->window   = CaroNull;
+    data->callback = CaroNull;
+    window->window.widgets[index] = &w;
+    window->widgets[index]        = args[0];
+
+    return CaroNull;
+
+}
 
 
 // TEST
