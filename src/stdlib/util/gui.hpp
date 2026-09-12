@@ -24,7 +24,7 @@
 #if defined(__EMSCRIPTEN__)
     #define CARO_GUI_WEB
 
-    #include "gui-styles.hpp"
+    #include "gui_styles.hpp"
 
 #elif defined(_WIN32)
 	#define CARO_GUI_WIN32
@@ -153,7 +153,7 @@ namespace CaroGui{
 
     #ifdef CARO_GUI_WEB
 
-        // add gui-styles.css and the google fonts it needs
+        // add gui_styles.css and the google fonts it needs
         void addStyles() {
             EM_ASM({
 

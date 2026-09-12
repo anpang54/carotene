@@ -9,7 +9,7 @@ results = {}
 
 languages = [
     ("Carotene",    "builds/caro-linux"  ,               "caro"),
-    ("clox with %", "tests/benchmarks/clox-with-modulo", "clox"),
+    ("clox with %", "tests/benchmarks/clox_with_modulo", "clox"),
     ("Lua",         "luajit -j off",                     "lua" ),
     ("Node.js",     "node --jitless --no-expose-wasm",   "js"  ),
     ("PHP",         "php -d opcache.enable_cli=0",       "php" ),
@@ -28,7 +28,7 @@ for i in range(6):
     for language in languages:
 
         start = perf_counter()
-        system(f"{language[1]} tests/benchmarks/find-primes/find-primes.{language[2]}")
+        system(f"{language[1]} tests/benchmarks/find_primes/find_primes.{language[2]}")
         end = perf_counter() - start
 
         if i > 0:    # discard first trial
