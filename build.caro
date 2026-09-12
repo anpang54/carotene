@@ -119,13 +119,13 @@ if(valid) {
     );
 
     if(platform == "web") {
-        if(!fs.exists("src/stdlib/util/gui-styles.css")) {
-            print("Couldn't find src/stdlib/util/gui-styles.css.");
+        if(!fs.exists("src/stdlib/util/gui_styles.css")) {
+            print("Couldn't find src/stdlib/util/gui_styles.css.");
             exit(true);
         }
         sh(
-            "( printf '// Generated from src/stdlib/util/gui-styles.css by build.caro.\n\n#pragma once\n\nconstexpr const char* GUI_STYLES = R\042GUI_STYLES(\n' ; cat src/stdlib/util/gui-styles.css ; printf ')GUI_STYLES\042;\n' )"
-          + " > src/stdlib/util/gui-styles.hpp"
+            "( printf '// Generated from src/stdlib/util/gui_styles.css by build.caro.\n\n#pragma once\n\nconstexpr const char* GUI_STYLES = R\042GUI_STYLES(\n' ; cat src/stdlib/util/gui_styles.css ; printf ')GUI_STYLES\042;\n' )"
+          + " > src/stdlib/util/gui_styles.hpp"
         );
     }
     

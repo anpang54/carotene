@@ -4,4 +4,4 @@ builds
 caro
 optimization_notes
 src/core/licenses.hpp
-src/stdlib/util/gui-styles.hpp
+src/stdlib/util/gui_styles.hpp
