@@ -1,7 +1,24 @@
 {
+
+    // carotene's syntax is rather similar to JS
+    // so just say .caro is JS but disable everything other than the syntax highlighting
+
     "files.associations": {
         "*.caro": "javascript"
     },
-    "js/ts.validate.enabled": false
-    // JS has pretty similar syntax to carotene
+    "js/ts.validate.enabled": false,
+    "js/ts.suggest.enabled": false,
+    "[javascript]": {
+        "editor.quickSuggestions": {
+            "other": false,
+            "comments": false,
+            "strings": false
+        },
+        "editor.suggestOnTriggerCharacters": false,
+        "editor.wordBasedSuggestions": "off",
+        "editor.inlineSuggest.enabled": false,
+        "editor.acceptSuggestionOnEnter": "off",
+        "editor.parameterHints.enabled": false
+    }
+
 }

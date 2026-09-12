@@ -13,6 +13,7 @@
 #include <cstdlib>
 
 #include "../util/natives.hpp"
+#include "../util/gui.hpp"
 
 namespace chrono = std::chrono;
 namespace ranges = std::ranges;
@@ -196,7 +197,7 @@ nFunc(main_wait, "", "wait", {
     params({
         {ANY_NUMERIC, true}
     });
-    std::this_thread::sleep_for(chrono::duration<double>(asNumberTo<double>(args[0])));
+    CaroGui::sleep(asNumberTo<double>(args[0]));
     return CaroNull;
 
 });
@@ -204,7 +205,7 @@ nFunc(main_wait_ms, "", "wait_ms", {
     params({
         {ANY_NUMERIC, true}
     });
-    std::this_thread::sleep_for(chrono::duration<double, std::milli>(asNumberTo<double>(args[0])));
+    CaroGui::sleep(asNumberTo<double>(args[0]) / 1000);
     return CaroNull;
 });
 

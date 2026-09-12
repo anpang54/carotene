@@ -18,6 +18,8 @@
 
 #include <algorithm>
 #include <functional>
+#include <chrono>
+#include <thread>
 
 #if defined(__EMSCRIPTEN__)
     #define CARO_GUI_WEB
@@ -59,6 +61,8 @@
 
 #include "../../core/format.hpp"
 
+namespace chrono = std::chrono;
+
 
 // ASYNCIFY
 
@@ -66,6 +70,12 @@
     EM_ASYNC_JS(int, caroWaitForEvent, (), {
         if(Module.caroEvents.length == 0) await new Promise(resolve => Module.caroWake = resolve);
         return Module.caroEvents.shift();
+    });
+    EM_ASYNC_JS(void, caroWaitForFrame, (), {
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+    });
+    EM_ASYNC_JS(void, caroSleep, (double ms), {
+        await new Promise(resolve => setTimeout(resolve, ms));
     });
 #endif
 
@@ -170,6 +180,14 @@ namespace CaroGui{
                 document.head.appendChild(style);
 
             }, GUI_STYLES);
+        }
+
+        bool isOpen() {
+            return EM_ASM_INT({ return Module.caroContainer? 1: 0; }) != 0;
+        }
+        
+        void update() {
+            if(isOpen()) caroWaitForFrame();
         }
 
         void close() {
@@ -291,7 +309,10 @@ namespace CaroGui{
 
             }
 
-            if(onShow && !onShow()) close();
+            if(onShow) {
+                caroWaitForFrame();
+                if(!onShow()) close();
+            }
 
             // block execution until the window gets closed
             // events: -1 = closed, -2 - i = textbox/textarea/select/combobox i changed, i = widget i clicked or combobox option picked
@@ -393,12 +414,16 @@ namespace CaroGui{
             f(widgetSetHalign,           "gtk_widget_set_halign",             void,          (void*, int))\
             f(widgetSetValign,           "gtk_widget_set_valign",             void,          (void*, int))\
             f(widgetSetSizeRequest,      "gtk_widget_set_size_request",       void,          (void*, int, int))\
+            f(widgetAddTickCallback,     "gtk_widget_add_tick_callback",      unsigned int,  (void*, int(*)(void*, void*, void*), void*, void*))\
+            f(widgetRemoveTickCallback,  "gtk_widget_remove_tick_callback",   void,          (void*, unsigned int))\
             \
             /* GObject */\
             f(signalConnectData,         "g_signal_connect_data",             unsigned long, (void*, const char*, void(*)(), void*, void*, int))\
             \
             /* GLib */\
             f(mainContextIteration,      "g_main_context_iteration",          int,           (void*, int))\
+            f(timeoutAdd,                "g_timeout_add",                     unsigned int,  (unsigned int, int(*)(void*), void*))\
+            f(sourceRemove,              "g_source_remove",                   int,           (unsigned int))\
             f(gFree,                     "g_free",                            void,          (void*))
 
 
@@ -470,6 +495,16 @@ namespace CaroGui{
             *(bool*)closed = true;
             currentWindow = nullptr;
         }
+
+        int onFirstFrame(void*, void*, void* shown) {
+            *(bool*)shown = true;
+            return 1;
+        }
+        int onFrameTimeout(void* shown) {
+            *(bool*)shown = true;
+            return 1;
+        }
+
         void onClicked(void*, void* data) {
             Click* click = (Click*)data;
             if(!(*click->onClick)(click->widget) && currentWindow) gtk().windowDestroy(currentWindow);
@@ -610,8 +645,20 @@ namespace CaroGui{
             gtk().windowPresent       (gtkWindow);
             currentWindow = gtkWindow;
 
+            if(onShow) {
+
+                bool shown = false;
+                unsigned int tick = gtk().widgetAddTickCallback(gtkWindow, onFirstFrame, &shown, nullptr);
+                unsigned int timeout = gtk().timeoutAdd(1000, onFrameTimeout, &shown);
+                while(!shown && !closed) gtk().mainContextIteration(nullptr, true);
+                if(currentWindow) gtk().widgetRemoveTickCallback(gtkWindow, tick);
+                gtk().sourceRemove(timeout);
+
+                if(!onShow() && currentWindow) gtk().windowDestroy(currentWindow);
+
+            }
+
             // block execution until the window gets closed
-            if(onShow && !onShow() && currentWindow) gtk().windowDestroy(currentWindow);
             while(!closed) gtk().mainContextIteration(nullptr, true);
 
             // without this, the window might not close properly
@@ -624,6 +671,16 @@ namespace CaroGui{
 
         void close() {
             if(currentWindow) gtk().windowDestroy(currentWindow);
+        }
+
+        bool isOpen() {
+            return currentWindow != nullptr;
+        }
+
+        // runs everything the toolkit has queued up, which is what actually draws the changes
+        // script code has made. Non-blocking, so it returns as soon as there's nothing left to do.
+        void update() {
+            while(currentWindow && gtk().mainContextIteration(nullptr, false));
         }
 
         void setText(Widget& widget, const string& text) {
@@ -1032,8 +1089,20 @@ namespace CaroGui{
             // show window
             ShowWindow(hwnd, SW_SHOWNORMAL);
 
+            if(onShow) {
+
+                MSG pending;
+                while(PeekMessageW(&pending, nullptr, 0, 0, PM_REMOVE)) {
+                    TranslateMessage(&pending);
+                    DispatchMessageW(&pending);
+                }
+                RedrawWindow(hwnd, nullptr, nullptr, RDW_UPDATENOW | RDW_ALLCHILDREN);
+
+                if(!onShow() && currentWindow) DestroyWindow(currentWindow);
+
+            }
+
             // block execution
-            if(onShow && !onShow() && currentWindow) DestroyWindow(currentWindow);
             MSG message;
             while(GetMessageW(&message, nullptr, 0, 0) > 0) {
                 if(IsDialogMessageW(hwnd, &message)) continue;    // so buttons can be pressed with the keyboard too
@@ -1050,6 +1119,20 @@ namespace CaroGui{
 		
         void close() {
             if(currentWindow) DestroyWindow(currentWindow);
+        }
+
+        bool isOpen() {
+            return currentWindow != nullptr;
+        }
+
+        void update() {
+            MSG message;
+            while(currentWindow && PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
+                if(IsDialogMessageW(currentWindow, &message)) continue;
+                TranslateMessage(&message);
+                DispatchMessageW(&message);
+            }
+            if(currentWindow) RedrawWindow(currentWindow, nullptr, nullptr, RDW_UPDATENOW | RDW_ALLCHILDREN);
         }
 
         void setText(Widget& widget, const string& text) {
@@ -1074,8 +1157,9 @@ namespace CaroGui{
 	
 	#elifdef CARO_GUI_BEAPI
 	
-        const ClickHandler* currentClick = nullptr;
-        const ShowHandler*  currentShow  = nullptr;
+        const ClickHandler* currentClick  = nullptr;
+        const ShowHandler*  currentShow   = nullptr;
+        BWindow*            currentWindow = nullptr;
 
         // BTextView has no modification message, so this keeps the widget's text in sync itself
         class CaroTextView: public BTextView{
@@ -1257,15 +1341,27 @@ namespace CaroGui{
             currentClick = &onClick;
             currentShow  = &onShow;
 			CaroWindow* caroWindow = new CaroWindow(window);
+            currentWindow = caroWindow;
 			caroWindow->Show();
 			if(onShow) caroWindow->PostMessage('show');
 			app.Run();
+            currentWindow = nullptr;
             for(Widget* widget: window.widgets) widget->handle = nullptr;
 			return "";
 		}
 
         void close() {
             if(be_app) be_app->PostMessage(B_QUIT_REQUESTED);
+        }
+
+        bool isOpen() {
+            return currentWindow != nullptr;
+        }
+
+        void update() {
+            if(!currentWindow || !currentWindow->LockLooper()) return;
+            currentWindow->UpdateIfNeeded();
+            currentWindow->UnlockLooper();
         }
 
         void setText(Widget& widget, const string& text) {
@@ -1304,8 +1400,38 @@ namespace CaroGui{
 
         // the haiku convention is to use 4 char chars for ints, which seems kinda funny but we'll follow it
 
-        
+
     #endif
+
+
+    // WAITING
+
+    void sleep(double seconds) {
+
+        #ifdef CARO_GUI_WEB
+
+            caroSleep(seconds * 1000);
+            
+        #else
+
+            const auto slice = chrono::milliseconds(8);
+            auto end = chrono::steady_clock::now() + chrono::duration_cast<chrono::steady_clock::duration>(chrono::duration<double>(seconds));
+            while(true) {
+                auto now = chrono::steady_clock::now();
+                if(now >= end) break;
+                if(!isOpen()) {
+                    std::this_thread::sleep_for(end - now);
+                    break;
+                }
+                update();
+                now = chrono::steady_clock::now();
+                if(now >= end) break;
+                std::this_thread::sleep_for(std::min<chrono::steady_clock::duration>(end - now, slice));
+            }
+
+        #endif
+
+    }
 
 
 }
