@@ -254,7 +254,18 @@ ObjBoundMethod* newBoundMethod(Value receiver, Obj* method) {
 
 // native functions
 
-typedef Value (*NativeFn)   (VM* vm, vector<Value> args);
+struct Args{
+    const Value* values;
+    size_t       count;
+    const Value& operator[](size_t index) const { return this->values[index]; }
+    size_t       size () const { return this->count; }
+    bool         empty() const { return this->count == 0; }
+    const Value* begin() const { return this->values; }
+    const Value* end  () const { return this->values + this->count; }
+    Args         rest () const { return {this->values + 1, this->count - 1}; }
+};
+
+typedef Value (*NativeFn)   (VM* vm, Args args);
 typedef Value (*NativeConst)(VM* vm);
 
 struct ObjNative: Obj{

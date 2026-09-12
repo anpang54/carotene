@@ -652,7 +652,7 @@ class VM{
         bool callNative(ObjNative* native, int argCount, bool withReceiver) {
             Value* first = this->stackTop - argCount - (withReceiver? 1: 0);
             this->hadError = false;
-            Value result = native->function(this, vector<Value>(first, this->stackTop));
+            Value result = native->function(this, Args{first, (size_t)(this->stackTop - first)});
             if(this->hadError) return false;
             this->stackTop -= argCount + 1;
             push(result);
