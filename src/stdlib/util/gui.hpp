@@ -133,6 +133,7 @@ namespace CaroGui{
         void* handle = nullptr;      // the native control
         vector<string> options;      // gui.Select and gui.ComboBox
         int selected = 0;
+        bool deleted = false;
     };
 
     struct Window{
@@ -201,6 +202,83 @@ namespace CaroGui{
             });
         }
 
+        void createWidget(const Widget& widget, size_t index) {
+
+            EM_ASM({
+
+                let element;
+                switch($0) {
+
+                    case 210:
+                        element = document.createElement("span");
+                        break;
+
+                    case 300:
+                        element = document.createElement("button");
+                        element.addEventListener("click", () => Module.caroPush($2));
+                        break;
+
+                    case 320:
+                        element = document.createElement("input");
+                        element.type = "text";
+                        element.addEventListener("input", () => Module.caroPush(-2 - $2));
+                        break;
+
+                    case 321:
+                        element = document.createElement("textarea");
+                        element.rows = 5;
+                        element.addEventListener("input", () => Module.caroPush(-2 - $2));
+                        break;
+
+                    case 322:
+                        element = document.createElement("select");
+                        element.addEventListener("change", () => Module.caroPush(-2 - $2));
+                        break;
+
+                    case 323: {
+                        element = document.createElement("input");
+                        element.type = "text";
+                        const list = document.createElement("datalist");
+                        list.id = `caro-combobox-${$2}`;
+                        element.setAttribute("list", list.id);
+                        Module.caroContainer.appendChild(list);
+                        element.addEventListener("input", (event) => {
+                            Module.caroPush(-2 - $2);
+                            if(!event.inputType || event.inputType == "insertReplacementText") Module.caroPush($2);
+                        });
+                        break;
+                    }
+
+                }
+                
+                if($0 == 320 || $0 == 321 || $0 == 323) {
+                    element.value     = UTF8ToString($1);
+                } else if($0 == 322) {
+                    // do nothing
+                } else {
+                    element.innerText = UTF8ToString($1);
+                }
+
+                element.style.gridColumn = `${$3 + 1} / span ${$4}`;
+                element.style.gridRow    = `${$5 + 1} / span ${$6}`;
+                Module.caroContainer.appendChild(element);
+                Module.caroElements.set($7, element);
+
+            }, widget.type, widget.text.c_str(), (int)index, widget.x, widget.xSpan, widget.y, widget.ySpan, &widget);
+
+            // select/combobox options
+            for(const string& option: widget.options) {
+                EM_ASM({
+                    const option = document.createElement("option");
+                    option.text = UTF8ToString($1);
+                    const element = Module.caroElements.get($0);
+                    (element.list || element).appendChild(option);
+                }, &widget, option.c_str());
+            }
+            if(widget.type == WIDGET_SELECT) EM_ASM({ Module.caroElements.get($0).selectedIndex = $1; }, &widget, widget.selected);
+
+        }
+
         string show(const Window& window, const ClickHandler& onClick, const ShowHandler& onShow = {}) {
 
             if(EM_ASM_INT({ return Module.caroContainer? 1: 0; })) return "A window is already open.";
@@ -209,6 +287,7 @@ namespace CaroGui{
 
             EM_ASM({
 
+                // make container
                 const div = document.createElement("div");
                 div.id = "caro-container";
                 div.style.gap = `${$1}px`;
@@ -230,85 +309,13 @@ namespace CaroGui{
                 
             }, window.title.c_str(), window.spacing);
 
+            // add widgets
             for(size_t i = 0; i < window.widgets.size(); ++i) {
-
                 const Widget& widget = *window.widgets[i];
-
-                EM_ASM({
-
-                    let element;
-                    switch($0) {
-
-                        case 210:
-                            element = document.createElement("span");
-                            break;
-
-                        case 300:
-                            element = document.createElement("button");
-                            element.addEventListener("click", () => Module.caroPush($2));
-                            break;
-
-                        case 320:
-                            element = document.createElement("input");
-                            element.type = "text";
-                            element.addEventListener("input", () => Module.caroPush(-2 - $2));
-                            break;
-
-                        case 321:
-                            element = document.createElement("textarea");
-                            element.rows = 5;
-                            element.addEventListener("input", () => Module.caroPush(-2 - $2));
-                            break;
-
-                        case 322:
-                            element = document.createElement("select");
-                            element.addEventListener("change", () => Module.caroPush(-2 - $2));
-                            break;
-
-                        case 323: {
-                            element = document.createElement("input");
-                            element.type = "text";
-                            const list = document.createElement("datalist");
-                            list.id = `caro-combobox-${$2}`;
-                            element.setAttribute("list", list.id);
-                            Module.caroContainer.appendChild(list);
-                            element.addEventListener("input", (event) => {
-                                Module.caroPush(-2 - $2);
-                                if(!event.inputType || event.inputType == "insertReplacementText") Module.caroPush($2);
-                            });
-                            break;
-                        }
-
-                    }
-
-                    if($0 == 320 || $0 == 321 || $0 == 323) {
-                        element.value     = UTF8ToString($1);
-                    } else if($0 == 322) {
-                        // do nothing
-                    } else {
-                        element.innerText = UTF8ToString($1);
-                    }
-                    
-                    element.style.gridColumn = `${$3 + 1} / span ${$4}`;
-                    element.style.gridRow    = `${$5 + 1} / span ${$6}`;
-                    Module.caroContainer.appendChild(element);
-                    Module.caroElements.set($7, element);
-
-                }, widget.type, widget.text.c_str(), (int)i, widget.x, widget.xSpan, widget.y, widget.ySpan, &widget);
-
-                // select/combobox options
-                for(const string& option: widget.options) {
-                    EM_ASM({
-                        const option = document.createElement("option");
-                        option.text = UTF8ToString($1);
-                        const element = Module.caroElements.get($0);
-                        (element.list || element).appendChild(option);
-                    }, &widget, option.c_str());
-                }
-                if(widget.type == WIDGET_SELECT) EM_ASM({ Module.caroElements.get($0).selectedIndex = $1; }, &widget, widget.selected);
-
+                if(!widget.deleted) createWidget(widget, i);
             }
 
+            // show
             if(onShow) {
                 caroWaitForFrame();
                 if(!onShow()) close();
@@ -322,6 +329,7 @@ namespace CaroGui{
                 if(event <= -2) {
                     size_t index = -2 - event;
                     Widget& widget = *window.widgets[index];
+                    if(widget.deleted) continue;
                     if(widget.type == WIDGET_SELECT) {
                         widget.selected = EM_ASM_INT({ return Module.caroElements.get($0).selectedIndex; }, &widget);
                         if(!onClick(index)) close();
@@ -337,11 +345,29 @@ namespace CaroGui{
                     }
                     continue;
                 }
+                if(window.widgets[event]->deleted) continue;
                 if(!onClick(event)) close();
             }
 
             return "";
 
+        }
+
+        void deleteWidget(Widget& widget) {
+            widget.deleted = true;
+            EM_ASM({
+                const element = Module.caroElements && Module.caroElements.get($0);
+                if(!element) return;
+                if(element.list) element.list.remove();
+                element.remove();
+                Module.caroElements.delete($0);
+            }, &widget);
+            widget.handle = nullptr;
+        }
+
+        void replaceWidget(Widget& widget, Widget& with, size_t index) {
+            deleteWidget(widget);
+            if(isOpen()) createWidget(with, index);
         }
 
         void setText(Widget& widget, const string& text) {
@@ -409,8 +435,10 @@ namespace CaroGui{
             f(scrolledWindowSetHasFrame, "gtk_scrolled_window_set_has_frame", void,          (void*, int))\
             f(gridNew,                   "gtk_grid_new",                      void*,         (void))\
             f(gridAttach,                "gtk_grid_attach",                   void,          (void*, void*, int, int, int, int))\
+            f(gridRemove,                "gtk_grid_remove",                   void,          (void*, void*))\
             f(gridSetRowSpacing,         "gtk_grid_set_row_spacing",          void,          (void*, unsigned int))\
             f(gridSetColumnSpacing,      "gtk_grid_set_column_spacing",       void,          (void*, unsigned int))\
+            f(widgetGetParent,           "gtk_widget_get_parent",             void*,         (void*))\
             f(widgetSetHalign,           "gtk_widget_set_halign",             void,          (void*, int))\
             f(widgetSetValign,           "gtk_widget_set_valign",             void,          (void*, int))\
             f(widgetSetSizeRequest,      "gtk_widget_set_size_request",       void,          (void*, int, int))\
@@ -484,6 +512,7 @@ namespace CaroGui{
         // callbacks
 
         void* currentWindow = nullptr;
+        void* currentGrid   = nullptr;
 
         struct Click{
             size_t widget;
@@ -491,9 +520,13 @@ namespace CaroGui{
             Widget* target = nullptr;
         };
 
+        vector<Click>*      currentClicks = nullptr;
+        const ClickHandler* currentClick  = nullptr;
+
         void onDestroy(void*, void* closed) {
             *(bool*)closed = true;
             currentWindow = nullptr;
+            currentGrid   = nullptr;
         }
 
         int onFirstFrame(void*, void*, void* shown) {
@@ -537,6 +570,90 @@ namespace CaroGui{
         }
 
 
+        void createWidget(void* grid, Widget& widget, size_t index, const ClickHandler& onClick) {
+
+            vector<Click>& clicks = *currentClicks;
+
+            switch(widget.type) {
+
+                case WIDGET_LABEL:
+                    widget.handle = gtk().labelNew(widget.text.c_str());
+                    gtk().gridAttach(grid, widget.handle, widget.x, widget.y, widget.xSpan, widget.ySpan);
+                    break;
+
+                case WIDGET_BUTTON: {
+                    void* button = gtk().buttonNewWithLabel(widget.text.c_str());
+                    gtk().widgetSetHalign(button, 3);
+                    gtk().widgetSetValign(button, 3);
+                    clicks[index] = {index, &onClick};
+                    gtk().signalConnectData(button, "clicked", (void(*)())onClicked, &clicks[index], nullptr, 0);
+                    gtk().gridAttach(grid, button, widget.x, widget.y, widget.xSpan, widget.ySpan);
+                    widget.handle = button;
+                    break;
+                }
+
+                case WIDGET_TEXTBOX: {
+                    void* entry = gtk().entryNew();
+                    gtk().editableSetText(entry, widget.text.c_str());
+                    gtk().widgetSetValign(entry, 3);
+                    gtk().signalConnectData(entry, "changed", (void(*)())onChanged, &widget, nullptr, 0);
+                    gtk().gridAttach(grid, entry, widget.x, widget.y, widget.xSpan, widget.ySpan);
+                    widget.handle = entry;
+                    break;
+                }
+
+                case WIDGET_TEXTAREA: {
+                    void* view   = gtk().textViewNew();
+                    void* buffer = gtk().textViewGetBuffer(view);
+                    gtk().textViewSetWrapMode    (view, 3);    // GTK_WRAP_WORD_CHAR
+                    gtk().textViewSetLeftMargin  (view, 8);    // padding, similar to a GtkEntry's
+                    gtk().textViewSetRightMargin (view, 8);
+                    gtk().textViewSetTopMargin   (view, 6);
+                    gtk().textViewSetBottomMargin(view, 6);
+                    gtk().textBufferSetText(buffer, widget.text.c_str(), -1);
+                    gtk().signalConnectData(buffer, "changed", (void(*)())onBufferChanged, &widget, nullptr, 0);
+                    void* scroll = gtk().scrolledWindowNew();
+                    gtk().scrolledWindowSetChild   (scroll, view);
+                    gtk().scrolledWindowSetHasFrame(scroll, true);
+                    gtk().widgetSetSizeRequest     (scroll, 250, 100);
+                    gtk().gridAttach(grid, scroll, widget.x, widget.y, widget.xSpan, widget.ySpan);
+                    widget.handle = view;
+                    break;
+                }
+
+                case WIDGET_SELECT: {
+                    vector<const char*> strings;
+                    for(const string& option: widget.options) strings.push_back(option.c_str());
+                    strings.push_back(nullptr);
+                    void* dropDown = gtk().dropDownNewFromStrings(strings.data());
+                    gtk().dropDownSetSelected(dropDown, widget.selected);
+                    gtk().widgetSetHalign(dropDown, 3);
+                    gtk().widgetSetValign(dropDown, 3);
+                    clicks[index] = {index, &onClick, &widget};
+                    gtk().signalConnectData(dropDown, "notify::selected", (void(*)())onSelected, &clicks[index], nullptr, 0);
+                    gtk().gridAttach(grid, dropDown, widget.x, widget.y, widget.xSpan, widget.ySpan);
+                    widget.handle = dropDown;
+                    break;
+                }
+
+                case WIDGET_COMBOBOX: {
+                    // todo: GtkComboBoxText has been deprecated since 4.10
+                    void* comboBox = gtk().comboBoxTextNewWithEntry();
+                    for(const string& option: widget.options) gtk().comboBoxTextAppendText(comboBox, option.c_str());
+                    gtk().editableSetText(gtk().comboBoxGetChild(comboBox), widget.text.c_str());
+                    gtk().widgetSetValign(comboBox, 3);
+                    clicks[index] = {index, &onClick, &widget};
+                    gtk().signalConnectData(comboBox, "changed", (void(*)())onComboChanged, &clicks[index], nullptr, 0);
+                    gtk().gridAttach(grid, comboBox, widget.x, widget.y, widget.xSpan, widget.ySpan);
+                    widget.handle = comboBox;
+                    break;
+                }
+
+            }
+
+        }
+
+
         // show
 
         string show(const Window& window, const ClickHandler& onClick, const ShowHandler& onShow = {}) {
@@ -547,6 +664,8 @@ namespace CaroGui{
 
             bool closed = false;
             vector<Click> clicks(window.widgets.size());
+            currentClicks = &clicks;
+            currentClick  = &onClick;
 
             // add widgets
             void* grid = gtk().gridNew();
@@ -554,84 +673,7 @@ namespace CaroGui{
             gtk().gridSetColumnSpacing(grid, window.spacing);
             for(size_t i = 0; i < window.widgets.size(); ++i) {
                 Widget& widget = *window.widgets[i];
-
-                switch(widget.type) {
-
-                    case WIDGET_LABEL:
-                        widget.handle = gtk().labelNew(widget.text.c_str());
-                        gtk().gridAttach(grid, widget.handle, widget.x, widget.y, widget.xSpan, widget.ySpan);
-                        break;
-
-                    case WIDGET_BUTTON: {
-                        void* button = gtk().buttonNewWithLabel(widget.text.c_str());
-                        gtk().widgetSetHalign(button, 3);
-                        gtk().widgetSetValign(button, 3);
-                        clicks[i] = {i, &onClick};
-                        gtk().signalConnectData(button, "clicked", (void(*)())onClicked, &clicks[i], nullptr, 0);
-                        gtk().gridAttach(grid, button, widget.x, widget.y, widget.xSpan, widget.ySpan);
-                        widget.handle = button;
-                        break;
-                    }
-
-                    case WIDGET_TEXTBOX: {
-                        void* entry = gtk().entryNew();
-                        gtk().editableSetText(entry, widget.text.c_str());
-                        gtk().widgetSetValign(entry, 3);
-                        gtk().signalConnectData(entry, "changed", (void(*)())onChanged, &widget, nullptr, 0);
-                        gtk().gridAttach(grid, entry, widget.x, widget.y, widget.xSpan, widget.ySpan);
-                        widget.handle = entry;
-                        break;
-                    }
-
-                    case WIDGET_TEXTAREA: {
-                        void* view   = gtk().textViewNew();
-                        void* buffer = gtk().textViewGetBuffer(view);
-                        gtk().textViewSetWrapMode    (view, 3);    // GTK_WRAP_WORD_CHAR
-                        gtk().textViewSetLeftMargin  (view, 8);    // padding, similar to a GtkEntry's
-                        gtk().textViewSetRightMargin (view, 8);
-                        gtk().textViewSetTopMargin   (view, 6);
-                        gtk().textViewSetBottomMargin(view, 6);
-                        gtk().textBufferSetText(buffer, widget.text.c_str(), -1);
-                        gtk().signalConnectData(buffer, "changed", (void(*)())onBufferChanged, &widget, nullptr, 0);
-                        void* scroll = gtk().scrolledWindowNew();
-                        gtk().scrolledWindowSetChild   (scroll, view);
-                        gtk().scrolledWindowSetHasFrame(scroll, true);
-                        gtk().widgetSetSizeRequest     (scroll, 250, 100);
-                        gtk().gridAttach(grid, scroll, widget.x, widget.y, widget.xSpan, widget.ySpan);
-                        widget.handle = view;
-                        break;
-                    }
-
-                    case WIDGET_SELECT: {
-                        vector<const char*> strings;
-                        for(const string& option: widget.options) strings.push_back(option.c_str());
-                        strings.push_back(nullptr);
-                        void* dropDown = gtk().dropDownNewFromStrings(strings.data());
-                        gtk().dropDownSetSelected(dropDown, widget.selected);
-                        gtk().widgetSetHalign(dropDown, 3);
-                        gtk().widgetSetValign(dropDown, 3);
-                        clicks[i] = {i, &onClick, &widget};
-                        gtk().signalConnectData(dropDown, "notify::selected", (void(*)())onSelected, &clicks[i], nullptr, 0);
-                        gtk().gridAttach(grid, dropDown, widget.x, widget.y, widget.xSpan, widget.ySpan);
-                        widget.handle = dropDown;
-                        break;
-                    }
-
-                    case WIDGET_COMBOBOX: {
-                        // todo: GtkComboBoxText has been deprecated since 4.10
-                        void* comboBox = gtk().comboBoxTextNewWithEntry();
-                        for(const string& option: widget.options) gtk().comboBoxTextAppendText(comboBox, option.c_str());
-                        gtk().editableSetText(gtk().comboBoxGetChild(comboBox), widget.text.c_str());
-                        gtk().widgetSetValign(comboBox, 3);
-                        clicks[i] = {i, &onClick, &widget};
-                        gtk().signalConnectData(comboBox, "changed", (void(*)())onComboChanged, &clicks[i], nullptr, 0);
-                        gtk().gridAttach(grid, comboBox, widget.x, widget.y, widget.xSpan, widget.ySpan);
-                        widget.handle = comboBox;
-                        break;
-                    }
-
-                }
-
+                if(!widget.deleted) createWidget(grid, widget, i, onClick);
             }
             gtk().widgetSetHalign(grid, 3);
             gtk().widgetSetValign(grid, 3);
@@ -644,6 +686,7 @@ namespace CaroGui{
             gtk().signalConnectData   (gtkWindow, "destroy", (void(*)())onDestroy, &closed, nullptr, 0);
             gtk().windowPresent       (gtkWindow);
             currentWindow = gtkWindow;
+            currentGrid   = grid;
 
             if(onShow) {
 
@@ -664,9 +707,27 @@ namespace CaroGui{
             // without this, the window might not close properly
             while(gtk().mainContextIteration(nullptr, false));
 
+            currentGrid   = nullptr;
+            currentClicks = nullptr;
+            currentClick  = nullptr;
             for(Widget* widget: window.widgets) widget->handle = nullptr;
             return "";
 
+        }
+
+        void deleteWidget(Widget& widget) {
+            widget.deleted = true;
+            if(currentGrid && widget.handle) {
+                void* child = widget.handle;
+                while(child && gtk().widgetGetParent(child) != currentGrid) child = gtk().widgetGetParent(child);
+                if(child) gtk().gridRemove(currentGrid, child);
+            }
+            widget.handle = nullptr;
+        }
+
+        void replaceWidget(Widget& widget, Widget& with, size_t index) {
+            deleteWidget(widget);
+            if(currentGrid && currentClicks && currentClick) createWidget(currentGrid, with, index, *currentClick);
         }
 
         void close() {
@@ -816,6 +877,108 @@ namespace CaroGui{
             return tracks;
         }
 
+        void createWidget(HWND hwnd, Widget& widget, size_t index) {
+
+            HWND control = nullptr;
+
+            switch(widget.type) {
+
+                case WIDGET_LABEL:
+                    control = CreateWindowExW(
+                        0,
+                        L"STATIC",
+                        wide(widget.text).c_str(),
+                        WS_CHILD | WS_VISIBLE | SS_CENTER,
+                        0, 0, 0, 0,
+                        hwnd,
+                        (HMENU)(INT_PTR)(firstId + index),
+                        (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
+                        nullptr
+                    );
+                    break;
+
+                case WIDGET_BUTTON:
+                    control = CreateWindowExW(
+                        0,
+                        L"BUTTON",
+                        wide(widget.text).c_str(),
+                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+                        0, 0, 0, 0,
+                        hwnd,
+                        (HMENU)(INT_PTR)(firstId + index),
+                        (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
+                        nullptr
+                    );
+                    break;
+
+                case WIDGET_TEXTBOX:
+                    control = CreateWindowExW(
+                        WS_EX_CLIENTEDGE,
+                        L"EDIT",
+                        wide(widget.text).c_str(),
+                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
+                        0, 0, 0, 0,
+                        hwnd,
+                        (HMENU)(INT_PTR)(firstId + index),
+                        (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
+                        nullptr
+                    );
+                    break;
+
+                case WIDGET_TEXTAREA:
+                    control = CreateWindowExW(
+                        WS_EX_CLIENTEDGE,
+                        L"EDIT",
+                        wide(toCRLF(widget.text)).c_str(),
+                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN,
+                        0, 0, 0, 0,
+                        hwnd,
+                        (HMENU)(INT_PTR)(firstId + index),
+                        (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
+                        nullptr
+                    );
+                    break;
+
+                case WIDGET_SELECT:
+                    control = CreateWindowExW(
+                        0,
+                        L"COMBOBOX",
+                        L"",
+                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
+                        0, 0, 0, 0,
+                        hwnd,
+                        (HMENU)(INT_PTR)(firstId + index),
+                        (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
+                        nullptr
+                    );
+                    for(const string& option: widget.options) SendMessageW(control, CB_ADDSTRING, 0, (LPARAM)wide(option).c_str());
+                    SendMessageW(control, CB_SETCURSEL, widget.selected, 0);
+                    break;
+
+                case WIDGET_COMBOBOX:
+                    control = CreateWindowExW(
+                        0,
+                        L"COMBOBOX",
+                        L"",
+                        WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL,
+                        0, 0, 0, 0,
+                        hwnd,
+                        (HMENU)(INT_PTR)(firstId + index),
+                        (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
+                        nullptr
+                    );
+                    for(const string& option: widget.options) SendMessageW(control, CB_ADDSTRING, 0, (LPARAM)wide(option).c_str());
+                    SetWindowTextW(control, wide(widget.text).c_str());
+                    break;
+
+            }
+
+            if(control == nullptr) return;
+            SendMessageW(control, WM_SETFONT, (WPARAM)guiFont(), true);
+            widget.handle = control;
+
+        }
+
         // callback
         LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
 
@@ -824,106 +987,8 @@ namespace CaroGui{
                 case WM_CREATE: {
 
                     for(size_t i = 0; i < currentLayout->widgets.size(); ++i) {
-
                         Widget& widget = *currentLayout->widgets[i];
-
-                        HWND control;
-                        
-                        switch(widget.type) {
-                            
-                            case WIDGET_LABEL:
-                                control = CreateWindowExW(
-                                    0,
-                                    L"STATIC",
-                                    wide(widget.text).c_str(),
-                                    WS_CHILD | WS_VISIBLE | SS_CENTER,
-                                    0, 0, 0, 0,
-                                    hwnd,
-                                    (HMENU)(INT_PTR)(firstId + i),
-                                    (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
-                                    nullptr
-                                );
-                                break;
-
-                            case WIDGET_BUTTON:
-                                control = CreateWindowExW(
-                                    0,
-                                    L"BUTTON",
-                                    wide(widget.text).c_str(),
-                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
-                                    0, 0, 0, 0,
-                                    hwnd,
-                                    (HMENU)(INT_PTR)(firstId + i),
-                                    (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
-                                    nullptr
-                                );
-                                break;
-
-                            case WIDGET_TEXTBOX:
-                                control = CreateWindowExW(
-                                    WS_EX_CLIENTEDGE,
-                                    L"EDIT",
-                                    wide(widget.text).c_str(),
-                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
-                                    0, 0, 0, 0,
-                                    hwnd,
-                                    (HMENU)(INT_PTR)(firstId + i),
-                                    (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
-                                    nullptr
-                                );
-                                break;
-
-                            case WIDGET_TEXTAREA:
-                                control = CreateWindowExW(
-                                    WS_EX_CLIENTEDGE,
-                                    L"EDIT",
-                                    wide(toCRLF(widget.text)).c_str(),
-                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN,
-                                    0, 0, 0, 0,
-                                    hwnd,
-                                    (HMENU)(INT_PTR)(firstId + i),
-                                    (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
-                                    nullptr
-                                );
-                                break;
-
-                            case WIDGET_SELECT:
-                                control = CreateWindowExW(
-                                    0,
-                                    L"COMBOBOX",
-                                    L"",
-                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
-                                    0, 0, 0, 0,
-                                    hwnd,
-                                    (HMENU)(INT_PTR)(firstId + i),
-                                    (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
-                                    nullptr
-                                );
-                                for(const string& option: widget.options) SendMessageW(control, CB_ADDSTRING, 0, (LPARAM)wide(option).c_str());
-                                SendMessageW(control, CB_SETCURSEL, widget.selected, 0);
-                                break;
-
-                            case WIDGET_COMBOBOX:
-                                control = CreateWindowExW(
-                                    0,
-                                    L"COMBOBOX",
-                                    L"",
-                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL,
-                                    0, 0, 0, 0,
-                                    hwnd,
-                                    (HMENU)(INT_PTR)(firstId + i),
-                                    (HINSTANCE)GetWindowLongPtrW(hwnd, GWLP_HINSTANCE),
-                                    nullptr
-                                );
-                                for(const string& option: widget.options) SendMessageW(control, CB_ADDSTRING, 0, (LPARAM)wide(option).c_str());
-                                SetWindowTextW(control, wide(widget.text).c_str());
-                                break;
-
-                        }
-
-                        SendMessageW(control, WM_SETFONT, (WPARAM)guiFont(), true);
-                        widget.handle = control;
-
+                        if(!widget.deleted) createWidget(hwnd, widget, i);
                     }
 
                     return 0;
@@ -940,6 +1005,10 @@ namespace CaroGui{
 
                     vector<Span> xSpans;
                     for(const Widget* widget: widgets) {
+                        if(widget->deleted) {
+                            xSpans.push_back({0, 0, 0});
+                            continue;
+                        }
                         int size;
                         switch(widget->type) {
                             case WIDGET_LABEL:    size = measureText(hwnd, widget->text, available).cx;                                           break;
@@ -963,6 +1032,11 @@ namespace CaroGui{
                     vector<Span> ySpans;
                     vector<int>  heights;
                     for(const Widget* widget: widgets) {
+                        if(widget->deleted) {
+                            heights.push_back(0);
+                            ySpans.push_back({0, 0, 0});
+                            continue;
+                        }
                         int cellWidth = trackSize(columns, widget->x, widget->xSpan);
                         switch(widget->type) {
                             case WIDGET_LABEL:    heights.push_back(measureText(hwnd, widget->text, cellWidth).cy); break;
@@ -980,6 +1054,7 @@ namespace CaroGui{
                     int top  = (height - trackSize(rows,    0, (int)rows.size()   )) / 2;
                     for(size_t i = 0; i < widgets.size(); ++i) {
                         const Widget& widget = *widgets[i];
+                        if(widget.deleted) continue;
                         int cellX      = left + trackStart(columns, widget.x);
                         int cellY      = top  + trackStart(rows,    widget.y);
                         int cellWidth  = trackSize(columns, widget.x, widget.xSpan);
@@ -1005,6 +1080,7 @@ namespace CaroGui{
                     int id = LOWORD(wParam) - firstId;
                     if(id < 0 || id >= (int)currentLayout->widgets.size()) break;
                     Widget& widget = *currentLayout->widgets[id];
+                    if(widget.deleted) return 0;
                     if(widget.type == WIDGET_BUTTON) {
                         if(!(*currentClick)(id) && currentWindow) DestroyWindow(currentWindow);
                         return 0;
@@ -1117,6 +1193,28 @@ namespace CaroGui{
             
         }
 		
+        void relayout() {
+            if(!currentWindow) return;
+            RECT client;
+            GetClientRect(currentWindow, &client);
+            SendMessageW(currentWindow, WM_SIZE, SIZE_RESTORED, MAKELPARAM(client.right, client.bottom));
+        }
+
+        void deleteWidget(Widget& widget) {
+            widget.deleted = true;
+            if(widget.handle) DestroyWindow((HWND)widget.handle);
+            widget.handle = nullptr;
+            relayout();
+        }
+
+        void replaceWidget(Widget& widget, Widget& with, size_t index) {
+            widget.deleted = true;
+            if(widget.handle) DestroyWindow((HWND)widget.handle);
+            widget.handle = nullptr;
+            if(currentWindow) createWidget(currentWindow, with, index);
+            relayout();
+        }
+
         void close() {
             if(currentWindow) DestroyWindow(currentWindow);
         }
@@ -1140,10 +1238,7 @@ namespace CaroGui{
             widget.text = text;
             if(!currentWindow || !widget.handle) return;
             SetWindowTextW((HWND)widget.handle, wide(widget.type == WIDGET_TEXTAREA? toCRLF(text): text).c_str());
-
-            RECT client;
-            GetClientRect(currentWindow, &client);
-            SendMessageW(currentWindow, WM_SIZE, SIZE_RESTORED, MAKELPARAM(client.right, client.bottom));
+            relayout();
         }
 
         void setSelected(Widget& widget, int index) {
@@ -1160,6 +1255,7 @@ namespace CaroGui{
         const ClickHandler* currentClick  = nullptr;
         const ShowHandler*  currentShow   = nullptr;
         BWindow*            currentWindow = nullptr;
+        BGridLayout*        currentGrid   = nullptr;
 
         // BTextView has no modification message, so this keeps the widget's text in sync itself
         class CaroTextView: public BTextView{
@@ -1190,10 +1286,80 @@ namespace CaroGui{
 
         };
 
+        void addWidget(BGridLayout* grid, Widget& widget, size_t index) {
+
+            BView* view = nullptr;
+
+            switch(widget.type) {
+
+                case WIDGET_LABEL:
+                    view = new BStringView("label", widget.text.c_str());
+                    break;
+
+                case WIDGET_BUTTON: {
+                    BMessage* message = new BMessage('clik');
+                    message->AddInt32("widget", (int32)index);
+                    view = new BButton("button", widget.text.c_str(), message);
+                    break;
+                }
+
+                case WIDGET_TEXTBOX: {
+                    BTextControl* textbox = new BTextControl("textbox", nullptr, widget.text.c_str(), nullptr);
+                    BMessage* message = new BMessage('chtx');
+                    message->AddPointer("widget", &widget);
+                    textbox->SetModificationMessage(message);
+                    view = textbox;
+                    break;
+                }
+
+                case WIDGET_TEXTAREA: {
+                    BScrollView* scroll = new BScrollView("Textarea scroll", new CaroTextView(widget), 0, false, true);
+                    scroll->SetExplicitMinSize(BSize(250, 100));
+                    view = scroll;
+                    break;
+                }
+
+                // beapi doesn't have a combobox and the "workaround" doesn't really work so just make it a select
+                case WIDGET_SELECT: case WIDGET_COMBOBOX: {
+                    if(widget.type == WIDGET_COMBOBOX) {
+                        auto found = std::ranges::find(widget.options, widget.text);
+                        widget.selected = found == widget.options.end()? 0: (int)(found - widget.options.begin());
+                        widget.text = widget.options[widget.selected];
+                    }
+                    BPopUpMenu* menu = new BPopUpMenu("select");
+                    for(size_t j = 0; j < widget.options.size(); ++j) {
+                        BMessage* message = new BMessage('slct');
+                        message->AddPointer("widget", &widget);
+                        message->AddInt32("index",  (int32)index);
+                        message->AddInt32("option", (int32)j);
+                        menu->AddItem(new BMenuItem(widget.options[j].c_str(), message));
+                    }
+                    if(BMenuItem* item = menu->ItemAt(widget.selected)) item->SetMarked(true);
+                    view = new BMenuField("select", nullptr, menu);
+                    break;
+                }
+
+            }
+
+            if(view == nullptr) return;
+
+            BLayoutItem* item = grid->AddView(view, widget.x, widget.y, widget.xSpan, widget.ySpan);
+            if(item == nullptr) {
+                delete view;
+                return;
+            }
+            item->SetExplicitAlignment(BAlignment(
+                widget.type == WIDGET_TEXTBOX || widget.type == WIDGET_TEXTAREA? B_ALIGN_USE_FULL_WIDTH:  B_ALIGN_HORIZONTAL_CENTER,
+                widget.type == WIDGET_TEXTAREA?                                  B_ALIGN_USE_FULL_HEIGHT: B_ALIGN_VERTICAL_CENTER
+            ));
+            widget.handle = view;
+
+        }
+
 		class CaroWindow: public BWindow{
-	
+
 			public:
-			
+
 				CaroWindow(const Window& window):
 
                     // make window
@@ -1207,90 +1373,26 @@ namespace CaroGui{
                     // add widgets
 					{
 
-                        // start building
+                        // make builder and grid
 						BLayoutBuilder::Group<> builder(this, B_VERTICAL, B_USE_DEFAULT_SPACING);
+                        BGridLayout* grid = new BGridLayout(window.spacing, window.spacing);
+
+                        // add stuff to builder
 						builder
                             .SetInsets(B_USE_WINDOW_INSETS)    // set insets
                             .AddGlue();                        // top glue
-
-                        // grid
-						BGridLayout* grid = new BGridLayout(window.spacing, window.spacing);
-						builder.AddGroup(B_HORIZONTAL)
-							        .AddGlue()    // left glue
-							        .Add(grid)    // content
-							        .AddGlue()    // right glue
-                                .End()
-                                .AddGlue();       // bottom glue
+                            .AddGroup(B_HORIZONTAL)
+                                .AddGlue()                     // left glue
+                                .Add(grid)                     // content
+                                .AddGlue()                     // right glue
+                            .End()
+                            .AddGlue();                        // bottom glue
+						currentGrid = grid;
 
                         // widgets
 						for(size_t i = 0; i < window.widgets.size(); ++i) {
-
 							Widget& widget = *window.widgets[i];
-							BView* view;
-
-							switch(widget.type) {
-
-                                case WIDGET_LABEL:
-                                    view = new BStringView("label", widget.text.c_str());
-                                    break;
-                                
-                                case WIDGET_BUTTON: {
-                                    BMessage* message = new BMessage('clik');
-                                    message->AddInt32("widget", (int32)i);
-                                    view = new BButton("button", widget.text.c_str(), message);
-                                    break;
-                                }
-
-                                case WIDGET_TEXTBOX: {
-                                    BTextControl* textbox = new BTextControl("textbox", nullptr, widget.text.c_str(), nullptr);
-                                    BMessage* message = new BMessage('chtx');
-                                    message->AddPointer("widget", &widget);
-                                    textbox->SetModificationMessage(message);
-                                    view = textbox;
-                                    break;
-                                }
-
-                                case WIDGET_TEXTAREA: {
-                                    BScrollView* scroll = new BScrollView("Textarea scroll", new CaroTextView(widget), 0, false, true);
-                                    scroll->SetExplicitMinSize(BSize(250, 100));
-                                    view = scroll;
-                                    break;
-                                }
-
-                                // beapi doesn't have a combobox and the "workaround" doesn't really work so just make it a select
-                                case WIDGET_SELECT: case WIDGET_COMBOBOX: {
-                                    if(widget.type == WIDGET_COMBOBOX) {
-                                        auto found = std::ranges::find(widget.options, widget.text);
-                                        widget.selected = found == widget.options.end()? 0: (int)(found - widget.options.begin());
-                                        widget.text = widget.options[widget.selected];
-                                    }
-                                    BPopUpMenu* menu = new BPopUpMenu("select");
-                                    for(size_t j = 0; j < widget.options.size(); ++j) {
-                                        BMessage* message = new BMessage('slct');
-                                        message->AddPointer("widget", &widget);
-                                        message->AddInt32("index",  (int32)i);
-                                        message->AddInt32("option", (int32)j);
-                                        menu->AddItem(new BMenuItem(widget.options[j].c_str(), message));
-                                    }
-                                    if(BMenuItem* item = menu->ItemAt(widget.selected)) item->SetMarked(true);
-                                    view = new BMenuField("select", nullptr, menu);
-                                    break;
-                                }
-
-							}
-
-                            // fails if the cells overlap another widget
-							BLayoutItem* item = grid->AddView(view, widget.x, widget.y, widget.xSpan, widget.ySpan);
-							if(item == nullptr) {
-								delete view;
-								continue;
-							}
-							item->SetExplicitAlignment(BAlignment(
-                                widget.type == WIDGET_TEXTBOX || widget.type == WIDGET_TEXTAREA? B_ALIGN_USE_FULL_WIDTH:  B_ALIGN_HORIZONTAL_CENTER,
-                                widget.type == WIDGET_TEXTAREA?                                  B_ALIGN_USE_FULL_HEIGHT: B_ALIGN_VERTICAL_CENTER
-                            ));
-                            widget.handle = view;
-
+							if(!widget.deleted) addWidget(grid, widget, i);
 						}
 
                         // layout
@@ -1346,9 +1448,29 @@ namespace CaroGui{
 			if(onShow) caroWindow->PostMessage('show');
 			app.Run();
             currentWindow = nullptr;
+            currentGrid   = nullptr;
             for(Widget* widget: window.widgets) widget->handle = nullptr;
 			return "";
 		}
+
+        void deleteWidget(Widget& widget) {
+            widget.deleted = true;
+            BView* view = (BView*)widget.handle;
+            widget.handle = nullptr;
+            if(view == nullptr || currentWindow == nullptr || !currentWindow->LockLooper()) return;
+            view->RemoveSelf();
+            currentWindow->Layout(true);
+            currentWindow->UnlockLooper();
+            delete view;
+        }
+
+        void replaceWidget(Widget& widget, Widget& with, size_t index) {
+            deleteWidget(widget);
+            if(currentWindow == nullptr || currentGrid == nullptr || !currentWindow->LockLooper()) return;
+            addWidget(currentGrid, with, index);
+            currentWindow->Layout(true);
+            currentWindow->UnlockLooper();
+        }
 
         void close() {
             if(be_app) be_app->PostMessage(B_QUIT_REQUESTED);
