@@ -91,6 +91,37 @@ nBuiltin(OBJ_STRING, contains, {
 
 // transformations
 
+nBuiltin(OBJ_STRING, sub, {
+    params({
+        {ANY_NUMERIC, true },
+        {ANY_NUMERIC, false}
+    });
+
+    const string& str = SELF;
+
+    // check starting position
+    double requestedStart = asNumberTo<double>(args[0]);
+    if(requestedStart < 0 || requestedStart > (double)str.size() || std::isnan(requestedStart)) {
+        vm->runtimeError("Invalid substring start.");
+        return CaroNull;
+    }
+    size_t start = static_cast<size_t>(requestedStart);
+
+    // check substring length
+    size_t length = str.size() - start;
+    if(args.size() >= 2) {
+        double requestedLength = asNumberTo<double>(args[1]);
+        if(requestedLength < 0 || std::isnan(requestedLength)) {
+            vm->runtimeError("Invalid substring length.");
+            return CaroNull;
+        }
+        if(requestedLength < (double)length) length = static_cast<size_t>(requestedLength);
+    }
+
+    return CaroObj(copyString(str.substr(start, length)));
+
+});
+
 nBuiltin(OBJ_STRING, replace, {
     params({
         {{OBJ_STRING}, true },
