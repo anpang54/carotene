@@ -15,7 +15,6 @@
 
 #define SELF    asString(self)   ->str
 #define ARGS(n) asString(args[n])->str
-#define FSELF   asString(self)   ->fString
 
 
 // METHODS
@@ -111,17 +110,17 @@ nBuiltin(OBJ_STRING, replace, {
 
     string result = SELF;
     replace(result, ARGS(0), ARGS(1), count);
-    return CaroObj(copyString(std::move(result), FSELF));
+    return CaroObj(copyString(std::move(result)));
 
 });
 
 nBuiltin(OBJ_STRING, lower, {
     params({});
-    return CaroObj(copyString(lower(SELF), FSELF));
+    return CaroObj(copyString(lower(SELF)));
 });
 nBuiltin(OBJ_STRING, upper, {
     params({});
-    return CaroObj(copyString(upper(SELF), FSELF));
+    return CaroObj(copyString(upper(SELF)));
 });
 
 nBuiltin(OBJ_STRING, capitalize, {
@@ -130,7 +129,7 @@ nBuiltin(OBJ_STRING, capitalize, {
     if(!result.empty()) {
         result[0] = std::toupper(static_cast<unsigned char>(result[0]));
     }
-    return CaroObj(copyString(std::move(result), FSELF));
+    return CaroObj(copyString(std::move(result)));
 });
 
 nBuiltin(OBJ_STRING, swap_case, {
@@ -141,20 +140,20 @@ nBuiltin(OBJ_STRING, swap_case, {
         else if(std::islower(c)) return std::toupper(c);
         return c;
     });
-    return CaroObj(copyString(std::move(result), FSELF));
+    return CaroObj(copyString(std::move(result)));
 });
 
 nBuiltin(OBJ_STRING, trim, {
     params({});
-    return CaroObj(copyString(trim(SELF), FSELF));
+    return CaroObj(copyString(trim(SELF)));
 });
 nBuiltin(OBJ_STRING, trim_left, {
     params({});
-    return CaroObj(copyString(leftTrim(SELF), FSELF));
+    return CaroObj(copyString(leftTrim(SELF)));
 });
 nBuiltin(OBJ_STRING, trim_right, {
     params({});
-    return CaroObj(copyString(rightTrim(SELF), FSELF));
+    return CaroObj(copyString(rightTrim(SELF)));
 });
 
 #define nStringPad(caroName, joined)\
@@ -185,11 +184,11 @@ nBuiltin(OBJ_STRING, trim_right, {
         \
         /* return string if it's already long enough */\
         const string& str = SELF;\
-        if(str.size() >= targetLength) return CaroObj(copyString(str, FSELF));\
+        if(str.size() >= targetLength) return CaroObj(copyString(str));\
         \
         /* pad */\
         string padding(targetLength - str.size(), paddingChar);\
-        return CaroObj(copyString(joined, FSELF));\
+        return CaroObj(copyString(joined));\
         \
     })
 
@@ -207,7 +206,7 @@ nBuiltin(OBJ_STRING, split, {
     GCPause pause;
     vector<Value> values;
     for(string& piece: split(SELF, delimiter)) {
-        values.push_back(CaroObj(copyString(std::move(piece), FSELF)));
+        values.push_back(CaroObj(copyString(std::move(piece))));
     }
     return CaroObj(copyArray(std::move(values)));
 });
@@ -215,4 +214,3 @@ nBuiltin(OBJ_STRING, split, {
 
 #undef SELF
 #undef ARGS
-#undef FSELF

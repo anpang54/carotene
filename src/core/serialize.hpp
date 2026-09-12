@@ -93,7 +93,6 @@ void serializeValue(Writer& w, Value& value) {
             w.writeUint8(obj->type);
             switch(obj->type) {
                 case OBJ_STRING:
-                    w.writeUint8(static_cast<ObjString*>(obj)->fString);
                     w.writeString(static_cast<ObjString*>(obj)->str);
                     break;
                 case OBJ_FUNCTION:
@@ -215,10 +214,8 @@ Value deserializeValue(Reader& r) {
         case TYPE_OBJ: {
             uint8_t objType = r.readUint8();
             switch(objType) {
-                case OBJ_STRING: {
-                    bool fString = r.readUint8();
-                    return CaroObj(copyString(r.readString(), fString));
-                }
+                case OBJ_STRING:
+                    return CaroObj(copyString(r.readString()));
                 case OBJ_FUNCTION: return CaroObj(deserializeFunction(r));
                 default: break;    // unreachable
             }

@@ -20,29 +20,22 @@ namespace ranges = std::ranges;
 
 // GENERAL
 
+void printFormattedValue(const Value& value, bool newline = true) {
+    if(isString(value)) {
+        printFormatted(asString(value)->str, newline);
+    } else {
+        cout << printValue(value);
+        if(newline) cout << '\n';
+    }
+}
+
 nFunc(main_print, "", "print", {
     params({
         {{},          true },
         {{TYPE_BOOL}, false}
     });
 
-    #ifdef __EMSCRIPTEN__
-        if(isString(args[0]) && asString(args[0])->fString) {
-            auto [text, cssRules] = formatString(asString(args[0])->str);
-            string js = "console.log(\"" + escapeJS(text) + "\"";
-            for(const string& rule: cssRules) {
-                js += ", \"" + escapeJS(rule) + "\"";
-            }
-            js += ")";
-            runJS(js);
-            return CaroNull;
-        }
-    #endif
-
-    cout << printValue(args[0]);
-    if(args.size() < 2 || !isFalsy(args[1])) {
-        cout << '\n';
-    }
+    printFormattedValue(args[0], args.size() < 2 || !isFalsy(args[1]));
     return CaroNull;
 
 });
@@ -53,7 +46,7 @@ nFunc(main_input, "", "input", {
     });
 
     if(args.size() >= 1) {
-        cout << printValue(args[0]);
+        printFormattedValue(args[0], false);
     }
     string result;
     std::getline(cin, result);
@@ -83,6 +76,16 @@ nFunc(main_log, "", "log", {
                           logType.front(), hms.hours().count(), hms.minutes().count(), hms.seconds().count(), hms.subseconds().count()
                       );
 
+    string text;
+    vector<string> cssRules;
+    if(isString(args[1])) {
+        auto formatted = formatString(asString(args[1])->str);
+        text     = std::move(formatted.first);
+        cssRules = std::move(formatted.second);
+    } else {
+        text = printValue(args[1]);
+    }
+
     // format
     string color;
     bool bold = args.size() >= 3 && isTruthy(args[2]);
@@ -97,8 +100,12 @@ nFunc(main_log, "", "log", {
             // hex codes are from https://color-palette.hexdocs.pm/ansi_color_codes.html
             // has the # so that vscode gives a fancy color box
         }
-        string css = "color: " + color + (bold? "; font-weight: bold": "");
-        runJS("console.log(\"%c" + mainText + printValue(args[1]) + "\", \"" + css + "\")");
+        string css = "color: " + color + (bold? "; font-weight: bold": "") + "; ";
+
+        vector<string> rules = {css};
+        for(const string& rule: cssRules) rules.push_back(css + rule);
+
+        runJS(consoleLogJS("%c" + mainText + text, rules));
 
     #else
 
@@ -109,7 +116,11 @@ nFunc(main_log, "", "log", {
             case 'o': color = "82";  break;
             case 'i': color = "45";  break;
         }
-        cout << "\033[38;5;" << color << "m" << (bold? "\033[1m": "") << mainText << printValue(args[1]) << "\033[0m\n";
+        string style = "\033[38;5;" + color + "m" + (bold? "\033[1m": "");
+
+        replace(text, codes.at("").first, codes.at("").first + style);
+
+        cout << style << mainText << text << "\033[0m\n";
 
     #endif
 

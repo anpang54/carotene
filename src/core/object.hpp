@@ -57,7 +57,6 @@ struct Obj{
 
 struct ObjString: Obj{
     string str;
-    bool fString = false;
     bool immutable = false;
 };
     // just a wrapper around an std::string
@@ -69,21 +68,16 @@ ObjString* asString(Value value) {
     return static_cast<ObjString*>(value.as.obj);
 }
 
-string renderString(ObjString* str) {
-    return str->fString? formatString(str->str).first: str->str;
-}
-
-ObjString* copyString(string str, bool fString = false) {
+ObjString* copyString(string str) {
     maybeCollect();
-    ObjString* object = new ObjString({OBJ_STRING}, std::move(str), fString);
+    ObjString* object = new ObjString({OBJ_STRING}, std::move(str));
     objects.push_back(object);
     return object;
 }
 
 Value copyIfString(const Value& value) {
     if(!isString(value)) return value;
-    ObjString* str = asString(value);
-    return CaroObj(copyString(str->str, str->fString));
+    return CaroObj(copyString(asString(value)->str));
 }
 
 
@@ -379,7 +373,7 @@ string printObject(Obj* object) {
     switch(object->type) {
 
         case OBJ_STRING:
-            return renderString(static_cast<ObjString*>(object));
+            return static_cast<ObjString*>(object)->str;
 
         case OBJ_ARRAY: {
 
