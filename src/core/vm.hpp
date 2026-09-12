@@ -746,6 +746,20 @@ class VM{
         }
 
 
+        // globals
+
+        [[gnu::noinline]] Value* resolveGlobal(Chunk& chunk, uint8_t index) {
+            ObjString* name = asString(chunk.constants[index]);
+            auto found = this->globals.find(name->str);
+            if(found == this->globals.end()) {
+                runtimeError("Undefined variable '%s'.", name->str.c_str());
+                return nullptr;
+            }
+            chunk.globalCache[index] = &found->second;
+            return &found->second;
+        }
+
+
         // run
 
         InterpretResult run(size_t exitDepth = 0, Value* result = nullptr) {
@@ -911,14 +925,14 @@ class VM{
                     }
 
                     case OP_GET_GLOBAL: {
-                        ObjString* name = asString(constants[READ_BYTE()]);
-                        auto found = this->globals.find(name->str);
-                        if(found == this->globals.end()) {
+                        uint8_t index = READ_BYTE();
+                        Value* global = frame->function->chunk.globalCache[index];
+                        if(global == nullptr) {
                             SYNC();
-                            runtimeError("Undefined variable '%s'.", name->str.c_str());
-                            return INTERPRET_RUNTIME_ERROR;
+                            global = resolveGlobal(frame->function->chunk, index);
+                            if(global == nullptr) return INTERPRET_RUNTIME_ERROR;
                         }
-                        push(found->second);
+                        push(*global);
                         break;
                     }
                     case OP_SET_GLOBAL: {
@@ -944,17 +958,17 @@ class VM{
                         break; \
                     }
                     #define incrementGlobal(op, opcode) { \
-                        ObjString* name = asString(constants[READ_BYTE()]); \
+                        uint8_t index = READ_BYTE(); \
                         const Value& step = constants[READ_BYTE()]; \
-                        auto found = this->globals.find(name->str); \
-                        if(found == this->globals.end()) { \
+                        Value* global = frame->function->chunk.globalCache[index]; \
+                        if(global == nullptr) { \
                             SYNC(); \
-                            runtimeError("Undefined variable '%s'.", name->str.c_str()); \
-                            return INTERPRET_RUNTIME_ERROR; \
+                            global = resolveGlobal(frame->function->chunk, index); \
+                            if(global == nullptr) return INTERPRET_RUNTIME_ERROR; \
                         } \
-                        if(found->second.type == TYPE_INT && step.type == TYPE_INT) { \
-                            found->second.as.Aint op step.as.Aint; \
-                        } else incrementSlow(found->second, opcode) \
+                        if(global->type == TYPE_INT && step.type == TYPE_INT) { \
+                            global->as.Aint op step.as.Aint; \
+                        } else incrementSlow(*global, opcode) \
                         break; \
                     }
 

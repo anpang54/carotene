@@ -116,6 +116,7 @@ class Chunk{
         vector<Value>  constants;
             // crafting interpreters uses custom dynamic arrays because it's C but here we just use vectors
 
+        vector<Value*> globalCache;
 
         // adding stuff
 
@@ -126,6 +127,7 @@ class Chunk{
 
         int addConstant(Value value) {
             this->constants.push_back(value);
+            this->globalCache.push_back(nullptr);
             return this->constants.size() - 1;    // return new constant's index
         }
 
