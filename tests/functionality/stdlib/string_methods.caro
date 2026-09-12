@@ -1,0 +1,32 @@
+
+
+error_type = "logic";
+str = f"An [b]off-by-one error[] is a {error_type} error that involves a number that differs from its intended value by 1.";
+
+print(str);    // An off-by-one error is a logic error that involves a number that differs from its intended value by 1.
+
+print(str.length());    // 107
+                        //! because the [b] tags are left alone but the interpolation is parsed
+                                 
+print(str.find("error"));        // 17
+print(str.count("error"));       // 2
+print(str.find_all("error"));    // [17, 36]
+
+print(str.starts_with("An"));     // true
+print(str.starts_with("off"));    // false
+print(str.ends_with("1."));       // true
+print(str.ends_with("1"));        // false
+print(str.contains("logic"));     // true
+print(str.contains("math"));      // false
+
+print(str.replace("error", "bug"));       // An off-by-one bug is a logic bug that involves a number that differs from its intended value by 1.
+print(str.replace("error", "bug", 0));    // An off-by-one error is a logic error that involves a number that differs from its intended value by 1.
+print(str.replace("error", "bug", 1));    // An off-by-one bug is a logic error that involves a number that differs from its intended value by 1.
+
+print(str.lower());                 // an off-by-one error is a logic error that involves a number that differs from its intended value by 1.
+print(str.upper());                 // AN OFF-BY-ONE ERROR IS A LOGIC ERROR THAT INVOLVES A NUMBER THAT DIFFERS FROM ITS INTENDED VALUE BY 1.
+print(str.lower().capitalize());    // An off-by-one error is a logic error that involves a number that differs from its intended value by 1.
+print(str.swap_case());             // aN OFF-BY-ONE ERROR IS A LOGIC ERROR THAT INVOLVES A NUMBER THAT DIFFERS FROM ITS INTENDED VALUE BY 1.
+
+print(str.split(" "));    // [An, off-by-one, error, is, a, logic, error, that, involves, a, number, that, differs, from, its, intended, value, by, 1.]
+
