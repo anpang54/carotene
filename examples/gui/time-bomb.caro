@@ -1,0 +1,16 @@
+
+use gui;
+
+$window = gui.Window("Time bomb");
+$label = gui.Label("HGello");
+$window.add($label, 0, 0);
+
+func callback() {
+    repeat(5): i{
+        $label.text = f"This window will close in {-i + 5}...";
+        wait(1);
+    }
+    $window.close();
+}
+
+$window.show(callback);
