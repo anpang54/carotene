@@ -75,7 +75,6 @@ nBuiltin(OBJ_STRING, starts_with, {
     });
     return CaroBool(SELF.starts_with(ARGS(0)));
 });
-
 nBuiltin(OBJ_STRING, ends_with, {
     params({
         {{OBJ_STRING}, true}
@@ -120,7 +119,6 @@ nBuiltin(OBJ_STRING, lower, {
     params({});
     return CaroObj(copyString(lower(SELF), FSELF));
 });
-
 nBuiltin(OBJ_STRING, upper, {
     params({});
     return CaroObj(copyString(upper(SELF), FSELF));
@@ -150,16 +148,53 @@ nBuiltin(OBJ_STRING, trim, {
     params({});
     return CaroObj(copyString(trim(SELF), FSELF));
 });
-
 nBuiltin(OBJ_STRING, trim_left, {
     params({});
     return CaroObj(copyString(leftTrim(SELF), FSELF));
 });
-
 nBuiltin(OBJ_STRING, trim_right, {
     params({});
     return CaroObj(copyString(rightTrim(SELF), FSELF));
 });
+
+#define nStringPad(caroName, joined)\
+    nBuiltin(OBJ_STRING, caroName, {\
+        params({\
+            {{ANY_NUMERIC}, true },\
+            {{OBJ_STRING},  false}\
+        });\
+        \
+        /* check requested length */\
+        double requested = asNumberTo<double>(args[0]);\
+        if(requested < 0 || requested > UINT32_MAX || std::isnan(requested)) {\
+            vm->runtimeError("That target length is invalid.");\
+            return CaroNull;\
+        }\
+        size_t targetLength = static_cast<size_t>(requested);\
+        \
+        /* check padding char */\
+        char paddingChar = ' ';\
+        if(args.size() >= 2) {\
+            const string& given = ARGS(1);\
+            if(given.size() != 1) {\
+                vm->runtimeError("The padding should be a single character, but \"%s\" was given.", given.c_str());\
+                return CaroNull;\
+            }\
+            paddingChar = given[0];\
+        }\
+        \
+        /* return string if it's already long enough */\
+        const string& str = SELF;\
+        if(str.size() >= targetLength) return CaroObj(copyString(str, FSELF));\
+        \
+        /* pad */\
+        string padding(targetLength - str.size(), paddingChar);\
+        return CaroObj(copyString(joined, FSELF));\
+        \
+    })
+
+nStringPad(pad_left,  padding + str);
+nStringPad(pad_right, str + padding);
 
 
 // turning the string into another type entirely
