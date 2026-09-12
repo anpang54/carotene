@@ -1,1 +1,2 @@
+include/** linguist-vendored
 tests/benchmarks/find_primes/** linguist-vendored
