@@ -1535,6 +1535,7 @@ void maybeCollect() {
 #include "../stdlib/modules/http.hpp"
 #include "../stdlib/modules/math.hpp"
 #include "../stdlib/modules/random.hpp"
+#include "../stdlib/modules/text.hpp"
 #include "../stdlib/modules/time.hpp"
 
 #include "../stdlib/methods/array.hpp"
