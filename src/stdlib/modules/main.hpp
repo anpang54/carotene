@@ -482,7 +482,7 @@ nVectorCast(vec3u, TYPE_VEC3U);
 nVectorCast(vec3f, TYPE_VEC3F);
     // also double as constructors
     
-nFunc(main_str, "", "str", {
+nFunc(main_string, "", "string", {
     params({
         {{},          true },
         {ANY_NUMERIC, false}
