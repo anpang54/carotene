@@ -439,11 +439,8 @@ class VM{
             string strA, strB;
             int64_t multiplier = 0;
 
-            bool fString = false;
             auto popString = [&]() {
-                ObjString* str = asString(pop());
-                fString = fString || str->fString;
-                return str->str;
+                return asString(pop())->str;
             };
 
             auto popCount = [&]() -> int64_t {
@@ -488,13 +485,13 @@ class VM{
             switch(op) {
 
                 case OP_ADD: {    // concatenates a and b
-                    push(CaroObj(copyString(strA + strB, fString)));
+                    push(CaroObj(copyString(strA + strB)));
                     break;
                 }
                 case OP_SUBTRACT: {    // removes all occurrences of b in a
                     string result = strA;
                     replace(result, strB, "");
-                    push(CaroObj(copyString(result, fString)));
+                    push(CaroObj(copyString(result)));
                     break;
                 }
 
@@ -504,7 +501,7 @@ class VM{
                         return INTERPRET_RUNTIME_ERROR;
                     }
                     if(strA.empty()) {
-                        push(CaroObj(copyString(strA, fString)));
+                        push(CaroObj(copyString(strA)));
                         break;
                     }
                     if((uint64_t)multiplier > MAX_STRING_LENGTH / strA.length()) {
@@ -516,7 +513,7 @@ class VM{
                     for(int64_t i = 0; i < multiplier; ++i) {
                         result += strA;
                     }
-                    push(CaroObj(copyString(result, fString)));
+                    push(CaroObj(copyString(result)));
                     break;
                 }
 
@@ -534,7 +531,7 @@ class VM{
                     vector<Value> result;
                     result.reserve(multiplier);
                     for(int64_t i = 0; i < multiplier; ++i) {
-                        result.push_back(CaroObj(copyString(strA.substr(i * eachPartLength, eachPartLength), fString)));
+                        result.push_back(CaroObj(copyString(strA.substr(i * eachPartLength, eachPartLength))));
                     }
                     push(CaroObj(copyArray(result)));
                     break;
@@ -550,7 +547,7 @@ class VM{
                         return INTERPRET_RUNTIME_ERROR;
                     }
                     int64_t eachPartLength = strA.length() / multiplier;
-                    push(CaroObj(copyString(strA.substr(eachPartLength * multiplier), fString)));
+                    push(CaroObj(copyString(strA.substr(eachPartLength * multiplier))));
                     break;
                 }
 
@@ -888,17 +885,10 @@ class VM{
                         uint8_t pieceCount = READ_BYTE();
                         string result;
                         for(Value* piece = this->stackTop - pieceCount; piece < this->stackTop; ++piece) {
-                            if(isString(*piece) && asString(*piece)->fString) {
-                                result += asString(*piece)->str;
-                            } else {
-                                for(char c: printValue(*piece)) {
-                                    if(c == '[' || c == ']') result.push_back('\\');
-                                    result.push_back(c);
-                                }
-                            }
+                            result += printValue(*piece);
                         }
                         this->stackTop -= pieceCount;
-                        push(CaroObj(copyString(result, true)));
+                        push(CaroObj(copyString(result)));
 
                         break;
                     }

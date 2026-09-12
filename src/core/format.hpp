@@ -1,6 +1,12 @@
 
 #pragma once
 
+/*
+    these are the square tags that add formatting like bold and color,
+    that are stored literally and only applied when used in a function like print()
+    NOT string interpolation
+*/
+
 
 // INCLUDES
 
@@ -69,7 +75,6 @@ string escapeJS(const string& str) {
 
 // FORMAT
 
-// only handles the actual formatting, not the interpolation
 pair<string, vector<string>> formatString(string str) {
 
     string result = "";
@@ -148,4 +153,27 @@ pair<string, vector<string>> formatString(string str) {
 
     return {result, cssRules};
 
+}
+
+
+// OUTPUT
+
+string consoleLogJS(const string& text, const vector<string>& cssRules) {
+    string js = "console.log(\"" + escapeJS(text) + "\"";
+    for(const string& rule: cssRules) {
+        js += ", \"" + escapeJS(rule) + "\"";
+    }
+    return js + ")";
+}
+
+void printFormatted(const string& text, bool newline = true) {
+    auto [formatted, cssRules] = formatString(text);
+    #ifdef __EMSCRIPTEN__
+        if(!cssRules.empty()) {
+            runJS(consoleLogJS(formatted, cssRules));
+            return;
+        }
+    #endif
+    cout << formatted;
+    if(newline) cout << '\n';
 }

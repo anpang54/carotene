@@ -81,7 +81,6 @@ struct ConstantKey{
     uint32_t  z       = 0;
     Obj*      obj     = nullptr;
     string    text;
-    bool      fString = false;
     bool operator==(const ConstantKey& other) const = default;
 };
 
@@ -92,8 +91,7 @@ ConstantKey makeConstantKey(const Value& value) {
 
     if(value.type == TYPE_OBJ) {
         if(value.as.obj->type == OBJ_STRING) {
-            key.text    = asString(value)->str;
-            key.fString = asString(value)->fString;
+            key.text = asString(value)->str;
         } else {
             key.obj = value.as.obj;
         }
@@ -113,7 +111,6 @@ struct ConstantKeyHash{
         h = h * 31 + hash<uint32_t>{}(key.z);
         h = h * 31 + hash<Obj*>{}(key.obj);
         h = h * 31 + hash<string>{}(key.text);
-        h = h * 31 + (size_t)key.fString;
         return h;
     }
 };
@@ -630,7 +627,7 @@ class Compiler{
                 // find {
                 size_t openingBrace = text.find('{', i);
                 if(openingBrace != i) {
-                    emitConstant(CaroObj(copyString(text.substr(i, openingBrace - i), true)));
+                    emitConstant(CaroObj(copyString(text.substr(i, openingBrace - i))));
                     if(pieceCount == 255) error("An F-string can only have 255 pieces.");
                     ++pieceCount;
                 }
