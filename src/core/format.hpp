@@ -16,16 +16,35 @@
 // ESCAPE CODES/CSS
 
 const unordered_map<string, pair<string, string>> codes = {
+
     {"b",       { "\033[1m" , "font-weight: bold;"                                         }},
+    {"/b",      { "\033[22m", "font-weight: normal"                                        }},
     {"f",       { "\033[2m" , "opacity: 0.5;"                                              }},
+    {"/f",      { "\033[22m", "font-weight: normal"                                        }},
+
     {"i",       { "\033[3m" , "font-style: italic;"                                        }},
+    {"/i",      { "\033[23m", "font-style: normal;"                                        }},
+
     {"u",       { "\033[4m" , "text-decoration: underline;"                                }},
-    {"inverse", { "\033[7m" , "background-color: #fff; color: #000;"                   }},    // filter: invert(1) doesn't work
-    {"hide",    { "\033[8m" , "color: transparent;"                                        }},
-    {"s",       { "\033[9m" , "text-decoration: line-through;"                             }},
+    {"/u",      { "\033[24m", "text-decoration: none;"                                     }},
     {"uu",      { "\033[21m", "text-decoration: underline; text-decoration-style: double;" }},
+    {"/uu",     { "\033[24m", "text-decoration: none;"                                     }},
     {"o",       { "\033[53m", "text-decoration: overline;"                                 }},
-    {"",        { "\033[0m" , ""                                                           }},
+    {"/o",      { "\033[55m", "text-decoration: none;"                                     }},
+
+    {"s",       { "\033[9m" , "text-decoration: line-through;"                             }},
+    {"/s",      { "\033[29m", "text-decoration: none;"                                     }},
+
+    {"hide",    { "\033[8m" , "color: transparent;"                                        }},
+    {"/hide",   { "\033[28m", "color: #fff;"                                             }},
+
+    {"invert",  { "\033[7m" , "background-color: #fff; color: #000;"                   }},    // filter: invert(1) doesn't work
+    {"/invert", { "\033[27m", "background-color: #000; color: #fff;"                   }},
+    
+    {"/",       { ""        , "font-size: 1em;"                                            }},    // remove font size
+    {"/#",      { "\033[39m", "color: #fff;"                                             }},    // remove color
+    {"",        { "\033[0m" , ""                                                           }},    // remove all formatting
+
 };
 
 
