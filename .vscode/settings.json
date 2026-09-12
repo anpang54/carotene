@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.caro": "javascript"
+    },
+    "js/ts.validate.enabled": false
+    // JS has pretty similar syntax to carotene
+}
