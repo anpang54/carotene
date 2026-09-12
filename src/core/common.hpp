@@ -132,6 +132,20 @@ string upper(string_view str) {
     return result;
 }
 
+string unescape(string_view str) {
+    string result;
+    result.reserve(str.size());
+    for(size_t i = 0; i < str.size(); ++i) {
+        if(str[i] == '\\' && i + 1 < str.size() && str[i + 1] == 'n') {
+            result.push_back('\n');
+            ++i;
+        } else {
+            result.push_back(str[i]);
+        }
+    }
+    return result;
+}
+
 int replace(string& str, const string& from, const string& to, int maxReplacements = INT_MAX) {
 
     if(from.empty()) return 0;

@@ -611,7 +611,7 @@ class Compiler{
 
         void parseString(bool canAssign) {
             emitConstant(
-                CaroObj(copyString(this->previous.start.substr(1, this->previous.length - 2)))
+                CaroObj(copyString(unescape(this->previous.start.substr(1, this->previous.length - 2))))
             );
         }
 
@@ -627,7 +627,7 @@ class Compiler{
                 // find {
                 size_t openingBrace = text.find('{', i);
                 if(openingBrace != i) {
-                    emitConstant(CaroObj(copyString(text.substr(i, openingBrace - i))));
+                    emitConstant(CaroObj(copyString(unescape(text.substr(i, openingBrace - i)))));
                     if(pieceCount == 255) error("An F-string can only have 255 pieces.");
                     ++pieceCount;
                 }
