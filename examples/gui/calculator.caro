@@ -1,0 +1,66 @@
+
+
+// includes
+
+use gui;
+
+
+// make window
+
+$window = gui.Window("CaroCalc", 320, 400, 5);
+
+$label = gui.Label("");
+$window.add($label, [0, 3], 0);
+
+
+// button pressed
+
+$just_calculated = false;
+
+func button_pressed(button) {
+    pressed = button.text;
+
+    if(pressed == "=") {
+        $label.text = str(eval($label.text));
+        $just_calculated = true;
+
+    } elif(pressed == "<") {
+        if($label.text.length() > 0) {
+            $label.text = $label.text.sub(0, $label.text.length() - 1);
+        }
+        $just_calculated = false;
+
+    } elif("+-*/".contains(pressed)) {
+        $label.text += f" {pressed} ";
+        $just_calculated = false;
+
+    } elif(pressed == "AC") {
+        $label.text = "";
+        $just_calculated = false;
+
+    } else {
+        if($just_calculated) {
+            $label.text = "";
+            $just_calculated = false;
+        }
+        $label.text += pressed;
+
+    }
+
+}
+
+
+// put buttons
+
+#buttons = "()<A789/456*123-0.=+";
+$buttons = [];
+repeat(#buttons.length()): i{
+    $buttons.append(gui.Button(#buttons[i] == "A"? "AC": #buttons[i], button_pressed));
+    $window.add($buttons[i], i % 4, int(i / 4) + 1);
+}
+
+
+// show
+
+$window.show();
+
