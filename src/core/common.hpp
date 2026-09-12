@@ -15,6 +15,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <climits>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -97,12 +98,23 @@ string runJS(string code) {
 
 // string manipulation
 
-// line endings count as whitespace, so this also strips the CRLF off a line
+const char* whitespace = " \t\r\n";
+    // line endings count as whitespace, so these also strip the CRLF off a line
+
 string trim(string_view str) {
-    const char* whitespace = " \t\r\n";
     size_t start = str.find_first_not_of(whitespace);
     if(start == string::npos) return "";
     return string(str.substr(start, str.find_last_not_of(whitespace) - start + 1));
+}
+string leftTrim(string_view str) {
+    size_t start = str.find_first_not_of(whitespace);
+    if(start == string::npos) return "";
+    return string(str.substr(start));
+}
+string rightTrim(string_view str) {
+    size_t end = str.find_last_not_of(whitespace);
+    if(end == string::npos) return "";
+    return string(str.substr(0, end + 1));
 }
 
 string lower(string_view str) {
@@ -120,28 +132,45 @@ string upper(string_view str) {
     return result;
 }
 
-int replace(string& str, const string& from, const string& to, int maxReplacements = 0) {
+int replace(string& str, const string& from, const string& to, int maxReplacements = INT_MAX) {
 
     if(from.empty()) return 0;
 
     int replaced = 0;
     size_t start_pos = 0;
 
-    while((start_pos = str.find(from, start_pos)) != string::npos) {
-
-        // replace
+    while(replaced < maxReplacements && (start_pos = str.find(from, start_pos)) != string::npos) {
         str.replace(start_pos, from.length(), to);
         start_pos += to.length();
         ++replaced;
-
-        // stop if reached count
-        if(maxReplacements != 0 && replaced >= maxReplacements) {
-            break;
-        }
-
     }
 
     return replaced;
 
 }
     // derived from https://stackoverflow.com/a/3418285
+
+vector<string> split(string_view str, string_view delimiter) {
+
+    vector<string> tokens;
+
+    // empty delimiter, split into chars
+    if(delimiter.empty()) {
+        tokens.reserve(str.size());
+        for(char c: str) tokens.push_back(string(1, c));
+        return tokens;
+    }
+
+    size_t start = 0;
+    size_t position;
+
+    while((position = str.find(delimiter, start)) != string::npos) {
+        tokens.push_back(string(str.substr(start, position - start)));
+        start = position + delimiter.length();
+    }
+    tokens.push_back(string(str.substr(start)));
+
+    return tokens;
+
+}
+    // derived from https://stackoverflow.com/a/46931770
