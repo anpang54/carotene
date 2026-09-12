@@ -40,6 +40,16 @@ nFunc(main_print, "", "print", {
 
 });
 
+nFunc(main_print_raw, "", "print_raw", {
+    params({
+        {{OBJ_STRING}, true},
+    });
+
+    cout << asString(args[0])->str;
+    return CaroNull;
+
+});
+
 nFunc(main_input, "", "input", {
     params({
         {{}, false},
