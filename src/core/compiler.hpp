@@ -57,6 +57,7 @@ struct Local{
 enum FunctionType{
     TYPE_SCRIPT,
     TYPE_FUNCTION,
+    TYPE_ANONYMOUS,
     TYPE_INITIALIZER,
     TYPE_METHOD,
 };
@@ -165,7 +166,11 @@ class Compiler{
             state.scopeDepth = 0;
             // lastCmpOffset and lastVariable start fresh with the state, and are dropped with it
 
-            if(type != TYPE_SCRIPT) state.function->name = this->previous.start;
+            if(type == TYPE_ANONYMOUS) {
+                state.function->name = "func";
+            } else if(type != TYPE_SCRIPT) {
+                state.function->name = this->previous.start;
+            }
 
             Local& local = state.locals.emplace_back();
             state.localCount = 1;
@@ -1418,7 +1423,11 @@ class Compiler{
         void declaration() {
 
             if(match(TOKEN_FUNC)) {
-                funcDeclaration();
+                if(check(TOKEN_IDENTIFIER)) {
+                    funcDeclaration();
+                } else {
+                    funcStatement();
+                }
             } else if(match(TOKEN_CLASS)) {
                 classDeclaration();
             } else if(check(TOKEN_IDENTIFIER)) {
@@ -1432,6 +1441,7 @@ class Compiler{
         }
 
         void funcDeclaration() {
+            // actual function declaration
 
             consume(TOKEN_IDENTIFIER, "Expect function name.");
             if(this->previous.start[0] == '$') {
@@ -1443,6 +1453,15 @@ class Compiler{
             uint8_t global = identifierConstant(&this->previous);
             makeFunction(TYPE_FUNCTION);
             emitBytes(OP_DEFINE_GLOBAL, global);
+
+        }
+
+        void funcStatement() {
+            // anonymous function statement
+            
+            int start = currentChunk()->code.size();
+            parseFromPrevious(PREC_ASSIGNMENT);
+            finishExpression(start);
 
         }
 
@@ -1687,7 +1706,7 @@ class Compiler{
             beginScope(); 
 
             // parameter list
-            consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+            consume(TOKEN_LEFT_PAREN, type == TYPE_ANONYMOUS? "Expect '(' after 'func'.": "Expect '(' after function name.");
             if(!check(TOKEN_RIGHT_PAREN)) {
                 do{
                     cur().function->arity++;
@@ -1704,6 +1723,10 @@ class Compiler{
             ObjFunction* function = endCompiler();
             emitBytes(OP_CONSTANT, makeConstant(CaroObj(function)));
             
+        }
+
+        void makeAnonFunc(bool canAssign) {
+            makeFunction(TYPE_ANONYMOUS);
         }
 
         void makeCall(bool canAssign) {
@@ -1902,7 +1925,7 @@ inline ParseRule rules[] = {
     [TOKEN_VERSION]       = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_USE]           = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_INCLUDE]       = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_FUNC]          = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_FUNC]          = { &Compiler::makeAnonFunc, NULL,                     PREC_NONE       },
     [TOKEN_RETURN]        = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_CLASS]         = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_THIS]          = { &Compiler::parseThis,    NULL,                     PREC_NONE       },

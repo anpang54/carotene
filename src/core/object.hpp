@@ -459,9 +459,8 @@ string printObject(Obj* object) {
 
         case OBJ_FUNCTION: {
             ObjFunction* function = static_cast<ObjFunction*>(object);
-            if(function->name.empty()) {
-                return "<script>";
-            }
+            if(function->name.empty())   return "<script>";
+            if(function->name == "func") return "<func>";
             return "<func " + function->name + ">";
         }
 

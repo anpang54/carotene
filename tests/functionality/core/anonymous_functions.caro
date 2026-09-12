@@ -1,0 +1,11 @@
+
+add_but_its_a_variable = func(a, b) {
+    return a + b;
+};
+print(add_but_its_a_variable(7, 11));     // 18
+print(add_but_its_a_variable);            // <func>
+print(typeof(add_but_its_a_variable));    // func
+
+func() {
+    print("immediately run");    // immediately run
+}();
