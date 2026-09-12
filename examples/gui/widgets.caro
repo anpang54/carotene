@@ -7,35 +7,46 @@ $window = gui.Window("Carotene widgets demo");
 $text = gui.Label("Welcome to the Carotene widgets demo!");
 $window.add($text, [0, 2], 0);
 
-func greet() {
-    $text.text = "Hi " + ($textbox.value == ""? "anonymous person": $textbox.value) + "!";
-    $textbox.value = "";
-}
-button = gui.Button("Greet", greet);
 $window.add(gui.Label("gui.Button"), 0, 1);
-$window.add(button, 1, 1);
+$window.add(
+    gui.Button(
+        "Greet", 
+        func() {
+            $text.text = "Hi " + ($textbox.value == ""? "anonymous person": $textbox.value) + "!";
+            $textbox.value = "";
+        }
+    ),
+    1, 1
+);
 
 $textbox = gui.Textbox("");
 $window.add(gui.Label("gui.Textbox"), 0, 2);
 $window.add($textbox, 1, 2);
 
-textarea = gui.Textarea("Type something here, it can have multiple lines.");
 $window.add(gui.Label("gui.Textarea"), 0, 3);
-$window.add(textarea, 1, 3);
+$window.add(gui.Textarea("Type something here, it can have multiple lines."), 1, 3);
 
-func pick_unix()   {
-    $text.text = "You picked " + $select.value + ".";
-}
-$select = gui.Select(["BSD", "Darwin", "Solaris", "System V"], pick_unix);
 $window.add(gui.Label("gui.Select"), 0, 4);
-$window.add($select, 1, 4);
+$window.add(
+    gui.Select(
+        ["BSD", "Darwin", "Solaris", "System V"],
+        func(widget) {
+            $text.text = "You picked " + widget.value + ".";
+        }
+    ),
+    1, 4
+);
 
-func pick_distro() {
-    $text.text = "You picked " + $combobox.value + ".";
-}
-$combobox = gui.ComboBox(["Arch", "Debian", "Fedora", "Ubuntu"], pick_distro);
 $window.add(gui.Label("gui.ComboBox"), 0, 5);
-$window.add($combobox, 1, 5);
+$window.add(
+    gui.ComboBox(
+        ["Arch", "Debian", "Fedora", "Ubuntu"],
+        func(widget) {
+            $text.text = "You picked " + widget.value + ".";
+        }
+    ),
+    1, 5
+);
 
 $window.show();
 

@@ -3,13 +3,8 @@ use dom;
 
 $window = gui.Window("DOM test");
 
-func shown() {
-    span1 = dom.Node("span");
-    span1.text = "Node added and text set from Carotene";
-    dom.id("caro-container").add(span1);
-}
-
 $other_spans_added = 0;
+
 func add_node() {
 
     if($other_spans_added == 0) {
@@ -48,4 +43,8 @@ func add_node() {
 
 $window.add(gui.Button("Add another element!", add_node), 0, 0);
 
-$window.show(shown);
+$window.show(func() {
+    span1 = dom.Node("span");
+    span1.text = "Node added and text set from Carotene";
+    dom.id("caro-container").add(span1);
+});

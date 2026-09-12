@@ -6,24 +6,22 @@
 use math;
 
 #length = 75;
+#line_count = 7;
 
-lines = [" " * #length, " " * #length, " " * #length, "-" * #length, " " * #length, " " * #length, " " * #length];
+lines = [];
+repeat(#line_count) {
+    lines.append(" " * #length);
+}
 
 func getSin(x) {
     return round((math.sin(x / 4d) + 1) * 3);
 }
 repeat(#length): x{
     y = getSin(x);
-    if(getSin(x + 1) < y) {
-        lines[y][x] = "/";
-    } else if(getSin(x + 1) > y) {
-        lines[y][x] = "\";
-    } else {
-        lines[y][x] = "-";
-    }
+    lines[y][x] = getSin(x + 1) < y? "/": (getSin(x + 1) > y? "\": "-");
 }
 
 print("");
-repeat(7): line{
+repeat(#line_count): line{
     print(lines[line]);
 }
