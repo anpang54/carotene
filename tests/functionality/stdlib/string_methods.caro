@@ -28,5 +28,5 @@ print(str.upper());                 // AN OFF-BY-ONE ERROR IS A LOGIC ERROR THAT
 print(str.lower().capitalize());    // An off-by-one error is a logic error that involves a number that differs from its intended value by 1.
 print(str.swap_case());             // aN OFF-BY-ONE ERROR IS A LOGIC ERROR THAT INVOLVES A NUMBER THAT DIFFERS FROM ITS INTENDED VALUE BY 1.
 
-print(str.split(" "));    // [An, off-by-one, error, is, a, logic, error, that, involves, a, number, that, differs, from, its, intended, value, by, 1.]
+print(str.split(" "));    // [An, [b]off-by-one, error[], is, a, logic, error, that, involves, a, number, that, differs, from, its, intended, value, by, 1.]
 
