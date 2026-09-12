@@ -461,8 +461,43 @@ nVectorCast(vec3f, TYPE_VEC3F);
     // also double as constructors
     
 nFunc(main_str, "", "str", {
-    params({{{}, true}});
+    params({
+        {{},          true },
+        {ANY_NUMERIC, false}
+    });
+
+    // number with base
+    if(args.size() >= 2) {
+
+        if(!isInt(args[0].type)) {
+            vm->runtimeError("The base can only be specified when the value is an integer.");
+            return CaroNull;
+        }
+
+        uint32_t base = asNumberTo<uint32_t>(args[1]);
+        if(base != 2 && base != 8 && base != 10 && base != 16) {
+            vm->runtimeError("The base can only be 2, 8, 10, or 16, but %d was given.", base);
+            return CaroNull;
+        }
+
+        auto inBase = [&](auto number) -> string {
+            switch(base) {
+                case 2:  return format("{:b}", number);
+                case 8:  return format("{:o}", number);
+                case 16: return format("{:X}", number);    // {:X} outputs the letters as capital letters
+                default: return format("{:d}", number);
+            }
+        };
+
+        return CaroObj(copyString(
+            isUnsigned(args[0].type)? inBase(asNumberTo<uint64_t>(args[0])): inBase(asNumberTo<int64_t> (args[0]))
+        ));
+
+    }
+
+    // everything else
     return CaroObj(copyString(printValue(args[0])));
+
 });
 
 nFunc(main_array, "", "array", {
