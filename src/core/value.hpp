@@ -457,7 +457,7 @@ string typeofValue(Value value) {
 
 // sizeof
 
-size_t sizeofType(ValueType type) {
+[[gnu::always_inline]] inline size_t sizeofType(ValueType type) {
 
     // result is in bytes
     // doesn't include all the wrapper stuff, only the actual value
