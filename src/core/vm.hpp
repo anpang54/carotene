@@ -107,11 +107,11 @@ class VM{
             }
 
             // add script arguments
-            this->globals["_args"] = CaroUint(moreArguments.size());
-            for(uint i = 0; i < moreArguments.size(); ++i) {
-                this->globals["_" + to_string(i + 1)] = CaroObj(copyString(moreArguments[i]));
-                // yes, indexes are supposed to start at 0
-                // but in C argv[0] is the name of the file and argv[1] is the first argument, so we're gonna match that
+            ObjArray* args = copyArray({});
+            this->globals["_args"] = CaroObj(args);
+            args->data.reserve(moreArguments.size());
+            for(const string& argument: moreArguments) {
+                args->data.push_back(CaroObj(copyString(argument)));
             }
             
             // add natives

@@ -46,11 +46,11 @@ platform = null;
 release = null;
 valid = true;
 
-if(_args == 0) {
+if(_args.length() == 0) {
     platform = caro.platform;
     release = false;
 } else {
-    if(_1 == "all") {
+    if(_args[0] == "all") {
         sh("./caro build.caro windows");
         sh("./caro build.caro macos");
         sh("./caro build.caro linux");
@@ -58,11 +58,11 @@ if(_args == 0) {
         sh("./caro build.caro haiku");
         sh("./caro build.caro web");
         exit();
-    } else if(_1 == "windows" | _1 == "macos" | _1 == "linux" | _1 == "freebsd" | _1 == "haiku" | _1 == "web") {
-        platform = _1;
+    } else if(_args[0] == "windows" | _args[0] == "macos" | _args[0] == "linux" | _args[0] == "freebsd" | _args[0] == "haiku" | _args[0] == "web") {
+        platform = _args[0];
         release = true;
     } else {
-        print("Invalid platform " + _1 + ".");
+        print("Invalid platform " + _args[0] + ".");
         valid = false;
     }
 }
