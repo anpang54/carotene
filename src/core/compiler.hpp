@@ -994,7 +994,12 @@ class Compiler{
                     error("You can only use the dom module on web.");
                 } else
             #endif
-            
+            #ifndef CARO_RAYLIB
+                if(name == "raylib") {
+                    error("You can currently only use the raylib module on Windows, Linux, and web.");
+                } else
+            #endif
+
             if(!modules.contains(name)) {
                 error("Module " + name + " doesn't exist.");
             } else {

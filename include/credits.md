@@ -13,10 +13,11 @@ The following is a list of libraries used by Carotene. Most are used for the sta
 | --------------------------------------------- | ------------------- | -------------------------------------- | ----------- |
 | [BeAPI](https://www.haiku-os.org/docs/api/)   | MIT                 | Haiku `gui`                            | Linked      |
 | [Emscripten](https://github.com/emscripten-core/emscripten)         | MIT         | Web builds               | Compiled in |
+| [GLFW](https://github.com/glfw/glfw)          | zlib                | Windows, Linux `raylib`                | Vendored    |
 | [GTK 4](https://gitlab.gnome.org/GNOME/gtk)   | LGPL 2.1+           | macOS, Linux, FreeBSD `gui`            | `dlopen()`  |
 | [isocline](https://github.com/daanx/isocline) | MIT                 | REPL                                   | Vendored    |
 | [libcurl](https://github.com/curl/curl)       | curl                | macOS, Linux, FreeBSD, Haiku `http`    | `dlopen()`  |
-| [raylib](https://github.com/raysan5/raylib)   | zlib                | `raylib`                               | Vendored    |
+| [raylib](https://github.com/raysan5/raylib)   | zlib                | Windows, Linux, web `raylib`           | Vendored    |
 | [SHA](https://github.com/pr0f3ss/SHA)         | MIT                 | `hash` SHA functions                   | Vendored    |
 | [Win32](https://learn.microsoft.com/en-us/windows/win32/api/)       | Proprietary | Windows `gui`            | Linked      |
 | [WinHTTP](https://learn.microsoft.com/en-us/windows/win32/WinHttp/) | Proprietary | Windows `http`           | Linked      |
@@ -54,6 +55,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 ### zlib license
 
+Copyright (c) 2002-2006 Marcus Geelnard\
+Copyright (c) 2006-2019 Camilla Löwy\
 Copyright (c) 2013-2026 Ramon Santamaria ([@raysan5](https://github.com/raysan5))
 
 This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software.
