@@ -39,4 +39,4 @@ print(f"[b]Bold[/b] [i]Italic[/i] [b][i]Both[] [invert]Inverse[/invert] [#ff0000
 
 print("And finally, let's fetch this file's source code from Github.");
 result = http.get("https://raw.githubusercontent.com/anpang54/carotene/refs/heads/main/examples/web/web.caro");
-print(result);
+print(result.body);

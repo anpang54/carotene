@@ -66,6 +66,12 @@ Value httpRequest(VM* vm, Args args, const string& method, const string& body, u
         return CaroNull;
     }
 
+    auto found = vm->globals.find("http.Response");
+    if(found == vm->globals.end() || !isClass(found->second)) {
+        vm->runtimeError("Couldn't find the http.Response class.");
+        return CaroNull;
+    }
+
     // build the result
     GCPause pause;    // temporarily pause the garbage collector
     unordered_map<Value, Value> headers;
@@ -76,13 +82,18 @@ Value httpRequest(VM* vm, Args args, const string& method, const string& body, u
             CaroObj(copyString(header.second))
         );
     }
-    unordered_map<Value, Value> result;
-    result.emplace(CaroObj(copyString("status" )), CaroUint(response.status));
-    result.emplace(CaroObj(copyString("body"   )), CaroObj(copyString(std::move(response.body))));
-    result.emplace(CaroObj(copyString("headers")), CaroObj(copyDict(std::move(headers))));
-    return CaroObj(copyDict(std::move(result)));
+    ObjInstance* result = newInstance(asClass(found->second));
+    result->fields["status" ] = CaroUint(response.status);
+    result->fields["body"   ] = CaroObj(copyString(std::move(response.body)));
+    result->fields["headers"] = CaroObj(copyDict(std::move(headers)));
+    return CaroObj(result);
 
 }
+
+
+// RESPONSE CLASS
+
+nClass(http_Response, "http", "Response");
 
 
 // FUNCTIONS
