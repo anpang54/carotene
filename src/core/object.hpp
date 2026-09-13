@@ -33,19 +33,44 @@ struct GCPause{
 
 enum ObjType{
 
-    OBJ_STRING,
-    OBJ_ARRAY,
-    OBJ_DICT,
-    OBJ_SET,
+    OBJ_STRING       = 0x00,
+    OBJ_ARRAY        = 0x01,
+    OBJ_DICT         = 0x02,
+    OBJ_SET          = 0x03,
 
-    OBJ_FUNCTION,
-    OBJ_CLASS,
-    OBJ_INSTANCE,
-    OBJ_BOUND_METHOD,
+    OBJ_FUNCTION     = 0x04,
+    OBJ_CLASS        = 0x05,
+    OBJ_INSTANCE     = 0x06,
+    OBJ_BOUND_METHOD = 0x07,
 
-    OBJ_NATIVE,
+    OBJ_NATIVE       = 0x08,
 
 };
+
+constexpr size_t OBJ_TYPE_COUNT = OBJ_NATIVE + 1;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic error "-Wswitch"
+#define OBJ_TYPE_COVERED(type)\
+    case type: {\
+        static_assert((size_t)type < OBJ_TYPE_COUNT, "OBJ_TYPE_COUNT must be greater than every ObjType");\
+        break;\
+    }
+[[maybe_unused]] constexpr void objTypeCountCheck(ObjType type) {
+    switch(type) {
+        OBJ_TYPE_COVERED(OBJ_STRING)
+        OBJ_TYPE_COVERED(OBJ_ARRAY)
+        OBJ_TYPE_COVERED(OBJ_DICT)
+        OBJ_TYPE_COVERED(OBJ_SET)
+        OBJ_TYPE_COVERED(OBJ_FUNCTION)
+        OBJ_TYPE_COVERED(OBJ_CLASS)
+        OBJ_TYPE_COVERED(OBJ_INSTANCE)
+        OBJ_TYPE_COVERED(OBJ_BOUND_METHOD)
+        OBJ_TYPE_COVERED(OBJ_NATIVE)
+    }
+}
+#undef OBJ_TYPE_COVERED
+#pragma GCC diagnostic pop
 
 struct Obj{
     ObjType type;

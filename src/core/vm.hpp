@@ -51,7 +51,7 @@ class VM{
         
         unordered_map<string, Value> globals;
         vector<Local> replLocals;
-        unordered_map<ObjType, ObjClass*> builtinClasses;    // hidden classes for builtin types
+        array<ObjClass*, OBJ_TYPE_COUNT> builtinClasses{};    // hidden classes for builtin types
         
         CallFrame* frame = nullptr;
         bool replMode = false;
@@ -122,7 +122,7 @@ class VM{
                     klass->methods[method.first] = CaroObj(newNative(method.second));
                 }
             }
-            this->builtinClasses.clear();
+            this->builtinClasses.fill(nullptr);
             for(const BuiltinMethod& method: builtinMethods) {
                 ObjClass*& klass = this->builtinClasses[method.type];
                 if(klass == nullptr) klass = newClass(typeofObjType(method.type));
@@ -683,8 +683,7 @@ class VM{
         
         ObjClass* builtinClassFor(Value value) {
             if(value.type != TYPE_OBJ) return nullptr;
-            auto found = this->builtinClasses.find(value.as.obj->type);
-            return found == this->builtinClasses.end()? nullptr: found->second;
+            return this->builtinClasses[value.as.obj->type];
         }
 
         bool invoke(ObjString* name, int argCount) {
@@ -1495,8 +1494,8 @@ class VM{
             for(CallFrame& callFrame: this->frames) {
                 markObject(callFrame.function);
             }
-            for(auto& [type, klass]: this->builtinClasses) {
-                markObject(klass);
+            for(ObjClass* klass: this->builtinClasses) {
+                if(klass != nullptr) markObject(klass);
             }
 
             // sweep
