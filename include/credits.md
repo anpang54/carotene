@@ -16,6 +16,7 @@ The following is a list of libraries used by Carotene. Most are used for the sta
 | [GTK 4](https://gitlab.gnome.org/GNOME/gtk)   | LGPL 2.1+           | macOS, Linux, FreeBSD `gui`            | `dlopen()`  |
 | [isocline](https://github.com/daanx/isocline) | MIT                 | REPL                                   | Bundled     |
 | [libcurl](https://github.com/curl/curl)       | curl                | macOS, Linux, FreeBSD, Haiku `http`    | `dlopen()`  |
+| [raylib](https://github.com/raysan5/raylib)   | zlib                | `raylib`                               | Bundled     |
 | [SHA](https://github.com/pr0f3ss/SHA)         | MIT                 | `hash` SHA functions                   | Bundled     |
 | [Win32](https://learn.microsoft.com/en-us/windows/win32/api/)       | Proprietary | Windows `gui`            | Linked      |
 | [WinHTTP](https://learn.microsoft.com/en-us/windows/win32/WinHttp/) | Proprietary | Windows `http`           | Linked      |
@@ -51,3 +52,14 @@ Redistribution and use in source and binary forms, with or without modification,
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+### zlib license
+
+Copyright (c) 2013-2026 Ramon Santamaria ([@raysan5](https://github.com/raysan5))
+
+This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose, including commercial applications, and to alter it and redistribute it freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
