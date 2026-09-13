@@ -259,5 +259,52 @@ nFunc(fs_target, "fs", "target", {
     filesystem::path target = filesystem::read_symlink(PATH(0), errorCode);
     FILE_CHECK(errorCode, "get the target of symlink", STR(0));
     return CaroObj(copyString(target.string()));
+
+});
+
+nFunc(fs_list, "fs", "list", {
+    params({
+        {{OBJ_STRING}, true },
+        {{TYPE_BOOL},  false}
+    });
+
+    filesystem::path path = PATH(0);
+    bool recursive = args.size() >= 2 && !isFalsy(args[1]);
+    error_code errorCode;
+
+    // check if it's a folder
+    if(!filesystem::is_directory(path, errorCode)) {
+        FILE_CHECK(errorCode, "list the contents of", STR(0));
+        vm->runtimeError("\"%s\" isn't a folder.", STR(0).c_str());
+        return CaroNull;
+    }
+
+    // iterate
+    vector<string> names;
+    if(recursive) {
+        filesystem::recursive_directory_iterator iterator(path, errorCode), end;
+        for(; !errorCode && iterator != end; iterator.increment(errorCode)) {
+            names.push_back(iterator->path().lexically_relative(path).generic_string());
+        }
+    } else {
+        filesystem::directory_iterator iterator(path, errorCode), end;
+        for(; !errorCode && iterator != end; iterator.increment(errorCode)) {
+            names.push_back(iterator->path().filename().string());
+        }
+    }
+    FILE_CHECK(errorCode, "list the contents of", STR(0));
+
+    // the output order is unspecified, so sort first
+    std::sort(names.begin(), names.end());
+
+    // make values
+    GCPause pause;
+    vector<Value> values;
+    values.reserve(names.size());
+    for(string& name: names) {
+        values.push_back(CaroObj(copyString(std::move(name))));
+    }
     
+    return CaroObj(copyArray(std::move(values)));
+
 });
