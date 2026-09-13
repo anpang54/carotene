@@ -1380,7 +1380,7 @@ namespace CaroGui{
                         // add stuff to builder
 						builder
                             .SetInsets(B_USE_WINDOW_INSETS)    // set insets
-                            .AddGlue();                        // top glue
+                            .AddGlue()                         // top glue
                             .AddGroup(B_HORIZONTAL)
                                 .AddGlue()                     // left glue
                                 .Add(grid)                     // content
