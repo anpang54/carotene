@@ -43,7 +43,7 @@ using std::ios, std::ifstream, std::ofstream, std::stringstream, std::error_code
 
 nFunc(fs_read, "fs", "read", {
     params({
-        {{}, true}
+        {{OBJ_STRING}, true}
     });
 
     string path = STR(0);
@@ -66,8 +66,8 @@ nFunc(fs_read, "fs", "read", {
 
 nFunc(fs_write, "fs", "write", {
     params({
-        {{}, true},
-        {{}, true}
+        {{OBJ_STRING}, true},
+        {{OBJ_STRING}, true}
     });
 
     string path = STR(0);
@@ -89,8 +89,8 @@ nFunc(fs_write, "fs", "write", {
 
 nFunc(fs_append, "fs", "append", {
     params({
-        {{}, true},
-        {{}, true}
+        {{OBJ_STRING}, true},
+        {{OBJ_STRING}, true}
     });
 
     string path = STR(0);
@@ -115,7 +115,7 @@ nFunc(fs_append, "fs", "append", {
 
 nFunc(fs_create_folder, "fs", "create_folder", {
     params({
-        {{}, true}
+        {{OBJ_STRING}, true}
     });
 
     error_code errorCode;
@@ -127,8 +127,8 @@ nFunc(fs_create_folder, "fs", "create_folder", {
 
 nFunc(fs_symlink, "fs", "symlink", {
     params({
-        {{}, true},
-        {{}, true}
+        {{OBJ_STRING}, true},
+        {{OBJ_STRING}, true}
     });
 
     #ifdef _WIN32
@@ -148,9 +148,9 @@ nFunc(fs_symlink, "fs", "symlink", {
 
 nFunc(fs_copy, "fs", "copy", {
     params({
-        {{},          true },
-        {{},          true },
-        {{TYPE_BOOL}, false}
+        {{OBJ_STRING}, true },
+        {{OBJ_STRING}, true },
+        {{TYPE_BOOL},  false}
     });
 
     filesystem::copy_options options = args.size() >= 3 && isFalsy(args[2])? filesystem::copy_options::none: filesystem::copy_options::recursive;
@@ -163,8 +163,8 @@ nFunc(fs_copy, "fs", "copy", {
 
 nFunc(fs_rename, "fs", "rename", {
     params({
-        {{}, true},
-        {{}, true}
+        {{OBJ_STRING}, true},
+        {{OBJ_STRING}, true}
     });
 
     error_code errorCode;
@@ -176,8 +176,8 @@ nFunc(fs_rename, "fs", "rename", {
 
 nFunc(fs_delete, "fs", "delete", {
     params({
-        {{},          true },
-        {{TYPE_BOOL}, false}
+        {{OBJ_STRING}, true },
+        {{TYPE_BOOL},  false}
     });
 
     error_code errorCode;
@@ -200,7 +200,7 @@ nFunc(fs_delete, "fs", "delete", {
 
 nFunc(fs_exists, "fs", "exists", {
     params({
-        {{}, true}
+        {{OBJ_STRING}, true}
     });
 
     error_code errorCode;
@@ -212,7 +212,7 @@ nFunc(fs_exists, "fs", "exists", {
 
 nFunc(fs_size, "fs", "size", {
     params({
-        {{}, true}
+        {{OBJ_STRING}, true}
     });
 
     error_code errorCode;
@@ -224,7 +224,7 @@ nFunc(fs_size, "fs", "size", {
 
 nFunc(fs_type, "fs", "type", {
     params({
-        {{}, true}
+        {{OBJ_STRING}, true}
     });
 
     filesystem::path path = PATH(0);
@@ -252,7 +252,7 @@ nFunc(fs_type, "fs", "type", {
 
 nFunc(fs_target, "fs", "target", {
     params({
-        {{}, true}
+        {{OBJ_STRING}, true}
     });
 
     error_code errorCode;
