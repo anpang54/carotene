@@ -455,5 +455,18 @@ nMethod(dom_Node, replace, {
     return CaroNull;
 });
 
+nMethod(dom_Node, delete, {
+    params({});
+
+    NodeData* data = nativeData<NodeData>(vm, self);
+    if(data == nullptr) return CaroNull;
+
+    EM_ASM({
+        Module.caroNodes.get($0).remove();
+    }, data->id);
+
+    return CaroNull;
+});
+
 
 #endif

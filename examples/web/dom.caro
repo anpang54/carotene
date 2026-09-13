@@ -37,6 +37,12 @@ func add_node() {
             dom.Node("li", "You thought that was gonna add a new element? Hah, no, this got changed instead.")
         );
 
+    } elif($other_spans_added == 3) {
+        $other_spans_added = 4;
+
+        dom.id("outside-div").delete();
+        $span1.text = "Poof! That div is gone!";
+
     }
 
 }
@@ -44,7 +50,7 @@ func add_node() {
 $window.add(gui.Button("Add another element!", add_node), 0, 0);
 
 $window.show(func() {
-    span1 = dom.Node("span");
-    span1.text = "Node added and text set from Carotene";
-    dom.id("caro-container").add(span1);
+    $span1 = dom.Node("span");
+    $span1.text = "Node added and text set from Carotene";
+    dom.id("caro-container").add($span1);
 });
