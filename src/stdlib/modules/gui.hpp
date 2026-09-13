@@ -112,14 +112,6 @@ nMethod(gui_Label, init, {
     return CaroNull;
 });
 
-nMethod(gui_Label, set_text, {
-    params({
-        {{OBJ_STRING}, true}
-    });
-    setWidgetText(vm, self, args);
-    return CaroNull;
-});
-
 nWidgetMethods(gui_Label);
 
 
@@ -137,14 +129,6 @@ nMethod(gui_Button, init, {
     data->widget = {CaroGui::WIDGET_BUTTON, asString(args[0])->str};
     if(args.size() >= 2) data->callback = args[1];
     asInstance(self)->native = std::move(data);
-    return CaroNull;
-});
-
-nMethod(gui_Button, set_text, {
-    params({
-        {{OBJ_STRING}, true}
-    });
-    setWidgetText(vm, self, args);
     return CaroNull;
 });
 
