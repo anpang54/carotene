@@ -161,7 +161,7 @@ nFunc(fs_copy, "fs", "copy", {
 
 });
 
-nFunc(fs_rename, "fs", "rename", {
+nFunc(fs_move, "fs", "move", {
     params({
         {{OBJ_STRING}, true},
         {{OBJ_STRING}, true}
@@ -169,7 +169,7 @@ nFunc(fs_rename, "fs", "rename", {
 
     error_code errorCode;
     filesystem::rename(PATH(0), PATH(1), errorCode);
-    FILE_CHECK(errorCode, "rename", STR(0));
+    FILE_CHECK(errorCode, "move", STR(0));
     return CaroNull;
 
 });
@@ -304,7 +304,7 @@ nFunc(fs_list, "fs", "list", {
     for(string& name: names) {
         values.push_back(CaroObj(copyString(std::move(name))));
     }
-    
+
     return CaroObj(copyArray(std::move(values)));
 
 });
