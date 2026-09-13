@@ -216,12 +216,6 @@ nFunc(main_exit, "", "exit", {
     exit(args.size() == 0 || isFalsy(args[0])? 0: 1);
 });
 
-nFunc(main_clock, "", "clock", {
-    params({});
-    return CaroDouble((double)clock() / CLOCKS_PER_SEC);
-});
-    // will probably delete once done with crafting interpreters
-
 
 // BASIC MATH
 
