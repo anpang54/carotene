@@ -2,6 +2,11 @@
 #pragma once
 
 
+// INCLUDES
+
+using std::initializer_list;
+
+
 // PARAMETER CHECKING
 
 struct PType{
@@ -17,14 +22,11 @@ struct PType{
     // {OBJ_STRING}          = string
 
 struct P{
-    std::initializer_list<PType> allowedTypes;
+    initializer_list<PType> allowedTypes;
     bool required;
 };
-    // the type lists are initializer_lists rather than vectors so that a parameter list written
-    // inline at a params() call site costs no allocation; both backing arrays live for the whole
-    // checkParameters() call expression, which is the only thing that ever reads them
 
-bool matchesType(const PType& allowed, const Value& value) {
+inline bool matchesType(const PType& allowed, const Value& value) {
     if(value.type != allowed.valueType) return false;
     if(!allowed.isObjType) return true;
     return value.as.obj->type == allowed.objType;
@@ -33,7 +35,30 @@ string typeofPType(const PType& type) {
     return type.isObjType? typeofObjType(type.objType): typeofType(type.valueType);
 }
 
-string checkParameters(std::initializer_list<P> parameters, Args args) {
+
+// fast path
+inline bool parametersValid(initializer_list<P> parameters, Args args) {
+
+    if(args.size() > parameters.size()) return false;
+
+    for(uint i = 0; i < parameters.size(); ++i) {
+        const P& parameter = parameters.begin()[i];
+        if(i >= args.size()) {
+            if(parameter.required) return false;
+            continue;
+        }
+        if(parameter.allowedTypes.size() != 0 && !std::ranges::any_of(parameter.allowedTypes,
+            [&](const PType& allowed) { return matchesType(allowed, args[i]); }
+        )) return false;
+    }
+
+    return true;
+
+}
+
+// slow path
+[[gnu::cold, gnu::noinline]]
+string describeParameterError(initializer_list<P> parameters, Args args) {
 
     // check for too many parameters
     if(args.size() > parameters.size()) {
@@ -141,9 +166,8 @@ bool alreadyInitialized(VM* vm, Value self) {
 
 #define params(...)\
     do{\
-        string checkResult = checkParameters(__VA_ARGS__, args);\
-        if(!checkResult.empty()) {\
-            vm->runtimeError("%s", checkResult.c_str());\
+        if(!parametersValid(__VA_ARGS__, args)) [[unlikely]] {\
+            vm->runtimeError("%s", describeParameterError(__VA_ARGS__, args).c_str());\
             return CaroNull;\
         }\
     } while(false)
