@@ -1380,6 +1380,15 @@ class VM{
                         top() = CaroUlong(sizeofValue(top()));
                         break;
                     }
+                    case OP_SHOUT: {
+                        const Value& value = top();
+                        cout << typeofValue(value);
+                        if(value.type != TYPE_NULL && value.type != TYPE_SMTH) {
+                            cout << ' ' << printValue(value);
+                        }
+                        cout << '\n';
+                        break;
+                    }
 
                     case OP_JUMP: {
                         uint16_t offset = READ_SHORT();

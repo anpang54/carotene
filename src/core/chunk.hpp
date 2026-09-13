@@ -80,6 +80,7 @@ enum OpCode: uint8_t{
     // specific functions
     OP_TYPEOF                    = 0x78,
     OP_SIZEOF                    = 0x79,
+    OP_SHOUT                     = 0x7A,
 
     // classes
     OP_CLASS                     = 0x80,
@@ -312,6 +313,8 @@ class Chunk{
                     return simpleInstruction("OP_TYPEOF", offset);
                 case OP_SIZEOF:
                     return simpleInstruction("OP_SIZEOF", offset);
+                case OP_SHOUT:
+                    return simpleInstruction("OP_SHOUT", offset);
 
                 case OP_CALL:
                     return byteInstruction("OP_CALL", offset);

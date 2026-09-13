@@ -1391,21 +1391,24 @@ class Compiler{
         }
 
         void finishExpression(int start) {
-            // expression compiled, consume ; and pop the value
+            // expression compiled, consume ; or ! and pop the value
+
+            bool shout = match(TOKEN_BANG);
+            if(shout) emitByte(OP_SHOUT);
 
             if(this->inEval) {
-                bool hadSemicolon = match(TOKEN_SEMICOLON);    // semicolon is optional here
+                bool hadTerminator = shout || match(TOKEN_SEMICOLON);
                 if(check(TOKEN_EOF)) {
                     emitByte(OP_RETURN);
                     return;
                 }
-                if(!hadSemicolon) errorAtCurrent("Expect ';' after expression.");
-            } else {
+                if(!hadTerminator) errorAtCurrent("Expect ';' after expression.");
+            } else if(!shout) {
                 consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
             }
 
             emitByte(OP_POP);
-            tryFuseIncrement(start);
+            if(!shout) tryFuseIncrement(start);
 
         }
 
