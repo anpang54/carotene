@@ -261,7 +261,7 @@ class Chunk{
                 case OP_GREATER_EQUAL:
                     return simpleInstruction("OP_GREATER_EQUAL", offset);
                 case OP_SPACESHIP:
-                    return simpleInstruction("OP_SPACEASHIP", offset);
+                    return simpleInstruction("OP_SPACESHIP", offset);
                     
                 case OP_NULL:
                     return simpleInstruction("OP_NULL", offset);
