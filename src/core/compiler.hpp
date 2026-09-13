@@ -322,16 +322,8 @@ class Compiler{
 
             if(cur().lastCmpOffset == (int)currentChunk()->code.size() - 1) {
 
-                uint8_t fusedOp;
-                switch(currentChunk()->code.back()) {
-                    case OP_LESS:          fusedOp = OP_JUMP_IF_NOT_LESS;          break;
-                    case OP_LESS_EQUAL:    fusedOp = OP_JUMP_IF_NOT_LESS_EQUAL;    break;
-                    case OP_GREATER:       fusedOp = OP_JUMP_IF_NOT_GREATER;       break;
-                    case OP_GREATER_EQUAL: fusedOp = OP_JUMP_IF_NOT_GREATER_EQUAL; break;
-                    case OP_EQUAL:         fusedOp = OP_JUMP_IF_NOT_EQUAL;         break;
-                    case OP_NOT_EQUAL:     fusedOp = OP_JUMP_IF_EQUAL;             break;
-                    default: return {emitJump(OP_JUMP_IF_FALSE), false};    // unreachable
-                }
+                uint8_t fusedOp = currentChunk()->code.back() + 0x50;
+                    // each jump opcode is the comparison opcode + 0x50
 
                 currentChunk()->code.pop_back();
                 currentChunk()->lines.pop_back();
