@@ -29,29 +29,29 @@ size_t hashObject    (Obj* object);
 enum ValueType{
 
     // general
-    TYPE_NULL,
-    TYPE_SMTH,
-    TYPE_BOOL,
+    TYPE_NULL   = 0x00,
+    TYPE_SMTH   = 0x01,
+    TYPE_BOOL   = 0x02,
 
     // numeric
-    TYPE_BYTE,
-    TYPE_UINT,
-    TYPE_INT,
-    TYPE_ULONG,
-    TYPE_LONG,
-    TYPE_FLOAT,
-    TYPE_DOUBLE,
+    TYPE_BYTE   = 0x10,
+    TYPE_UINT   = 0x11,
+    TYPE_INT    = 0x12,
+    TYPE_ULONG  = 0x13,
+    TYPE_LONG   = 0x14,
+    TYPE_FLOAT  = 0x15,
+    TYPE_DOUBLE = 0x16,
 
     // vectors
-    TYPE_VEC2I,
-    TYPE_VEC2U,
-    TYPE_VEC2F,
-    TYPE_VEC3I,
-    TYPE_VEC3U,
-    TYPE_VEC3F,
+    TYPE_VEC2I  = 0x18,
+    TYPE_VEC2U  = 0x19,
+    TYPE_VEC2F  = 0x1A,
+    TYPE_VEC3I  = 0x1B,
+    TYPE_VEC3U  = 0x1C,
+    TYPE_VEC3F  = 0x1D,
     
     // object
-    TYPE_OBJ,
+    TYPE_OBJ    = 0x20,
 
 };
 
