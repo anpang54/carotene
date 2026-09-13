@@ -9,95 +9,105 @@
 
 // OPCODES
 
-enum OpCode{
+enum OpCode: uint8_t{
+
+    /*
+        each opcode has a specified value for bytecode compatibility
+        0x00 is intentionally left unused because nulls are common in corrupted data
+        the last value is 0xff so that the jump table a switch on this enum turns into takes up every byte
+    */
 
     // app info
-    OP_NAME,
-    OP_DESC,
-    OP_VERSION,
+    OP_NAME                      = 0x01,
+    OP_DESC                      = 0x02,
+    OP_VERSION                   = 0x03,
 
     // values
-    OP_CONSTANT,
-    OP_NULL,
-    OP_SMTH,
-    OP_TRUE,
-    OP_FALSE,
-    OP_INTERPOLATE,
+    OP_CONSTANT                  = 0x10,
+    OP_NULL                      = 0x11,
+    OP_SMTH                      = 0x12,
+    OP_TRUE                      = 0x13,
+    OP_FALSE                     = 0x14,
+    OP_INTERPOLATE               = 0x15,
 
     // arithmetic
-    OP_ADD,
-    OP_SUBTRACT,
-    OP_MULTIPLY,
-    OP_DIVIDE,
-    OP_NEGATE,
-    OP_MODULO,
-    OP_EXPONENTIATE,
-
-    // logic
-    OP_NOT,
+    OP_ADD                       = 0x20,
+    OP_SUBTRACT                  = 0x21,
+    OP_MULTIPLY                  = 0x22,
+    OP_DIVIDE                    = 0x23,
+    OP_NEGATE                    = 0x24,
+    OP_MODULO                    = 0x25,
+    OP_EXPONENTIATE              = 0x26,
     
-    // comparison
-    OP_EQUAL,
-    OP_NOT_EQUAL,
-    OP_LESS,
-    OP_LESS_EQUAL,
-    OP_GREATER,
-    OP_GREATER_EQUAL,
-    OP_SPACESHIP,
+    // logic/bitwise
+    OP_NOT                       = 0x30,
 
-    // variables
-    OP_DEFINE_GLOBAL,
-    OP_DEFINE_CONSTANT,
-    OP_GET_GLOBAL,
-    OP_SET_GLOBAL,
-    OP_INCREMENT_GLOBAL,
-    OP_DECREMENT_GLOBAL,
-    OP_GET_LOCAL,
-    OP_SET_LOCAL,
-    OP_INCREMENT_LOCAL,
-    OP_DECREMENT_LOCAL,
+    // comparison
+    OP_EQUAL                     = 0x41,
+    OP_NOT_EQUAL                 = 0x42,
+    OP_LESS                      = 0x43,
+    OP_LESS_EQUAL                = 0x44,
+    OP_GREATER                   = 0x45,
+    OP_GREATER_EQUAL             = 0x46,
+    OP_SPACESHIP                 = 0x47,
+
+    // globals
+    OP_DEFINE_GLOBAL             = 0x50,
+    OP_DEFINE_CONSTANT           = 0x51,
+    OP_GET_GLOBAL                = 0x52,
+    OP_SET_GLOBAL                = 0x53,
+    OP_INCREMENT_GLOBAL          = 0x54,
+    OP_DECREMENT_GLOBAL          = 0x55,
+
+    // locals (globals + 0x08)
+    OP_GET_LOCAL                 = 0x5A,
+    OP_SET_LOCAL                 = 0x5B,
+    OP_INCREMENT_LOCAL           = 0x5C,
+    OP_DECREMENT_LOCAL           = 0x5D,
 
     // collections
-    OP_MAKE_ARRAY,
-    OP_MAKE_DICT,
-    OP_MAKE_SET,
-    OP_GET_INDEX,
-    OP_SET_INDEX,
-    OP_DUPLICATE_INDEX,
+    OP_MAKE_ARRAY                = 0x60,
+    OP_MAKE_DICT                 = 0x61,
+    OP_MAKE_SET                  = 0x62,
+    OP_GET_INDEX                 = 0x63,
+    OP_SET_INDEX                 = 0x64,
+    OP_DUPLICATE_INDEX           = 0x65,
 
     // functions
-    OP_CALL,
-    OP_RETURN,
-
-    // classes
-    OP_CLASS,
-    OP_GET_PROPERTY,
-    OP_SET_PROPERTY,
-    OP_GET_MEMBER,
-    OP_SET_MEMBER,
-    OP_METHOD,
-    OP_INVOKE,
+    OP_CALL                      = 0x70,
+    OP_RETURN                    = 0x71,
 
     // specific functions
-    OP_TYPEOF,
-    OP_SIZEOF,
+    OP_TYPEOF                    = 0x78,
+    OP_SIZEOF                    = 0x79,
 
-    // control flow
-    OP_JUMP,
-    OP_JUMP_IF_EQUAL,
-    OP_JUMP_IF_FALSE,
-    OP_JUMP_IF_NOT_LESS,
-    OP_JUMP_IF_NOT_LESS_EQUAL,
-    OP_JUMP_IF_NOT_GREATER,
-    OP_JUMP_IF_NOT_GREATER_EQUAL,
-    OP_JUMP_IF_NOT_EQUAL,
-    OP_LOOP,
-    OP_FOR_LOOP,
+    // classes
+    OP_CLASS                     = 0x80,
+    OP_GET_PROPERTY              = 0x81,
+    OP_SET_PROPERTY              = 0x82,
+    OP_GET_MEMBER                = 0x83,
+    OP_SET_MEMBER                = 0x84,
+    OP_METHOD                    = 0x85,
+    OP_INVOKE                    = 0x86,
 
-    // misc
-    OP_POP,
-    OP_COPY,
-    OP_DUPLICATE,
+    // jump (comparison + 0x50)
+    OP_JUMP                      = 0x90,
+    OP_JUMP_IF_NOT_EQUAL         = 0x91,
+    OP_JUMP_IF_EQUAL             = 0x92,
+    OP_JUMP_IF_NOT_LESS          = 0x93,
+    OP_JUMP_IF_NOT_LESS_EQUAL    = 0x94,
+    OP_JUMP_IF_NOT_GREATER       = 0x95,
+    OP_JUMP_IF_NOT_GREATER_EQUAL = 0x96,
+    OP_JUMP_IF_FALSE             = 0x98,
+
+    // loops
+    OP_LOOP                      = 0xA0,
+    OP_FOR_LOOP                  = 0xA1,
+
+    // stack
+    OP_POP                       = 0xFD,
+    OP_COPY                      = 0xFE,
+    OP_DUPLICATE                 = 0xFF,
 
 };
 
