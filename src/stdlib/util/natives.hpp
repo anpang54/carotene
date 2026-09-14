@@ -175,6 +175,8 @@ bool alreadyInitialized(VM* vm, Value self) {
     // variadic so that the braced parameter list can be passed in as one argument
 
 #define ANY_NUMERIC {TYPE_BYTE, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG, TYPE_FLOAT, TYPE_DOUBLE}
+#define ANY_VEC2    {TYPE_VEC2I, TYPE_VEC2U, TYPE_VEC2F}
+#define ANY_VEC3    {TYPE_VEC3I, TYPE_VEC3U, TYPE_VEC3F}
 
 #define STR(index)  printValue(args[index])
 

@@ -141,6 +141,27 @@ nMethod(raylib_Window, close, {
 
 // DRAWING
 
+
+// helpers
+
+Color raylibColor(Value value) {
+    auto channel = [&](int component) {
+        float number = asNumberTo<float>(getComponent(value, component));
+        return (uint8_t)std::clamp(number, 0.0f, 255.0f);
+    };
+    return Color{channel(0), channel(1), channel(2), 255};
+}
+
+Vector2 raylibVector2(Value value) {
+    return {asNumberTo<float>(getComponent(value, 0)), asNumberTo<float>(getComponent(value, 1))};
+}
+Vector3 raylibVector3(Value value) {
+    return {asNumberTo<float>(getComponent(value, 0)), asNumberTo<float>(getComponent(value, 1)), asNumberTo<float>(getComponent(value, 2))};
+}
+
+
+// DRAWING
+
 #define ifWindowOpen() if(!raylibWindowOpen(vm)) return CaroNull;
 
 bool raylibWindowOpen(VM* vm) {
@@ -148,6 +169,9 @@ bool raylibWindowOpen(VM* vm) {
     vm->runtimeError("No raylib window is open.");
     return false;
 }
+
+
+// begin/end
 
 nFunc(raylib_begin, "raylib", "begin", {
     params({});
@@ -160,6 +184,148 @@ nFunc(raylib_end, "raylib", "end", {
     params({});
     ifWindowOpen();
     EndDrawing();
+    return CaroNull;
+});
+
+nFunc(raylib_begin_3d, "raylib", "begin_3d", {
+    params({
+        {ANY_VEC3,    true },    // camera position
+        {ANY_VEC3,    true },    // camera rotation, instead of raylib's camera target
+        {ANY_NUMERIC, false},    // vertical fov
+    });
+    ifWindowOpen();
+
+    Vector3 position = raylibVector3(args[0]);
+    Vector3 rotation = raylibVector3(args[1]);
+
+    // compute camera target from rotation with meth
+    float pitch = rotation.x * DEG2RAD;
+    float yaw   = rotation.y * DEG2RAD;
+    float roll  = rotation.z * DEG2RAD;
+    float sp = std::sin(pitch), cp = std::cos(pitch);
+    float sy = std::sin(yaw),   cy = std::cos(yaw);
+    float sr = std::sin(roll),  cr = std::cos(roll);
+    Vector3 forward = {-sy * cp, sp,   -cy * cp};
+    Vector3 right   = { cy,      0.0f, -sy     };
+    Vector3 up      = { sy * sp, cp,    cy * sp};
+
+    // make camera
+    Camera3D camera = {
+        .position   = position,
+        .target     = {position.x + forward.x, position.y + forward.y, position.z + forward.z},
+        .up         = {up.x * cr + right.x * sr, up.y * cr + right.y * sr, up.z * cr + right.z * sr},
+        .fovy       = args.size() >= 3? asNumberTo<float>(args[2]): 66.66f,
+        .projection = CAMERA_PERSPECTIVE
+    };
+
+    // start 3d mode
+    BeginMode3D(camera);
+
+    return CaroNull;
+});
+
+nFunc(raylib_end_3d, "raylib", "end_3d", {
+    params({});
+    ifWindowOpen();
+    EndMode3D();
+    return CaroNull;
+});
+
+
+// background
+
+nFunc(raylib_background, "raylib", "background", {
+    params({
+        {ANY_VEC3, true}
+    });
+    ifWindowOpen();
+    Color color = raylibColor(args[0]);
+    ClearBackground(color);
+    return CaroNull;
+});
+
+
+// 2d shapes
+
+nFunc(raylib_rectangle, "raylib", "rectangle", {
+    params({
+        {ANY_VEC2, true},    // position
+        {ANY_VEC2, true},    // size
+        {ANY_VEC3, true}     // color
+    });
+    ifWindowOpen();
+    Color color = raylibColor(args[2]);
+    DrawRectangleV(raylibVector2(args[0]), raylibVector2(args[1]), color);
+    return CaroNull;
+});
+
+nFunc(raylib_rectangle_outline, "raylib", "rectangle_outline", {
+    params({
+        {ANY_VEC2,    true },    // position
+        {ANY_VEC2,    true },    // size
+        {ANY_VEC3,    true },    // color
+        {ANY_NUMERIC, false}     // thickness
+    });
+    ifWindowOpen();
+    Color   color    = raylibColor(args[2]);
+    Vector2 position = raylibVector2(args[0]);
+    Vector2 size     = raylibVector2(args[1]);
+    float thickness  = args.size() >= 4? asNumberTo<float>(args[3]): 1.0f;
+    DrawRectangleLinesEx({position.x, position.y, size.x, size.y}, thickness, color);
+    return CaroNull;
+});
+
+nFunc(raylib_text, "raylib", "text", {
+    params({
+        {{OBJ_STRING}, true },    // text
+        {ANY_VEC2,     true },    // position
+        {ANY_VEC3,     true },    // color
+        {ANY_NUMERIC,  false}     // font size
+    });
+    ifWindowOpen();
+    Color color      = raylibColor(args[2]);
+    Vector2 position = raylibVector2(args[1]);
+    int fontSize     = args.size() >= 4? asNumberTo<int>(args[3]): 16;
+    rlDrawText(asString(args[0])->str.c_str(), (int)position.x, (int)position.y, fontSize, color);
+    return CaroNull;
+});
+
+
+// 3d shapes
+
+nFunc(raylib_cube, "raylib", "cube", {
+    params({
+        {ANY_VEC3, true},    // center
+        {ANY_VEC3, true},    // size
+        {ANY_VEC3, true}     // color
+    });
+    ifWindowOpen();
+    Color color = raylibColor(args[2]);
+    DrawCubeV(raylibVector3(args[0]), raylibVector3(args[1]), color);
+    return CaroNull;
+});
+
+nFunc(raylib_cube_outline, "raylib", "cube_outline", {
+    params({
+        {ANY_VEC3, true},    // center
+        {ANY_VEC3, true},    // size
+        {ANY_VEC3, true}     // color
+    });
+    ifWindowOpen();
+    Color color = raylibColor(args[2]);
+    DrawCubeWiresV(raylibVector3(args[0]), raylibVector3(args[1]), color);
+    return CaroNull;
+});
+
+nFunc(raylib_plane, "raylib", "plane", {
+    params({
+        {ANY_VEC3, true},    // center
+        {ANY_VEC2, true},    // horizontal size
+        {ANY_VEC3, true}     // color
+    });
+    ifWindowOpen();
+    Color color = raylibColor(args[2]);
+    DrawPlane(raylibVector3(args[0]), raylibVector2(args[1]), color);
     return CaroNull;
 });
 
