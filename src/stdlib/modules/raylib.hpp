@@ -73,22 +73,29 @@ nMethod(raylib_Window, show, {
 
     // set config
     SetTraceLogLevel(LOG_WARNING);      // don't log literally everything
-    SetConfigFlags(FLAG_VSYNC_HINT);    // better than hardcoding the fps to 60 or smth
+    unsigned int flags = FLAG_VSYNC_HINT;   // better than hardcoding the fps to 60 or smth
 
     #ifdef __EMSCRIPTEN__
         // make a <canvas> for web
-        EM_ASM({
-            if(!Module.canvas) {
-                const canvas = document.createElement("canvas");
-                canvas.id = "caro-raylib";
-                canvas.oncontextmenu = (event) => event.preventDefault();
-                document.body.appendChild(canvas);
-                Module.canvas = canvas;
-            } else if(!Module.canvas.id) {
-                Module.canvas.id = "caro-raylib";
+        bool created = EM_ASM_INT({
+            if(Module.canvas) {
+                if(!Module.canvas.id) Module.canvas.id = "caro-raylib";
+                return 0;
             }
-        });
+            const canvas = document.createElement("canvas");
+            canvas.id             = "caro-raylib";
+            canvas.style.display  = "block";
+            canvas.style.position = "fixed";
+            canvas.style.inset    = 0;
+            canvas.oncontextmenu  = (event) => event.preventDefault();
+            document.body.appendChild(canvas);
+            Module.canvas = canvas;
+            return 1;
+        }) != 0;
+        if(created) flags |= FLAG_WINDOW_RESIZABLE;
     #endif
+
+    SetConfigFlags(flags);
 
     // make window
     InitWindow(data->width, data->height, data->title.c_str());
