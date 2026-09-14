@@ -326,4 +326,120 @@ nFunc(raylib_plane, "raylib", "plane", {
 });
 
 
+// INPUT
+
+
+// helpers
+
+const unordered_map<string, int> mapKey = {
+
+    // top digits
+    {"0", KEY_ZERO}, {"1", KEY_ONE}, {"2", KEY_TWO  }, {"3", KEY_THREE}, {"4", KEY_FOUR},
+    {"5", KEY_FIVE}, {"6", KEY_SIX}, {"7", KEY_SEVEN}, {"8", KEY_EIGHT}, {"9", KEY_NINE},
+
+    // letters
+    {"a", KEY_A}, {"b", KEY_B}, {"c", KEY_C}, {"d", KEY_D}, {"e", KEY_E}, {"f", KEY_F}, {"g", KEY_G},
+    {"h", KEY_H}, {"i", KEY_I}, {"j", KEY_J}, {"k", KEY_K}, {"l", KEY_L}, {"m", KEY_M}, {"n", KEY_N},
+    {"o", KEY_O}, {"p", KEY_P}, {"q", KEY_Q}, {"r", KEY_R}, {"s", KEY_S}, {"t", KEY_T}, {"u", KEY_U},
+    {"v", KEY_V}, {"w", KEY_W}, {"x", KEY_X}, {"y", KEY_Y}, {"z", KEY_Z},
+
+    // punctuation
+    {"`", KEY_GRAVE       },
+    {"-", KEY_MINUS       }, {"=", KEY_EQUAL        },
+    {"[", KEY_LEFT_BRACKET}, {"]", KEY_RIGHT_BRACKET},
+    {";", KEY_SEMICOLON   }, {"'", KEY_APOSTROPHE   }, {"\\", KEY_BACKSLASH},
+    {",", KEY_COMMA       }, {".", KEY_PERIOD       }, {"/" , KEY_SLASH    },
+
+    // control
+    {"escape",       KEY_ESCAPE      },
+                                                                           {"backspace", KEY_BACKSPACE},
+    {"tab",          KEY_TAB         },
+    {"caps_lock",    KEY_CAPS_LOCK   },                                    {"enter",     KEY_ENTER    },
+                                        {"space",        KEY_SPACE      },
+    {"print_screen", KEY_PRINT_SCREEN}, {"scroll_lock",  KEY_SCROLL_LOCK}, {"pause",     KEY_PAUSE    },
+    {"insert",       KEY_INSERT      }, {"home",         KEY_HOME       }, {"page_up",   KEY_PAGE_UP  },
+    {"delete",       KEY_DELETE      }, {"end",          KEY_END        }, {"page_down", KEY_PAGE_DOWN},
+                                        {"up",           KEY_UP         },
+    {"left",         KEY_LEFT        }, {"down",         KEY_DOWN       }, {"right",     KEY_RIGHT    },
+    {"num_lock",     KEY_NUM_LOCK    },
+
+    // modifiers
+    {"left_ctrl",  KEY_LEFT_CONTROL}, {"right_ctrl",  KEY_RIGHT_CONTROL},
+    {"left_shift", KEY_LEFT_SHIFT  }, {"right_shift", KEY_RIGHT_SHIFT  },
+    {"left_alt",   KEY_LEFT_ALT    }, {"right_alt",   KEY_RIGHT_ALT    },
+    {"left_super", KEY_LEFT_SUPER  }, {"right_super", KEY_RIGHT_SUPER},
+
+    // function
+    {"f1", KEY_F1}, {"f2", KEY_F2}, {"f3",  KEY_F3},  {"f4",  KEY_F4 }, {"f5",  KEY_F5 }, {"f6",  KEY_F6 },
+    {"f7", KEY_F7}, {"f8", KEY_F8}, {"f9",  KEY_F9},  {"f10", KEY_F10}, {"f11", KEY_F11}, {"f12", KEY_F12},
+
+    // numpad
+    {"num_0", KEY_KP_0}, {"num_1", KEY_KP_1}, {"num_2", KEY_KP_2}, {"num_3", KEY_KP_3}, {"num_4", KEY_KP_4},
+    {"num_5", KEY_KP_5}, {"num_6", KEY_KP_6}, {"num_7", KEY_KP_7}, {"num_8", KEY_KP_8}, {"num_9", KEY_KP_9},
+    {"num_slash", KEY_KP_DIVIDE}, {"num_asterisk", KEY_KP_MULTIPLY}, {"num_minus", KEY_KP_SUBTRACT},
+                                                                     {"num_plus",  KEY_KP_ADD     },
+                                  {"num_dot",      KEY_KP_DECIMAL }, {"num_enter", KEY_KP_ENTER   },
+
+};
+    // I painstakingly perfected the names and the ordering/alignment here for literally no reason
+
+const unordered_map<string, int> mapMouse = {
+    {"left",   MOUSE_BUTTON_LEFT  },
+    {"middle", MOUSE_BUTTON_MIDDLE},
+    {"right",  MOUSE_BUTTON_RIGHT }, 
+    {"side",   MOUSE_BUTTON_SIDE  },
+};
+
+int raylibInputCode(VM* vm, const unordered_map<string, int>& codes, Value name, const char* kind) {
+    const string& str = asString(name)->str;
+    auto it = codes.find(lower(str));
+    if(it != codes.end()) return it->second;
+    vm->runtimeError("\"%s\" isn't a valid %s name.", str.c_str(), kind);
+    return -1;
+}
+
+#define inputKey(cppName, caroName, raylibFunction)\
+    nFunc(cppName, "raylib", caroName, {\
+        params({\
+            {{OBJ_STRING}, true}\
+        });\
+        ifWindowOpen();\
+        int key = raylibInputCode(vm, mapKey, args[0], "key");\
+        if(key < 0) return CaroNull;\
+        return CaroBool(raylibFunction(key));\
+    })
+
+#define inputMouse(cppName, caroName, raylibFunction)\
+    nFunc(cppName, "raylib", caroName, {\
+        params({\
+            {{OBJ_STRING}, false}\
+        });\
+        ifWindowOpen();\
+        int button = MOUSE_BUTTON_LEFT;\
+        if(args.size() >= 1) {\
+            button = raylibInputCode(vm, mapMouse, args[0], "mouse button");\
+            if(button < 0) return CaroNull;\
+        }\
+        return CaroBool(raylibFunction(button));\
+    })
+
+
+// actual functions
+
+inputKey(raylib_key_down,     "key_down",     IsKeyDown);
+inputKey(raylib_key_pressed,  "key_pressed",  IsKeyPressed);
+inputKey(raylib_key_released, "key_released", IsKeyReleased);
+
+inputMouse(raylib_mouse_down,     "mouse_down",     IsMouseButtonDown);
+inputMouse(raylib_mouse_pressed,  "mouse_pressed",  IsMouseButtonPressed);
+inputMouse(raylib_mouse_released, "mouse_released", IsMouseButtonReleased);
+
+nFunc(raylib_mouse_position, "raylib", "mouse_position", {
+    params({});
+    ifWindowOpen();
+    Vector2 position = GetMousePosition();
+    return CaroVec2f(position.x, position.y);
+});
+
+
 #endif
