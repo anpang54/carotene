@@ -14,10 +14,37 @@
 // basically the same design as gui.Window
 
 struct RaylibWindowData: NativeData{
+
     string title;
     int width;
     int height;
     bool shown = false;
+    bool lockCursor = false;
+
+    bool readProperty(const string& name, Value& result) override{
+        if(name == "lock_cursor") {
+            result = CaroBool(lockCursor);
+            return true;
+        }
+        return false;
+    }
+
+    bool writeProperty(const string& name, Value value, string& error) override{
+        if(name == "lock_cursor") {
+            if(value.type != TYPE_BOOL) {
+                error = format("lock_cursor should be bool, but {:s} was given.", typeofValue(value));
+                return true;
+            }
+            lockCursor = value.as.Abool;
+            if(shown) {
+                if(lockCursor) DisableCursor();
+                else           EnableCursor();
+            }
+            return true;
+        }
+        return false;
+    }
+
 };
 
 RaylibWindowData* raylibWindowData(Value value) {
@@ -110,6 +137,7 @@ nMethod(raylib_Window, show, {
         return CaroNull;
     }
     data->shown = true;
+    if(data->lockCursor) DisableCursor();
 
     return CaroNull;
 });
