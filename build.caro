@@ -46,8 +46,8 @@ release_only = "-O2 -g0 -s ";
         "-lm -lpthread "
     ],
     "web":     ["/usr/lib/emscripten/emcc ",
-        "-DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 ",
-        "-sUSE_GLFW=3 "
+        "-DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES3 ",
+        "-sUSE_GLFW=3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 "
     ]
 };
 
