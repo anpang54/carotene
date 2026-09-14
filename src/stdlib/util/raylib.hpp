@@ -43,6 +43,7 @@
 
     // actually include raylib
     #include "../../../include/raylib/raylib.h"
+    #include "../../../include/raylib/rcamera.h"
 
     #undef Rectangle
     #undef CloseWindow

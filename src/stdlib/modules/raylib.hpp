@@ -155,16 +155,166 @@ Vector3 raylibVector3(Value value) {
     return {asNumberTo<float>(getComponent(value, 0)), asNumberTo<float>(getComponent(value, 1)), asNumberTo<float>(getComponent(value, 2))};
 }
 
-
-// DRAWING
-
-#define ifWindowOpen() if(!raylibWindowOpen(vm)) return CaroNull;
-
 bool raylibWindowOpen(VM* vm) {
     if(IsWindowReady()) return true;
     vm->runtimeError("No raylib window is open.");
     return false;
 }
+
+#define ifWindowOpen() if(!raylibWindowOpen(vm)) return CaroNull;
+
+
+// CAMERA OBJECT
+
+struct RaylibCameraData: NativeData{
+
+    Camera3D camera;
+
+    bool readProperty(const string& name, Value& result) override{
+        if     (name == "position")   result = CaroVec3f(camera.position.x, camera.position.y, camera.position.z);
+        else if(name == "target")     result = CaroVec3f(camera.target.x,   camera.target.y,   camera.target.z);
+        else if(name == "up")         result = CaroVec3f(camera.up.x,       camera.up.y,       camera.up.z);
+        else if(name == "fov")        result = CaroFloat(camera.fovy);
+        else if(name == "projection") result = CaroObj(copyString(camera.projection == CAMERA_ORTHOGRAPHIC? "orthographic": "perspective"));
+        else                          return false;
+        return true;
+    }
+
+    bool writeProperty(const string& name, Value value, string& error) override{
+        Vector3* vector = name == "position"? &camera.position: (name == "target"? &camera.target: (name == "up"? &camera.up: nullptr));
+        if(vector != nullptr) {
+            if(isVec3(value.type)) *vector = raylibVector3(value);
+            else error = format("The {:s} should be vec3i, vec3u, or vec3f, but {:s} was given.", name, typeofValue(value));
+        } else if(name == "fov") {
+            if(isNumeric(value.type)) camera.fovy = asNumberTo<float>(value);
+            else error = format("The fov should be numeric, but {:s} was given.", typeofValue(value));
+        } else if(name == "projection") {
+            string projection = isString(value)? lower(asString(value)->str): "";
+            if     (projection == "perspective")  camera.projection = CAMERA_PERSPECTIVE;
+            else if(projection == "orthographic") camera.projection = CAMERA_ORTHOGRAPHIC;
+            else                                  error = "The projection should be \"perspective\" or \"orthographic\".";
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+};
+
+RaylibCameraData* raylibCameraData(Value value) {
+    return isInstance(value)? dynamic_cast<RaylibCameraData*>(asInstance(value)->native.get()): nullptr;
+}
+
+const unordered_map<string, int> mapCameraMode = {
+    {"free",         CAMERA_FREE        },
+    {"orbital",      CAMERA_ORBITAL     },
+    {"first_person", CAMERA_FIRST_PERSON},
+    {"third_person", CAMERA_THIRD_PERSON},
+};
+
+nClass(raylib_Camera, "raylib", "Camera");
+
+
+// constructor
+
+nMethod(raylib_Camera, init, {
+    params({
+        {ANY_VEC3,    false},    // camera position
+        {ANY_VEC3,    false},    // camera rotation, instead of raylib's camera target
+        {ANY_NUMERIC, false}     // vertical fov
+    });
+    if(alreadyInitialized(vm, self)) return CaroNull;
+
+    // get data
+    Vector3 position = args.size() >= 1? raylibVector3(args[0]): Vector3{0.0f, 0.0f, 0.0f};
+    Vector3 rotation = args.size() >= 2? raylibVector3(args[1]): Vector3{0.0f, 0.0f, 0.0f};
+
+    // compute camera target from rotation with meth
+    float pitch = rotation.x * DEG2RAD;
+    float yaw   = rotation.y * DEG2RAD;
+    float roll  = rotation.z * DEG2RAD;
+    float sp = std::sin(pitch), cp = std::cos(pitch);
+    float sy = std::sin(yaw),   cy = std::cos(yaw);
+    float sr = std::sin(roll),  cr = std::cos(roll);
+    Vector3 forward = {-sy * cp, sp,   -cy * cp};
+    Vector3 right   = { cy,      0.0f, -sy     };
+    Vector3 up      = { sy * sp, cp,    cy * sp};
+
+    // set stuff
+    auto data = std::make_unique<RaylibCameraData>();
+    data->camera = {
+        .position   = position,
+        .target     = {position.x + forward.x, position.y + forward.y, position.z + forward.z},
+        .up         = {up.x * cr + right.x * sr, up.y * cr + right.y * sr, up.z * cr + right.z * sr},
+        .fovy       = args.size() >= 3? asNumberTo<float>(args[2]): 66.66f,
+        .projection = CAMERA_PERSPECTIVE
+    };
+    asInstance(self)->native = std::move(data);
+
+    return CaroNull;
+});
+
+
+// movement
+
+#define getCameraData()\
+    RaylibCameraData* data = nativeData<RaylibCameraData>(vm, self);\
+    if(data == nullptr) return CaroNull;
+
+nMethod(raylib_Camera, update, {
+    params({
+        {{OBJ_STRING}, true}    // mode
+    });
+    getCameraData();
+    ifWindowOpen();
+
+    const string& mode = asString(args[0])->str;
+    auto it = mapCameraMode.find(lower(mode));
+    if(it == mapCameraMode.end()) {
+        vm->runtimeError("\"%s\" isn't a valid camera mode. It should be \"free\", \"orbital\", \"first_person\", or \"third_person\".", mode.c_str());
+        return CaroNull;
+    }
+
+    UpdateCamera(&data->camera, it->second);
+    return CaroNull;
+});
+
+nMethod(raylib_Camera, yaw, {
+    params({
+        {ANY_NUMERIC, true },    // angle in degrees
+        {{TYPE_BOOL}, false}     // rotate around the target instead of the position
+    });
+    getCameraData();
+    CameraYaw(&data->camera, asNumberTo<float>(args[0]) * DEG2RAD, args.size() >= 2 && args[1].as.Abool);
+    return CaroNull;
+});
+
+nMethod(raylib_Camera, pitch, {
+    params({
+        {ANY_NUMERIC, true },    // angle in degrees
+        {{TYPE_BOOL}, false},    // rotate around the target instead of the position
+        {{TYPE_BOOL}, false},    // stop the camera from flipping past straight up or down
+        {{TYPE_BOOL}, false}     // rotate the up vector as well
+    });
+    getCameraData();
+    bool aroundTarget = args.size() >= 2 && args[1].as.Abool;
+    bool lockView     = args.size() <  3 || args[2].as.Abool;
+    bool rotateUp     = args.size() >= 4 && args[3].as.Abool;
+    CameraPitch(&data->camera, asNumberTo<float>(args[0]) * DEG2RAD, lockView, aroundTarget, rotateUp);
+    return CaroNull;
+});
+
+nMethod(raylib_Camera, roll, {
+    params({
+        {ANY_NUMERIC, true}    // angle in degrees
+    });
+    getCameraData();
+    CameraRoll(&data->camera, asNumberTo<float>(args[0]) * DEG2RAD);
+    return CaroNull;
+});
+
+
+// DRAWING
 
 
 // begin/end
@@ -185,38 +335,17 @@ nFunc(raylib_end, "raylib", "end", {
 
 nFunc(raylib_begin_3d, "raylib", "begin_3d", {
     params({
-        {ANY_VEC3,    true },    // camera position
-        {ANY_VEC3,    true },    // camera rotation, instead of raylib's camera target
-        {ANY_NUMERIC, false},    // vertical fov
+        {{OBJ_INSTANCE}, true}    // raylib.Camera
     });
     ifWindowOpen();
 
-    Vector3 position = raylibVector3(args[0]);
-    Vector3 rotation = raylibVector3(args[1]);
+    RaylibCameraData* camera = raylibCameraData(args[0]);
+    if(camera == nullptr) {
+        vm->runtimeError("Parameter 1 should be an initialized raylib.Camera, but %s was given.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
 
-    // compute camera target from rotation with meth
-    float pitch = rotation.x * DEG2RAD;
-    float yaw   = rotation.y * DEG2RAD;
-    float roll  = rotation.z * DEG2RAD;
-    float sp = std::sin(pitch), cp = std::cos(pitch);
-    float sy = std::sin(yaw),   cy = std::cos(yaw);
-    float sr = std::sin(roll),  cr = std::cos(roll);
-    Vector3 forward = {-sy * cp, sp,   -cy * cp};
-    Vector3 right   = { cy,      0.0f, -sy     };
-    Vector3 up      = { sy * sp, cp,    cy * sp};
-
-    // make camera
-    Camera3D camera = {
-        .position   = position,
-        .target     = {position.x + forward.x, position.y + forward.y, position.z + forward.z},
-        .up         = {up.x * cr + right.x * sr, up.y * cr + right.y * sr, up.z * cr + right.z * sr},
-        .fovy       = args.size() >= 3? asNumberTo<float>(args[2]): 66.66f,
-        .projection = CAMERA_PERSPECTIVE
-    };
-
-    // start 3d mode
-    BeginMode3D(camera);
-
+    BeginMode3D(camera->camera);
     return CaroNull;
 });
 
