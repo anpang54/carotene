@@ -4,3 +4,13 @@ use raylib;
 $w = raylib.Window();
 
 $w.show();
+
+while($w.running()) {
+    raylib.begin();
+
+    // 描画する
+
+    raylib.end();
+}
+
+$w.close();

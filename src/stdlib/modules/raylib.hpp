@@ -9,7 +9,7 @@
 #include "../util/raylib.hpp"
 
 
-// WINDOWS
+// WINDOW OBJECT
 
 // basically the same design as gui.Window
 
@@ -25,9 +25,10 @@ RaylibWindowData* raylibWindowData(Value value) {
 }
 
 nClass(raylib_Window, "raylib", "Window");
+    // todo: consider renaming to raylib.Game
 
 
-// init/show
+// constructor
 
 nMethod(raylib_Window, init, {
     params({
@@ -42,6 +43,7 @@ nMethod(raylib_Window, init, {
     int width    = args.size() >= 2? asNumberTo<int>(args[1]): 800;
     int height   = args.size() >= 3? asNumberTo<int>(args[2]): 450;
         // 800x450 is seemingly the default raylib window size
+        // on web the canvas is just made fullscreen anyway
     if(width <= 0 || height <= 0) {
         vm->runtimeError("The window's width and height must be positive.");
         return CaroNull;
@@ -57,12 +59,16 @@ nMethod(raylib_Window, init, {
     return CaroNull;
 });
 
+
+// state
+
+#define getWindowData()\
+    RaylibWindowData* data = nativeData<RaylibWindowData>(vm, self);\
+    if(data == nullptr) return CaroNull;
+
 nMethod(raylib_Window, show, {
     params({});
-
-    // get data
-    RaylibWindowData* data = nativeData<RaylibWindowData>(vm, self);
-    if(data == nullptr) return CaroNull;
+    getWindowData();
 
     // check if there's already a window
     if(IsWindowReady()) {
@@ -72,8 +78,8 @@ nMethod(raylib_Window, show, {
         // todo: maybe circumvent this in the future by using multiple processes
 
     // set config
-    SetTraceLogLevel(LOG_WARNING);      // don't log literally everything
-    unsigned int flags = FLAG_VSYNC_HINT;   // better than hardcoding the fps to 60 or smth
+    SetTraceLogLevel(LOG_WARNING);           // don't log literally everything
+    unsigned int flags = FLAG_VSYNC_HINT;    // better than hardcoding the fps to 60 or smth
 
     #ifdef __EMSCRIPTEN__
         // make a <canvas> for web
@@ -105,28 +111,57 @@ nMethod(raylib_Window, show, {
     }
     data->shown = true;
 
-    const char* text = "rey lyp";
-    const int size = 20;
+    return CaroNull;
+});
 
-    // loop
-    while(!WindowShouldClose()) {
+nMethod(raylib_Window, running, {
+    params({});
+    getWindowData();
 
-        BeginDrawing();
+    return CaroBool(data->shown && !WindowShouldClose());
 
-        ClearBackground(RAYWHITE);
+    // I just don't like how raylib's while loop condition is negated
+    // like why say "not supposed to close", just say "supposed to run"
+    // like yeah they're the same thing and both trivial but why?
 
-        int width = MeasureText(text, size);
-        rlDrawText(text, (GetScreenWidth() - width) / 2, (GetScreenHeight() - size) / 2, size, BLACK);
+});
 
-        EndDrawing();
+nMethod(raylib_Window, close, {
+    params({});
+    getWindowData();
 
+    if(data->shown) {
+        rlCloseWindow();
+        data->shown = false;
     }
-
-    // close
-    rlCloseWindow();
-    data->shown = false;
 
     return CaroNull;
 });
+
+
+// DRAWING
+
+#define ifWindowOpen() if(!raylibWindowOpen(vm)) return CaroNull;
+
+bool raylibWindowOpen(VM* vm) {
+    if(IsWindowReady()) return true;
+    vm->runtimeError("No raylib window is open.");
+    return false;
+}
+
+nFunc(raylib_begin, "raylib", "begin", {
+    params({});
+    ifWindowOpen();
+    BeginDrawing();
+    return CaroNull;
+});
+
+nFunc(raylib_end, "raylib", "end", {
+    params({});
+    ifWindowOpen();
+    EndDrawing();
+    return CaroNull;
+});
+
 
 #endif
