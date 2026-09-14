@@ -145,11 +145,7 @@ nMethod(raylib_Window, close, {
 // helpers
 
 Color raylibColor(Value value) {
-    auto channel = [&](int component) {
-        float number = asNumberTo<float>(getComponent(value, component));
-        return (uint8_t)std::clamp(number, 0.0f, 255.0f);
-    };
-    return Color{channel(0), channel(1), channel(2), 255};
+    return Color{value.as.Acolor.r, value.as.Acolor.g, value.as.Acolor.b, value.as.Acolor.a};
 }
 
 Vector2 raylibVector2(Value value) {
@@ -236,7 +232,7 @@ nFunc(raylib_end_3d, "raylib", "end_3d", {
 
 nFunc(raylib_background, "raylib", "background", {
     params({
-        {ANY_VEC3, true}
+        {{TYPE_COLOR}, true}
     });
     ifWindowOpen();
     Color color = raylibColor(args[0]);
@@ -249,9 +245,9 @@ nFunc(raylib_background, "raylib", "background", {
 
 nFunc(raylib_rectangle, "raylib", "rectangle", {
     params({
-        {ANY_VEC2, true},    // position
-        {ANY_VEC2, true},    // size
-        {ANY_VEC3, true}     // color
+        {ANY_VEC2,     true},    // position
+        {ANY_VEC2,     true},    // size
+        {{TYPE_COLOR}, true}     // color
     });
     ifWindowOpen();
     Color color = raylibColor(args[2]);
@@ -261,10 +257,10 @@ nFunc(raylib_rectangle, "raylib", "rectangle", {
 
 nFunc(raylib_rectangle_outline, "raylib", "rectangle_outline", {
     params({
-        {ANY_VEC2,    true },    // position
-        {ANY_VEC2,    true },    // size
-        {ANY_VEC3,    true },    // color
-        {ANY_NUMERIC, false}     // thickness
+        {ANY_VEC2,     true },    // position
+        {ANY_VEC2,     true },    // size
+        {{TYPE_COLOR}, true },    // color
+        {ANY_NUMERIC,  false}     // thickness
     });
     ifWindowOpen();
     Color   color    = raylibColor(args[2]);
@@ -279,7 +275,7 @@ nFunc(raylib_text, "raylib", "text", {
     params({
         {{OBJ_STRING}, true },    // text
         {ANY_VEC2,     true },    // position
-        {ANY_VEC3,     true },    // color
+        {{TYPE_COLOR}, true },    // color
         {ANY_NUMERIC,  false}     // font size
     });
     ifWindowOpen();
@@ -295,9 +291,9 @@ nFunc(raylib_text, "raylib", "text", {
 
 nFunc(raylib_cube, "raylib", "cube", {
     params({
-        {ANY_VEC3, true},    // center
-        {ANY_VEC3, true},    // size
-        {ANY_VEC3, true}     // color
+        {ANY_VEC3,     true},    // center
+        {ANY_VEC3,     true},    // size
+        {{TYPE_COLOR}, true}     // color
     });
     ifWindowOpen();
     Color color = raylibColor(args[2]);
@@ -307,9 +303,9 @@ nFunc(raylib_cube, "raylib", "cube", {
 
 nFunc(raylib_cube_outline, "raylib", "cube_outline", {
     params({
-        {ANY_VEC3, true},    // center
-        {ANY_VEC3, true},    // size
-        {ANY_VEC3, true}     // color
+        {ANY_VEC3,     true},    // center
+        {ANY_VEC3,     true},    // size
+        {{TYPE_COLOR}, true}     // color
     });
     ifWindowOpen();
     Color color = raylibColor(args[2]);
@@ -319,9 +315,9 @@ nFunc(raylib_cube_outline, "raylib", "cube_outline", {
 
 nFunc(raylib_plane, "raylib", "plane", {
     params({
-        {ANY_VEC3, true},    // center
-        {ANY_VEC2, true},    // horizontal size
-        {ANY_VEC3, true}     // color
+        {ANY_VEC3,     true},    // center
+        {ANY_VEC2,     true},    // horizontal size
+        {{TYPE_COLOR}, true}     // color
     });
     ifWindowOpen();
     Color color = raylibColor(args[2]);
