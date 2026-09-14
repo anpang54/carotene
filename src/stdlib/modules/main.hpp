@@ -341,17 +341,40 @@ Value castToVector(VM* vm, ValueType targetType, Args args) {
             components = asArray(v)->data;
             if((int)components.size() != size) cantCast(typeofType(targetType));    // it needs to be the same size as the vector's length
 
+        // hex string becomes a color
+        } else if(targetType == TYPE_COLOR && isString(v)) {
+            string hex = asString(v)->str;
+            if(!hex.empty() && hex[0] == '#') hex.erase(0, 1);    // the correct usage is to not include a # but whatever it's fine
+            if(hex.size() != 6 && hex.size() != 8) cantCast(typeofType(targetType));
+            for(char c: hex) {
+                if(!isxdigit((uint8_t)c)) cantCast(typeofType(targetType));
+            }
+            for(size_t i = 0; i < hex.size(); i += 2) {
+                components.push_back(CaroInt(std::stoi(hex.substr(i, 2), nullptr, 16)));
+            }
+
         } else cantCast(typeofType(targetType));
 
     // same amount of components, so construct
     } else if((int)args.size() == size) {
         components.assign(args.begin(), args.end());
 
+    // rgb color
+    } else if(targetType == TYPE_COLOR && args.size() == 3) {
+        components.assign(args.begin(), args.end());
+
     // neither of those
     } else {
-        vm->runtimeError("%s takes 1 or %d parameters, but %d were given.", typeofType(targetType).c_str(), size, (int)args.size());
+        if(targetType == TYPE_COLOR) {
+            vm->runtimeError("color takes 1 (cast or hex), 3 (RGB), or 4 (RGBA) parameters, but %d were given.", (int)args.size());
+        } else {
+            vm->runtimeError("%s takes 1 or %d parameters, but %d were given.", typeofType(targetType).c_str(), size, (int)args.size());
+        }
         return CaroNull;
     }
+
+    // colors have a=255 (opaque) unless a was specified
+    if(targetType == TYPE_COLOR && components.size() == 3) components.push_back(CaroInt(255));
 
     // convert each component to the appropriate type
     components.resize(4, CaroInt(0));
