@@ -75,6 +75,21 @@ nMethod(raylib_Window, show, {
     SetTraceLogLevel(LOG_WARNING);      // don't log literally everything
     SetConfigFlags(FLAG_VSYNC_HINT);    // better than hardcoding the fps to 60 or smth
 
+    #ifdef __EMSCRIPTEN__
+        // make a <canvas> for web
+        EM_ASM({
+            if(!Module.canvas) {
+                const canvas = document.createElement("canvas");
+                canvas.id = "caro-raylib";
+                canvas.oncontextmenu = (event) => event.preventDefault();
+                document.body.appendChild(canvas);
+                Module.canvas = canvas;
+            } else if(!Module.canvas.id) {
+                Module.canvas.id = "caro-raylib";
+            }
+        });
+    #endif
+
     // make window
     InitWindow(data->width, data->height, data->title.c_str());
     if(!IsWindowReady()) {

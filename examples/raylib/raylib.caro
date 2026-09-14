@@ -1,0 +1,6 @@
+
+use raylib;
+
+$w = raylib.Window();
+
+$w.show();
