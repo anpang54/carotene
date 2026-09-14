@@ -372,7 +372,7 @@ class VM{
             Value a = pop();
 
             // do the operation on every component
-            T result[3] = {};
+            T result[4] = {};
             for(int i = 0; i < componentCount(resultType); ++i) {
 
                 T x = asNumberTo<T>(getComponent(a, i));
@@ -401,7 +401,7 @@ class VM{
                 }
 
             }
-            push(CaroVector(resultType, result[0], result[1], result[2]));
+            push(CaroVector(resultType, result[0], result[1], result[2], result[3]));
 
             return INTERPRET_OK;
 

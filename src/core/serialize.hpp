@@ -87,6 +87,12 @@ void serializeValue(Writer& w, Value& value) {
             w.writeFloat(value.as.XYfloat.Yfloat);
             if(isVec3(value.type)) w.writeFloat(value.z.Zfloat);
             break;
+        case TYPE_COLOR:
+            w.writeUint8(value.as.Acolor.r);
+            w.writeUint8(value.as.Acolor.g);
+            w.writeUint8(value.as.Acolor.b);
+            w.writeUint8(value.as.Acolor.a);
+            break;
 
         case TYPE_OBJ: {
             Obj* obj = value.as.obj;
@@ -210,6 +216,7 @@ Value deserializeValue(Reader& r) {
         case TYPE_VEC3I: { int32_t  x = r.readUint32(); int32_t  y = r.readUint32(); int32_t  z = r.readUint32(); return CaroVec3i(x, y, z); }
         case TYPE_VEC3U: { uint32_t x = r.readUint32(); uint32_t y = r.readUint32(); uint32_t z = r.readUint32(); return CaroVec3u(x, y, z); }
         case TYPE_VEC3F: { float    x = r.readFloat();  float    y = r.readFloat();  float    z = r.readFloat();  return CaroVec3f(x, y, z); }
+        case TYPE_COLOR: { uint8_t  cr = r.readUint8(); uint8_t  cg = r.readUint8(); uint8_t  cb = r.readUint8(); uint8_t ca = r.readUint8(); return CaroColor(cr, cg, cb, ca); }
 
         case TYPE_OBJ: {
             uint8_t objType = r.readUint8();

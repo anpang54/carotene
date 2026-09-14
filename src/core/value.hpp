@@ -33,7 +33,7 @@ enum ValueType{
     TYPE_SMTH   = 0x01,
     TYPE_BOOL   = 0x02,
 
-    // numeric
+    // numbers
     TYPE_BYTE   = 0x10,
     TYPE_UINT   = 0x11,
     TYPE_INT    = 0x12,
@@ -49,7 +49,8 @@ enum ValueType{
     TYPE_VEC3I  = 0x1B,
     TYPE_VEC3U  = 0x1C,
     TYPE_VEC3F  = 0x1D,
-    
+    TYPE_COLOR  = 0x1E,    // in a way, it's just vec4b
+
     // object
     TYPE_OBJ    = 0x20,
 
@@ -83,6 +84,7 @@ struct Value{
         struct{ int32_t  Xint;   int32_t  Yint;   } XYint;
         struct{ uint32_t Xuint;  uint32_t Yuint;  } XYuint;
         struct{ float    Xfloat; float    Yfloat; } XYfloat;
+        struct{ uint8_t r; uint8_t g; uint8_t b; uint8_t a; } Acolor;
         Obj* obj;
     } as;
 
@@ -105,12 +107,13 @@ inline constexpr Value CaroSmth                             { TYPE_SMTH,   {}, {
        constexpr Value CaroFloat (   float v) { return Value{ TYPE_FLOAT,  {}, { .Afloat  = v } }; }
        constexpr Value CaroDouble(  double v) { return Value{ TYPE_DOUBLE, {}, { .Adouble = v } }; }
 
-       constexpr Value CaroVec2i(int32_t  x, int32_t  y            ) { return Value{ TYPE_VEC2I, {             }, { .XYint   = { x, y } } }; }
-       constexpr Value CaroVec2u(uint32_t x, uint32_t y            ) { return Value{ TYPE_VEC2U, {             }, { .XYuint  = { x, y } } }; }
-       constexpr Value CaroVec2f(float    x, float    y            ) { return Value{ TYPE_VEC2F, {             }, { .XYfloat = { x, y } } }; }
-       constexpr Value CaroVec3i(int32_t  x, int32_t  y, int32_t  z) { return Value{ TYPE_VEC3I, { .Zint   = z }, { .XYint   = { x, y } } }; }
-       constexpr Value CaroVec3u(uint32_t x, uint32_t y, uint32_t z) { return Value{ TYPE_VEC3U, { .Zuint  = z }, { .XYuint  = { x, y } } }; }
-       constexpr Value CaroVec3f(float    x, float    y, float    z) { return Value{ TYPE_VEC3F, { .Zfloat = z }, { .XYfloat = { x, y } } }; }
+       constexpr Value CaroVec2i (int32_t  x, int32_t  y            ) { return Value{ TYPE_VEC2I, {             }, { .XYint   = { x, y } } }; }
+       constexpr Value CaroVec2u (uint32_t x, uint32_t y            ) { return Value{ TYPE_VEC2U, {             }, { .XYuint  = { x, y } } }; }
+       constexpr Value CaroVec2f (float    x, float    y            ) { return Value{ TYPE_VEC2F, {             }, { .XYfloat = { x, y } } }; }
+       constexpr Value CaroVec3i (int32_t  x, int32_t  y, int32_t  z) { return Value{ TYPE_VEC3I, { .Zint   = z }, { .XYint   = { x, y } } }; }
+       constexpr Value CaroVec3u (uint32_t x, uint32_t y, uint32_t z) { return Value{ TYPE_VEC3U, { .Zuint  = z }, { .XYuint  = { x, y } } }; }
+       constexpr Value CaroVec3f (float    x, float    y, float    z) { return Value{ TYPE_VEC3F, { .Zfloat = z }, { .XYfloat = { x, y } } }; }
+       constexpr Value CaroColor (uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return Value{ TYPE_COLOR, {}, { .Acolor = { r, g, b, a } } }; }
 
        constexpr Value CaroObj   (    Obj* v) { return Value{ TYPE_OBJ,    {}, { .obj     = v } }; }
 
@@ -209,7 +212,7 @@ Value toFloat(const Value& v, F f) {
 // vectors
 
 template<typename T>
-Value CaroVector(ValueType type, T x, T y, T z) {
+Value CaroVector(ValueType type, T x, T y, T z, T a) {
     switch(type) {
         case TYPE_VEC2I: return CaroVec2i( (int32_t)x,  (int32_t)y             );
         case TYPE_VEC2U: return CaroVec2u((uint32_t)x, (uint32_t)y             );
@@ -217,6 +220,7 @@ Value CaroVector(ValueType type, T x, T y, T z) {
         case TYPE_VEC3I: return CaroVec3i( (int32_t)x,  (int32_t)y,  (int32_t)z);
         case TYPE_VEC3U: return CaroVec3u((uint32_t)x, (uint32_t)y, (uint32_t)z);
         case TYPE_VEC3F: return CaroVec3f(   (float)x,    (float)y,    (float)z);
+        case TYPE_COLOR: return CaroColor( (uint8_t)x,  (uint8_t)y,  (uint8_t)z,  (uint8_t)a);
         default: return CaroNull;    // unreachable
     }
 }
@@ -226,14 +230,17 @@ ValueType componentType(ValueType type) {
         case TYPE_VEC2I: case TYPE_VEC3I: return TYPE_INT;
         case TYPE_VEC2U: case TYPE_VEC3U: return TYPE_UINT;
         case TYPE_VEC2F: case TYPE_VEC3F: return TYPE_FLOAT;
+        case TYPE_COLOR:                  return TYPE_BYTE;
         default: return TYPE_NULL;    // unreachable
     }
 }
 ValueType vectorType(ValueType component, uint8_t size) {
+    if(size == 4) return TYPE_COLOR;    // actually does something
     switch(component) {
         case TYPE_INT:   return size == 2? TYPE_VEC2I: TYPE_VEC3I;
         case TYPE_UINT:  return size == 2? TYPE_VEC2U: TYPE_VEC3U;
         case TYPE_FLOAT: return size == 2? TYPE_VEC2F: TYPE_VEC3F;
+        case TYPE_BYTE:  return TYPE_COLOR;
         default: return TYPE_NULL;    // unreachable
     }
 }
@@ -246,6 +253,8 @@ Value getComponent(const Value& v, int component) {
             return CaroUint (component == 0? v.as.XYuint .Xuint : (component == 1? v.as.XYuint .Yuint : v.z.Zuint ));
         case TYPE_VEC2F: case TYPE_VEC3F:
             return CaroFloat(component == 0? v.as.XYfloat.Xfloat: (component == 1? v.as.XYfloat.Yfloat: v.z.Zfloat));
+        case TYPE_COLOR:
+            return CaroByte (component == 0? v.as.Acolor.r: (component == 1? v.as.Acolor.g: (component == 2? v.as.Acolor.b: v.as.Acolor.a)));
         default: return CaroNull;    // unreachable    
     }
 }
@@ -266,6 +275,11 @@ void setComponent(Value& v, int component, const Value& to) {
             slot = to.as.Afloat;
             break;
         }
+        case TYPE_COLOR: {
+            uint8_t&  slot = component == 0? v.as.Acolor.r: (component == 1? v.as.Acolor.g: (component == 2? v.as.Acolor.b: v.as.Acolor.a));
+            slot = to.as.Abyte;
+            break;
+        }
         default: break;    // unreachable
     }
 }
@@ -278,11 +292,11 @@ bool isInt     (ValueType type) { return type >= TYPE_BYTE  && type <= TYPE_LONG
 bool isFloat   (ValueType type) { return type == TYPE_FLOAT || type == TYPE_DOUBLE; }
 bool isUnsigned(ValueType type) { return type == TYPE_BYTE  || type == TYPE_UINT || type == TYPE_ULONG; }
 
-bool isVector (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_VEC3F;  }
+bool isVector (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_COLOR;  }
 bool isVec2   (ValueType type) { return type >= TYPE_VEC2I && type <= TYPE_VEC2F;  }
 bool isVec3   (ValueType type) { return type >= TYPE_VEC3I && type <= TYPE_VEC3F;  }
 
-int componentCount(ValueType type) { return isVec2(type)? 2: 3; }
+int componentCount(ValueType type) { return isVec2(type)? 2: (type == TYPE_COLOR? 4: 3); }
 
 
 // truthiness
@@ -299,6 +313,7 @@ bool isTruthy(Value value) {
             case TYPE_VEC2I: case TYPE_VEC3I: return value.as.XYint  .Xint        || value.as.XYint  .Yint        || value.z.Zint;
             case TYPE_VEC2U: case TYPE_VEC3U: return value.as.XYuint .Xuint       || value.as.XYuint .Yuint       || value.z.Zuint;
             case TYPE_VEC2F: case TYPE_VEC3F: return value.as.XYfloat.Xfloat != 0 || value.as.XYfloat.Yfloat != 0 || value.z.Zfloat != 0;
+            case TYPE_COLOR:                  return value.as.Acolor.r != 0 || value.as.Acolor.g != 0 || value.as.Acolor.b != 0 || value.as.Acolor.a != 0;
             default: return false;    // unreachable
         }
     }
@@ -406,6 +421,7 @@ string printValue(Value value) {
                     case TYPE_VEC3I: return "(" + to_string(value.as.XYint  .Xint  ) + ", " + to_string(value.as.XYint  .Yint  ) + ", " + to_string(value.z.Zint  ) + ")";
                     case TYPE_VEC3U: return "(" + to_string(value.as.XYuint .Xuint ) + ", " + to_string(value.as.XYuint .Yuint ) + ", " + to_string(value.z.Zuint ) + ")";
                     case TYPE_VEC3F: return "(" + to_string(value.as.XYfloat.Xfloat) + ", " + to_string(value.as.XYfloat.Yfloat) + ", " + to_string(value.z.Zfloat) + ")";
+                    case TYPE_COLOR: return "(" + to_string(value.as.Acolor.r) + ", " + to_string(value.as.Acolor.g) + ", " + to_string(value.as.Acolor.b) + ", " + to_string(value.as.Acolor.a) + ")";
                     default: return "vector";    // unreachable
                 }
             } else {
@@ -439,6 +455,7 @@ string typeofType(ValueType type) {
         case TYPE_VEC3I:  return "vec3i";
         case TYPE_VEC3U:  return "vec3u";
         case TYPE_VEC3F:  return "vec3f";
+        case TYPE_COLOR:  return "color";
 
         case TYPE_OBJ:    return "object";
 
@@ -468,7 +485,7 @@ string typeofValue(Value value) {
             return 0;
         case TYPE_BOOL: case TYPE_BYTE:
             return 1;    // bool is technically 1 bit but is stored as 1 byte
-        case TYPE_INT: case TYPE_UINT: case TYPE_FLOAT:
+        case TYPE_INT: case TYPE_UINT: case TYPE_FLOAT: case TYPE_COLOR:
             return 4;
         case TYPE_LONG: case TYPE_ULONG: case TYPE_DOUBLE: case TYPE_VEC2I: case TYPE_VEC2U: case TYPE_VEC2F:
             return 8;

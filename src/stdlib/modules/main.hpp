@@ -331,7 +331,7 @@ Value castToVector(VM* vm, ValueType targetType, Args args) {
 
         // another vector
         if(isVector(v.type)) {
-            if(componentCount(v.type) != size) cantCast(typeofType(targetType));    // no casting been vec2's and vec3's
+            if(componentCount(v.type) != size) cantCast(typeofType(targetType));    // no casting between vectors of different sizes
             for(int i = 0; i < size; ++i) {
                 components.push_back(getComponent(v, i));
             }
@@ -343,7 +343,7 @@ Value castToVector(VM* vm, ValueType targetType, Args args) {
 
         } else cantCast(typeofType(targetType));
 
-    // same amount of components (either 2 or 3), so construct
+    // same amount of components, so construct
     } else if((int)args.size() == size) {
         components.assign(args.begin(), args.end());
 
@@ -354,7 +354,7 @@ Value castToVector(VM* vm, ValueType targetType, Args args) {
     }
 
     // convert each component to the appropriate type
-    components.resize(3, CaroInt(0));
+    components.resize(4, CaroInt(0));
     for(Value& value: components) {
         value = castToNumber(vm, value, type);
         if(vm->hadError) return CaroNull;
@@ -363,7 +363,7 @@ Value castToVector(VM* vm, ValueType targetType, Args args) {
     // return
     return CaroVector(
         targetType,
-        asNumberTo<double>(components[0]), asNumberTo<double>(components[1]), asNumberTo<double>(components[2])
+        asNumberTo<double>(components[0]), asNumberTo<double>(components[1]), asNumberTo<double>(components[2]), asNumberTo<double>(components[3])
     );
 
 }
@@ -474,6 +474,7 @@ nVectorCast(vec2f, TYPE_VEC2F);
 nVectorCast(vec3i, TYPE_VEC3I);
 nVectorCast(vec3u, TYPE_VEC3U);
 nVectorCast(vec3f, TYPE_VEC3F);
+nVectorCast(color, TYPE_COLOR);
     // also double as constructors
     
 nFunc(main_string, "", "string", {
