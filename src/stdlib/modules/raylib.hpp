@@ -669,4 +669,38 @@ nMethod(raylib_Game, mouse_position, {
 });
 
 
+// COLORS
+
+// generated from the colors section in https://www.raylib.com/cheatsheet/cheatsheet.html with a python script
+// these match the raylib color constants exactly except for the naming convention (eg. LIGHTGRAY vs light_gray)
+
+nConst(raylib_light_gray,  "raylib", "light_gray",  { return CaroColor(200, 200, 200, 255); });
+nConst(raylib_gray,        "raylib", "gray",        { return CaroColor(130, 130, 130, 255); });
+nConst(raylib_dark_gray,   "raylib", "dark_gray",   { return CaroColor( 80,  80,  80, 255); });
+nConst(raylib_yellow,      "raylib", "yellow",      { return CaroColor(253, 249,   0, 255); });
+nConst(raylib_gold,        "raylib", "gold",        { return CaroColor(255, 203,   0, 255); });
+nConst(raylib_orange,      "raylib", "orange",      { return CaroColor(255, 161,   0, 255); });
+nConst(raylib_pink,        "raylib", "pink",        { return CaroColor(255, 109, 194, 255); });
+nConst(raylib_red,         "raylib", "red",         { return CaroColor(230,  41,  55, 255); });
+nConst(raylib_maroon,      "raylib", "maroon",      { return CaroColor(190,  33,  55, 255); });
+nConst(raylib_green,       "raylib", "green",       { return CaroColor(  0, 228,  48, 255); });
+nConst(raylib_lime,        "raylib", "lime",        { return CaroColor(  0, 158,  47, 255); });
+nConst(raylib_dark_green,  "raylib", "dark_green",  { return CaroColor(  0, 117,  44, 255); });
+nConst(raylib_sky_blue,    "raylib", "sky_blue",    { return CaroColor(102, 191, 255, 255); });
+nConst(raylib_blue,        "raylib", "blue",        { return CaroColor(  0, 121, 241, 255); });
+nConst(raylib_dark_blue,   "raylib", "dark_blue",   { return CaroColor(  0,  82, 172, 255); });
+nConst(raylib_purple,      "raylib", "purple",      { return CaroColor(200, 122, 255, 255); });
+nConst(raylib_violet,      "raylib", "violet",      { return CaroColor(135,  60, 190, 255); });
+nConst(raylib_dark_purple, "raylib", "dark_purple", { return CaroColor(112,  31, 126, 255); });
+nConst(raylib_beige,       "raylib", "beige",       { return CaroColor(211, 176, 131, 255); });
+nConst(raylib_brown,       "raylib", "brown",       { return CaroColor(127, 106,  79, 255); });
+nConst(raylib_dark_brown,  "raylib", "dark_brown",  { return CaroColor( 76,  63,  47, 255); });
+
+nConst(raylib_white,       "raylib", "white",       { return CaroColor(255, 255, 255, 255); });
+nConst(raylib_black,       "raylib", "black",       { return CaroColor(  0,   0,   0, 255); });
+nConst(raylib_blank,       "raylib", "blank",       { return CaroColor(  0,   0,   0,   0); });
+nConst(raylib_magenta,     "raylib", "magenta",     { return CaroColor(255,   0, 255, 255); });
+nConst(raylib_ray_white,   "raylib", "ray_white",   { return CaroColor(245, 245, 245, 255); });
+
+
 #endif
