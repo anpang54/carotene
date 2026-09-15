@@ -1,0 +1,28 @@
+
+use raylib;
+
+game = raylib.Game("Carrot", 800, 450);
+
+#carrot = raylib.Texture("assets/wordmark.png");
+#scale = 0.5;
+
+rotation = 0f;
+
+game.show();
+
+while(game.running()) {
+
+    if(game.key_down("left"))  { rotation -= 2f; }
+    if(game.key_down("right")) { rotation += 2f; }
+
+    game.begin();
+
+        game.background(raylib.ray_white);
+
+        game.texture(#carrot, vec2f(400, 225), rotation, #scale);
+
+    game.end();
+
+}
+
+game.close();

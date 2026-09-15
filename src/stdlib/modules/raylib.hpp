@@ -5,6 +5,8 @@
 
 // INCLUDES
 
+#include <filesystem>
+
 #include "../util/natives.hpp"
 #include "../util/raylib.hpp"
 
@@ -12,6 +14,8 @@
 // GAME OBJECT
 
 // basically the same design as gui.Window
+
+unsigned raylibWindowGeneration = 0;
 
 struct RaylibGameData: NativeData{
 
@@ -132,6 +136,7 @@ nMethod(raylib_Game, show, {
         return CaroNull;
     }
     data->shown = true;
+    ++raylibWindowGeneration;
     if(data->lockCursor) DisableCursor();
 
     return CaroNull;
@@ -337,6 +342,87 @@ nMethod(raylib_Camera, roll, {
 });
 
 
+// TEXTURE OBJECT
+
+struct RaylibTextureData: NativeData{
+
+    Image image{};
+    Texture2D texture{};
+    unsigned generation = 0;
+
+    bool uploaded() const {
+        return texture.id != 0 && generation == raylibWindowGeneration && IsWindowReady();
+    }
+
+    bool upload() {
+        if(uploaded()) return true;
+        texture    = LoadTextureFromImage(image);
+        generation = raylibWindowGeneration;
+        return IsTextureValid(texture);
+    }
+
+    ~RaylibTextureData() override{
+        if(uploaded()) UnloadTexture(texture);
+        UnloadImage(image);
+    }
+
+    bool readProperty(const string& name, Value& result) override{
+        if     (name == "width")  result = CaroInt(image.width);
+        else if(name == "height") result = CaroInt(image.height);
+        else                      return false;
+        return true;
+    }
+
+    bool writeProperty(const string& name, Value value, string& error) override{
+        (void)value;
+        if(name != "width" && name != "height") return false;
+        error = format("The texture's {:s} is read-only.", name);
+        return true;
+    }
+
+};
+
+RaylibTextureData* raylibTextureData(Value value) {
+    return isInstance(value)? dynamic_cast<RaylibTextureData*>(asInstance(value)->native.get()): nullptr;
+}
+
+nClass(raylib_Texture, "raylib", "Texture");
+
+
+// constructor
+
+nMethod(raylib_Texture, init, {
+    params({
+        {{OBJ_STRING}, true}    // file path
+    });
+    if(alreadyInitialized(vm, self)) return CaroNull;
+
+    // check path
+    const string& path = asString(args[0])->str;
+    if(!std::filesystem::is_regular_file(path)) {
+        vm->runtimeError("\"%s\" isn't a file.", path.c_str());
+        return CaroNull;
+    }
+
+    // load texture
+    SetTraceLogLevel(LOG_ERROR);
+    Image image = rlLoadImage(path.c_str());
+    SetTraceLogLevel(LOG_WARNING);
+    if(!IsImageValid(image)) {
+        UnloadImage(image);
+        vm->runtimeError("Couldn't load \"%s\" as an image. Supported formats are PNG, BMP, GIF, QOI, and DDS.", path.c_str());
+        return CaroNull;
+    }
+
+    // store texture
+    auto data = std::make_unique<RaylibTextureData>();
+    data->image = image;
+    asInstance(self)->native = std::move(data);
+
+    return CaroNull;
+});
+
+
 // DRAWING
 
 
@@ -486,6 +572,45 @@ nMethod(raylib_Game, text, {
     Vector2 position = raylibVector2(args[1]);
     int fontSize     = args.size() >= 4? asNumberTo<int>(args[3]): 16;
     rlDrawText(asString(args[0])->str.c_str(), (int)position.x, (int)position.y, fontSize, color);
+    return CaroNull;
+});
+
+
+// 2d textures
+
+nMethod(raylib_Game, texture, {
+    params({
+        {{OBJ_INSTANCE}, true },    // raylib.Texture
+        {ANY_VEC2,       true },    // position, center
+        {ANY_NUMERIC,    false},    // rotation, around the center
+        {ANY_NUMERIC,    false},    // scale
+        {{TYPE_COLOR},   false}     // tint
+    });
+    getShownGameData();
+
+    RaylibTextureData* texture = raylibTextureData(args[0]);
+    if(texture == nullptr) {
+        vm->runtimeError("Parameter 1 should be a raylib.Texture, but %s was given.", typeofValue(args[0]).c_str());
+        return CaroNull;
+    }
+    if(!texture->upload()) {
+        vm->runtimeError("Couldn't load that texture.");
+        return CaroNull;
+    }
+
+    const Texture2D& tex = texture->texture;
+    Vector2 position     = raylibVector2(args[1]);
+    float scale          = args.size() >= 4? asNumberTo<float>(args[3]): 1.0f;
+
+    DrawTexturePro(
+        tex,
+        {0, 0, (float)tex.width, (float)tex.height},
+        {position.x, position.y, tex.width * scale, tex.height * scale},
+        {tex.width * scale / 2, tex.height * scale / 2},
+        args.size() >= 3? asNumberTo<float>(args[2]): 0.0f,
+        args.size() >= 5? raylibColor(args[4]): WHITE
+    );
+
     return CaroNull;
 });
 
