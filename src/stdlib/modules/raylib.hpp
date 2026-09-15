@@ -428,6 +428,47 @@ nFunc(raylib_rectangle_outline, "raylib", "rectangle_outline", {
     return CaroNull;
 });
 
+nFunc(raylib_circle, "raylib", "circle", {
+    params({
+        {ANY_VEC2,     true},    // center
+        {ANY_NUMERIC,  true},    // radius
+        {{TYPE_COLOR}, true}     // color
+    });
+    ifWindowOpen();
+    Color color = raylibColor(args[2]);
+    DrawCircleV(raylibVector2(args[0]), asNumberTo<float>(args[1]), color);
+    return CaroNull;
+});
+
+nFunc(raylib_circle_outline, "raylib", "circle_outline", {
+    params({
+        {ANY_VEC2,     true },    // center
+        {ANY_NUMERIC,  true },    // radius
+        {{TYPE_COLOR}, true },    // color
+        {ANY_NUMERIC,  false}     // thickness
+    });
+    ifWindowOpen();
+    Color color     = raylibColor(args[2]);
+    float radius    = asNumberTo<float>(args[1]);
+    float thickness = args.size() >= 4? asNumberTo<float>(args[3]): 1.0f;
+    DrawRing(raylibVector2(args[0]), std::max(radius - thickness, 0.0f), radius, 0.0f, 360.0f, 0, color);
+    return CaroNull;
+});
+
+nFunc(raylib_line, "raylib", "line", {
+    params({
+        {ANY_VEC2,     true },    // start
+        {ANY_VEC2,     true },    // end
+        {{TYPE_COLOR}, true },    // color
+        {ANY_NUMERIC,  false}     // thickness
+    });
+    ifWindowOpen();
+    Color color     = raylibColor(args[2]);
+    float thickness = args.size() >= 4? asNumberTo<float>(args[3]): 1.0f;
+    DrawLineEx(raylibVector2(args[0]), raylibVector2(args[1]), thickness, color);
+    return CaroNull;
+});
+
 nFunc(raylib_text, "raylib", "text", {
     params({
         {{OBJ_STRING}, true },    // text
@@ -470,6 +511,18 @@ nFunc(raylib_cube_outline, "raylib", "cube_outline", {
     return CaroNull;
 });
 
+nFunc(raylib_sphere, "raylib", "sphere", {
+    params({
+        {ANY_VEC3,     true},    // center
+        {ANY_NUMERIC,  true},    // radius
+        {{TYPE_COLOR}, true}     // color
+    });
+    ifWindowOpen();
+    Color color = raylibColor(args[2]);
+    DrawSphere(raylibVector3(args[0]), asNumberTo<float>(args[1]), color);
+    return CaroNull;
+});
+
 nFunc(raylib_plane, "raylib", "plane", {
     params({
         {ANY_VEC3,     true},    // center
@@ -479,6 +532,18 @@ nFunc(raylib_plane, "raylib", "plane", {
     ifWindowOpen();
     Color color = raylibColor(args[2]);
     DrawPlane(raylibVector3(args[0]), raylibVector2(args[1]), color);
+    return CaroNull;
+});
+
+nFunc(raylib_line_3d, "raylib", "line_3d", {
+    params({
+        {ANY_VEC3,     true},    // start
+        {ANY_VEC3,     true},    // end
+        {{TYPE_COLOR}, true}     // color
+    });
+    ifWindowOpen();
+    Color color = raylibColor(args[2]);
+    DrawLine3D(raylibVector3(args[0]), raylibVector3(args[1]), color);
     return CaroNull;
 });
 
