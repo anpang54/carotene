@@ -77,9 +77,7 @@ typedef ptrdiff_t  PVG_FT_PtrDist;
 #include <stdlib.h>
 #include <limits.h>
 
-#ifndef PVG_FT_MINIMUM_POOL_SIZE
 #define PVG_FT_MINIMUM_POOL_SIZE (1024 * 8)
-#endif
 #define PVG_FT_MAXIMUM_POOL_SIZE (1024 * 1024 * 8)
 
 #define RAS_ARG   PWorker  worker

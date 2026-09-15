@@ -90,7 +90,7 @@ plutovg_codepoint_t plutovg_text_iterator_next(plutovg_text_iterator_t* it)
         const uint16_t* text = it->text;
         codepoint = text[it->index++];
         if(((codepoint) & 0xfffffc00) == 0xd800) {
-            if(it->index < it->length && ((text[it->index] & 0xfffffc00) == 0xdc00)) {
+            if(it->index < it->length && (((codepoint) & 0xfffffc00) == 0xdc00)) {
                 uint16_t trail = text[it->index++];
                 codepoint = (codepoint << 10) + trail - ((0xD800u << 10) - 0x10000u + 0xDC00u);
             }
@@ -697,9 +697,10 @@ plutovg_font_face_t* plutovg_font_face_cache_get(plutovg_font_face_cache_t* cach
 #include <unistd.h>
 #include <dirent.h>
 
+#ifdef __linux__
+#include <linux/limits.h>
+#else
 #include <limits.h>
-#ifndef PATH_MAX
-#define PATH_MAX 4096
 #endif
 
 #include <sys/mman.h>

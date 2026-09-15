@@ -1,11 +1,9 @@
 #include "plutovg-private.h"
 #include "plutovg-utils.h"
 
-#ifndef PLUTOVG_DISABLE_IMAGE_WRITE
 #define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "plutovg-stb-image-write.h"
-#endif
 
 #define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
@@ -197,7 +195,6 @@ void plutovg_surface_clear(plutovg_surface_t* surface, const plutovg_color_t* co
     }
 }
 
-#ifndef PLUTOVG_DISABLE_IMAGE_WRITE
 static void plutovg_surface_write_begin(const plutovg_surface_t* surface)
 {
     plutovg_convert_argb_to_rgba(surface->data, surface->data, surface->width, surface->height, surface->stride);
@@ -239,7 +236,6 @@ bool plutovg_surface_write_to_jpg_stream(const plutovg_surface_t* surface, pluto
     plutovg_surface_write_end(surface);
     return success;
 }
-#endif /* !PLUTOVG_DISABLE_IMAGE_WRITE */
 
 void plutovg_convert_argb_to_rgba(unsigned char* dst, const unsigned char* src, int width, int height, int stride)
 {

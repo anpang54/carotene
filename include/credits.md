@@ -17,7 +17,8 @@ The following is a list of libraries used by Carotene. Most are used for the sta
 | [GTK 4](https://gitlab.gnome.org/GNOME/gtk)     | LGPL 2.1+         | macOS, Linux, FreeBSD `gui`            | `dlopen()`  |
 | [isocline](https://github.com/daanx/isocline)   | MIT               | REPL                                   | Vendored    |
 | [libcurl](https://github.com/curl/curl)         | curl              | macOS, Linux, FreeBSD, Haiku `http`    | `dlopen()`  |
-| [plutovg](https://github.com/sammycage/plutovg) | MIT               | SVG rasterization                      | Vendored    |
+| [lunasvg](https://github.com/sammycage/lunasvg) | MIT               | SVG rasterization                      | Vendored    |
+| [plutovg](https://github.com/sammycage/plutovg) | MIT               | Used by lunasvg                        | Vendored    |
 | [raylib](https://github.com/raysan5/raylib)     | zlib              | Windows, Linux, web `raylib`           | Vendored    |
 | [SHA](https://github.com/pr0f3ss/SHA)           | MIT               | `hash` SHA functions                   | Vendored    |
 | [Win32](https://learn.microsoft.com/en-us/windows/win32/api/)       | Proprietary | Windows `gui`            | Linked      |
