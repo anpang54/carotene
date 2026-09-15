@@ -702,6 +702,24 @@ nMethod(raylib_Game, sphere, {
     return CaroNull;
 });
 
+nMethod(raylib_Game, cylinder, {
+    params({
+        {ANY_VEC3,     true},    // center of the bottom
+        {ANY_VEC3,     true},    // center of the top
+        {ANY_NUMERIC,  true},    // radius
+        {{TYPE_COLOR}, true}     // color
+    });
+    getShownGameData();
+    float radius = std::abs(asNumberTo<float>(args[2]));
+    DrawCylinderEx(
+        raylibVector3(args[0]), raylibVector3(args[1]),
+        radius, radius,
+        16,
+        raylibColor(args[3])
+    );
+    return CaroNull;
+});
+
 nMethod(raylib_Game, plane, {
     params({
         {ANY_VEC3,     true},    // center
