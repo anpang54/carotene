@@ -9,11 +9,11 @@
 #include "../util/raylib.hpp"
 
 
-// WINDOW OBJECT
+// GAME OBJECT
 
 // basically the same design as gui.Window
 
-struct RaylibWindowData: NativeData{
+struct RaylibGameData: NativeData{
 
     string title;
     int width;
@@ -47,17 +47,12 @@ struct RaylibWindowData: NativeData{
 
 };
 
-RaylibWindowData* raylibWindowData(Value value) {
-    return isInstance(value)? dynamic_cast<RaylibWindowData*>(asInstance(value)->native.get()): nullptr;
-}
-
-nClass(raylib_Window, "raylib", "Window");
-    // todo: consider renaming to raylib.Game
+nClass(raylib_Game, "raylib", "Game");
 
 
 // constructor
 
-nMethod(raylib_Window, init, {
+nMethod(raylib_Game, init, {
     params({
         {{OBJ_STRING}, false},
         {ANY_NUMERIC,  false},
@@ -77,7 +72,7 @@ nMethod(raylib_Window, init, {
     }
 
     // set stuff
-    auto data = std::make_unique<RaylibWindowData>();
+    auto data = std::make_unique<RaylibGameData>();
     data->title  = title;
     data->width  = width;
     data->height = height;
@@ -90,10 +85,10 @@ nMethod(raylib_Window, init, {
 // state
 
 #define getWindowData()\
-    RaylibWindowData* data = nativeData<RaylibWindowData>(vm, self);\
+    RaylibGameData* data = nativeData<RaylibGameData>(vm, self);\
     if(data == nullptr) return CaroNull;
 
-nMethod(raylib_Window, show, {
+nMethod(raylib_Game, show, {
     params({});
     getWindowData();
 
@@ -142,7 +137,7 @@ nMethod(raylib_Window, show, {
     return CaroNull;
 });
 
-nMethod(raylib_Window, running, {
+nMethod(raylib_Game, running, {
     params({});
     getWindowData();
 
@@ -154,7 +149,7 @@ nMethod(raylib_Window, running, {
 
 });
 
-nMethod(raylib_Window, close, {
+nMethod(raylib_Game, close, {
     params({});
     getWindowData();
 

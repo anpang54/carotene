@@ -1,13 +1,15 @@
 
 use raylib;
 
-$w = raylib.Window();
+$w = raylib.Game();
 
 $w.show();
 
 while($w.running()) {
     raylib.begin();
 
+    raylib.background(color(255, 255, 255));
+    
     // 描画する
 
     raylib.end();
