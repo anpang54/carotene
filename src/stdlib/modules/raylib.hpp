@@ -340,27 +340,37 @@ nMethod(raylib_Camera, roll, {
 // DRAWING
 
 
+// helpers
+
+#define getShownGameData()\
+    getWindowData();\
+    if(!data->shown) {\
+        vm->runtimeError("That raylib.Game isn't shown.");\
+        return CaroNull;\
+    }
+
+
 // begin/end
 
-nFunc(raylib_begin, "raylib", "begin", {
+nMethod(raylib_Game, begin, {
     params({});
-    ifWindowOpen();
+    getShownGameData();
     BeginDrawing();
     return CaroNull;
 });
 
-nFunc(raylib_end, "raylib", "end", {
+nMethod(raylib_Game, end, {
     params({});
-    ifWindowOpen();
+    getShownGameData();
     EndDrawing();
     return CaroNull;
 });
 
-nFunc(raylib_begin_3d, "raylib", "begin_3d", {
+nMethod(raylib_Game, begin_3d, {
     params({
         {{OBJ_INSTANCE}, true}    // raylib.Camera
     });
-    ifWindowOpen();
+    getShownGameData();
 
     RaylibCameraData* camera = raylibCameraData(args[0]);
     if(camera == nullptr) {
@@ -372,9 +382,9 @@ nFunc(raylib_begin_3d, "raylib", "begin_3d", {
     return CaroNull;
 });
 
-nFunc(raylib_end_3d, "raylib", "end_3d", {
+nMethod(raylib_Game, end_3d, {
     params({});
-    ifWindowOpen();
+    getShownGameData();
     EndMode3D();
     return CaroNull;
 });
@@ -382,11 +392,11 @@ nFunc(raylib_end_3d, "raylib", "end_3d", {
 
 // background
 
-nFunc(raylib_background, "raylib", "background", {
+nMethod(raylib_Game, background, {
     params({
         {{TYPE_COLOR}, true}
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color = raylibColor(args[0]);
     ClearBackground(color);
     return CaroNull;
@@ -395,26 +405,26 @@ nFunc(raylib_background, "raylib", "background", {
 
 // 2d shapes
 
-nFunc(raylib_rectangle, "raylib", "rectangle", {
+nMethod(raylib_Game, rectangle, {
     params({
         {ANY_VEC2,     true},    // position
         {ANY_VEC2,     true},    // size
         {{TYPE_COLOR}, true}     // color
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color = raylibColor(args[2]);
     DrawRectangleV(raylibVector2(args[0]), raylibVector2(args[1]), color);
     return CaroNull;
 });
 
-nFunc(raylib_rectangle_outline, "raylib", "rectangle_outline", {
+nMethod(raylib_Game, rectangle_outline, {
     params({
         {ANY_VEC2,     true },    // position
         {ANY_VEC2,     true },    // size
         {{TYPE_COLOR}, true },    // color
         {ANY_NUMERIC,  false}     // thickness
     });
-    ifWindowOpen();
+    getShownGameData();
     Color   color    = raylibColor(args[2]);
     Vector2 position = raylibVector2(args[0]);
     Vector2 size     = raylibVector2(args[1]);
@@ -423,26 +433,26 @@ nFunc(raylib_rectangle_outline, "raylib", "rectangle_outline", {
     return CaroNull;
 });
 
-nFunc(raylib_circle, "raylib", "circle", {
+nMethod(raylib_Game, circle, {
     params({
         {ANY_VEC2,     true},    // center
         {ANY_NUMERIC,  true},    // radius
         {{TYPE_COLOR}, true}     // color
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color = raylibColor(args[2]);
     DrawCircleV(raylibVector2(args[0]), asNumberTo<float>(args[1]), color);
     return CaroNull;
 });
 
-nFunc(raylib_circle_outline, "raylib", "circle_outline", {
+nMethod(raylib_Game, circle_outline, {
     params({
         {ANY_VEC2,     true },    // center
         {ANY_NUMERIC,  true },    // radius
         {{TYPE_COLOR}, true },    // color
         {ANY_NUMERIC,  false}     // thickness
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color     = raylibColor(args[2]);
     float radius    = asNumberTo<float>(args[1]);
     float thickness = args.size() >= 4? asNumberTo<float>(args[3]): 1.0f;
@@ -450,28 +460,28 @@ nFunc(raylib_circle_outline, "raylib", "circle_outline", {
     return CaroNull;
 });
 
-nFunc(raylib_line, "raylib", "line", {
+nMethod(raylib_Game, line, {
     params({
         {ANY_VEC2,     true },    // start
         {ANY_VEC2,     true },    // end
         {{TYPE_COLOR}, true },    // color
         {ANY_NUMERIC,  false}     // thickness
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color     = raylibColor(args[2]);
     float thickness = args.size() >= 4? asNumberTo<float>(args[3]): 1.0f;
     DrawLineEx(raylibVector2(args[0]), raylibVector2(args[1]), thickness, color);
     return CaroNull;
 });
 
-nFunc(raylib_text, "raylib", "text", {
+nMethod(raylib_Game, text, {
     params({
         {{OBJ_STRING}, true },    // text
         {ANY_VEC2,     true },    // position
         {{TYPE_COLOR}, true },    // color
         {ANY_NUMERIC,  false}     // font size
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color      = raylibColor(args[2]);
     Vector2 position = raylibVector2(args[1]);
     int fontSize     = args.size() >= 4? asNumberTo<int>(args[3]): 16;
@@ -482,61 +492,61 @@ nFunc(raylib_text, "raylib", "text", {
 
 // 3d shapes
 
-nFunc(raylib_cube, "raylib", "cube", {
+nMethod(raylib_Game, cube, {
     params({
         {ANY_VEC3,     true},    // center
         {ANY_VEC3,     true},    // size
         {{TYPE_COLOR}, true}     // color
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color = raylibColor(args[2]);
     DrawCubeV(raylibVector3(args[0]), raylibVector3(args[1]), color);
     return CaroNull;
 });
 
-nFunc(raylib_cube_outline, "raylib", "cube_outline", {
+nMethod(raylib_Game, cube_outline, {
     params({
         {ANY_VEC3,     true},    // center
         {ANY_VEC3,     true},    // size
         {{TYPE_COLOR}, true}     // color
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color = raylibColor(args[2]);
     DrawCubeWiresV(raylibVector3(args[0]), raylibVector3(args[1]), color);
     return CaroNull;
 });
 
-nFunc(raylib_sphere, "raylib", "sphere", {
+nMethod(raylib_Game, sphere, {
     params({
         {ANY_VEC3,     true},    // center
         {ANY_NUMERIC,  true},    // radius
         {{TYPE_COLOR}, true}     // color
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color = raylibColor(args[2]);
     DrawSphere(raylibVector3(args[0]), asNumberTo<float>(args[1]), color);
     return CaroNull;
 });
 
-nFunc(raylib_plane, "raylib", "plane", {
+nMethod(raylib_Game, plane, {
     params({
         {ANY_VEC3,     true},    // center
         {ANY_VEC2,     true},    // horizontal size
         {{TYPE_COLOR}, true}     // color
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color = raylibColor(args[2]);
     DrawPlane(raylibVector3(args[0]), raylibVector2(args[1]), color);
     return CaroNull;
 });
 
-nFunc(raylib_line_3d, "raylib", "line_3d", {
+nMethod(raylib_Game, line_3d, {
     params({
         {ANY_VEC3,     true},    // start
         {ANY_VEC3,     true},    // end
         {{TYPE_COLOR}, true}     // color
     });
-    ifWindowOpen();
+    getShownGameData();
     Color color = raylibColor(args[2]);
     DrawLine3D(raylibVector3(args[0]), raylibVector3(args[1]), color);
     return CaroNull;
@@ -615,23 +625,23 @@ int raylibInputCode(VM* vm, const unordered_map<string, int>& codes, Value name,
     return -1;
 }
 
-#define inputKey(cppName, caroName, raylibFunction)\
-    nFunc(cppName, "raylib", caroName, {\
+#define inputKey(caroName, raylibFunction)\
+    nMethod(raylib_Game, caroName, {\
         params({\
             {{OBJ_STRING}, true}\
         });\
-        ifWindowOpen();\
+        getShownGameData();\
         int key = raylibInputCode(vm, mapKey, args[0], "key");\
         if(key < 0) return CaroNull;\
         return CaroBool(raylibFunction(key));\
     })
 
-#define inputMouse(cppName, caroName, raylibFunction)\
-    nFunc(cppName, "raylib", caroName, {\
+#define inputMouse(caroName, raylibFunction)\
+    nMethod(raylib_Game, caroName, {\
         params({\
             {{OBJ_STRING}, false}\
         });\
-        ifWindowOpen();\
+        getShownGameData();\
         int button = MOUSE_BUTTON_LEFT;\
         if(args.size() >= 1) {\
             button = raylibInputCode(vm, mapMouse, args[0], "mouse button");\
@@ -641,19 +651,19 @@ int raylibInputCode(VM* vm, const unordered_map<string, int>& codes, Value name,
     })
 
 
-// actual functions
+// actual methods
 
-inputKey(raylib_key_down,     "key_down",     IsKeyDown);
-inputKey(raylib_key_pressed,  "key_pressed",  IsKeyPressed);
-inputKey(raylib_key_released, "key_released", IsKeyReleased);
+inputKey(key_down,     IsKeyDown);
+inputKey(key_pressed,  IsKeyPressed);
+inputKey(key_released, IsKeyReleased);
 
-inputMouse(raylib_mouse_down,     "mouse_down",     IsMouseButtonDown);
-inputMouse(raylib_mouse_pressed,  "mouse_pressed",  IsMouseButtonPressed);
-inputMouse(raylib_mouse_released, "mouse_released", IsMouseButtonReleased);
+inputMouse(mouse_down,     IsMouseButtonDown);
+inputMouse(mouse_pressed,  IsMouseButtonPressed);
+inputMouse(mouse_released, IsMouseButtonReleased);
 
-nFunc(raylib_mouse_position, "raylib", "mouse_position", {
+nMethod(raylib_Game, mouse_position, {
     params({});
-    ifWindowOpen();
+    getShownGameData();
     Vector2 position = GetMousePosition();
     return CaroVec2f(position.x, position.y);
 });
