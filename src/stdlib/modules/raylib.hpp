@@ -25,12 +25,15 @@ struct RaylibGameData: NativeData{
     bool shown = false;
     bool lockCursor = false;
 
+    int targetFps = 0;    // 0 = no limit
+    bool vsync = true;
+
     bool readProperty(const string& name, Value& result) override{
-        if(name == "lock_cursor") {
-            result = CaroBool(lockCursor);
-            return true;
-        }
-        return false;
+        if     (name == "lock_cursor") result = CaroBool(lockCursor);
+        else if(name == "target_fps")  result = CaroInt(targetFps);
+        else if(name == "vsync")       result = CaroBool(vsync);
+        else                           return false;
+        return true;
     }
 
     bool writeProperty(const string& name, Value value, string& error) override{
@@ -44,9 +47,34 @@ struct RaylibGameData: NativeData{
                 if(lockCursor) DisableCursor();
                 else           EnableCursor();
             }
-            return true;
+        } else if(name == "vsync") {
+            if(value.type != TYPE_BOOL) {
+                error = format("vsync should be bool, but {:s} was given.", typeofValue(value));
+                return true;
+            }
+            vsync = value.as.Abool;
+            #ifndef __EMSCRIPTEN__
+                if(shown) {
+                    if(vsync) SetWindowState(FLAG_VSYNC_HINT);
+                    else      ClearWindowState(FLAG_VSYNC_HINT);
+                }
+            #endif
+        } else if(name == "target_fps") {
+            if(!isNumeric(value.type)) {
+                error = format("target_fps should be numeric, but {:s} was given.", typeofValue(value));
+                return true;
+            }
+            int fps = asNumberTo<int>(value);
+            if(fps < 0) {
+                error = "target_fps can't be negative. Use 0 for no limit.";
+                return true;
+            }
+            targetFps = fps;
+            if(shown) SetTargetFPS(targetFps);
+        } else {
+            return false;
         }
-        return false;
+        return true;
     }
 
 };
@@ -104,8 +132,11 @@ nMethod(raylib_Game, show, {
         // todo: maybe circumvent this in the future by using multiple processes
 
     // set config
-    SetTraceLogLevel(LOG_WARNING);           // don't log literally everything
-    unsigned int flags = FLAG_VSYNC_HINT;    // better than hardcoding the fps to 60 or smth
+    SetTraceLogLevel(LOG_WARNING);    // don't log literally everything
+    unsigned int flags = 0;
+    #ifndef __EMSCRIPTEN__
+        if(data->vsync) flags |= FLAG_VSYNC_HINT;
+    #endif
 
     #ifdef __EMSCRIPTEN__
         // make a <canvas> for web
@@ -138,6 +169,7 @@ nMethod(raylib_Game, show, {
     data->shown = true;
     ++raylibWindowGeneration;
     if(data->lockCursor) DisableCursor();
+    SetTargetFPS(data->targetFps);
 
     return CaroNull;
 });
