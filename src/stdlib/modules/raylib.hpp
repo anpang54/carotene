@@ -405,12 +405,29 @@ nMethod(raylib_Texture, init, {
     }
 
     // load texture
-    SetTraceLogLevel(LOG_ERROR);
-    Image image = rlLoadImage(path.c_str());
-    SetTraceLogLevel(LOG_WARNING);
+    Image image{};
+    if(path.ends_with(".svg")) {
+        
+        // load SVGs with lunasvg
+        auto document = lunasvg::Document::loadFromFile(path);
+        lunasvg::Bitmap bitmap = document? document->renderToBitmap(): lunasvg::Bitmap();
+        if(!bitmap.isNull()) {
+            bitmap.convertToRGBA();
+            image = ImageCopy({bitmap.data(), bitmap.width(), bitmap.height(), 1, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8});
+        }
+        
+    } else {
+
+        // load bitmaps normally
+        SetTraceLogLevel(LOG_ERROR);
+        image = rlLoadImage(path.c_str());
+        SetTraceLogLevel(LOG_WARNING);
+
+    }
+
     if(!IsImageValid(image)) {
         UnloadImage(image);
-        vm->runtimeError("Couldn't load \"%s\" as an image. Supported formats are PNG, BMP, GIF, QOI, and DDS.", path.c_str());
+        vm->runtimeError("Couldn't load \"%s\" as an image. Supported formats are PNG, BMP, GIF, QOI, DDS, and SVG.", path.c_str());
         return CaroNull;
     }
 

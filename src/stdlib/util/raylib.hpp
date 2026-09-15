@@ -54,4 +54,7 @@
     #pragma pop_macro("DrawTextEx")
     #pragma pop_macro("PlaySound")
 
+    // also lunasvg
+    #include "../../../include/lunasvg/include/lunasvg.h"
+
 #endif

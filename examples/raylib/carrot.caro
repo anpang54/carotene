@@ -1,25 +1,25 @@
 
 use raylib;
 
-game = raylib.Game("Carrot", 800, 450);
+game = raylib.Game("Carrot", 400, 400);
 
-#carrot = raylib.Texture("assets/wordmark.png");
-#scale = 0.5;
+#carrot = raylib.Texture("assets/carrot.svg");
+#scale = 3;
 
-rotation = 0f;
+rotation = 0;
 
 game.show();
 
 while(game.running()) {
 
-    if(game.key_down("left"))  { rotation -= 2f; }
-    if(game.key_down("right")) { rotation += 2f; }
+    if(game.key_down("left"))  { rotation -= 2; }
+    if(game.key_down("right")) { rotation += 2; }
 
     game.begin();
 
-        game.background(raylib.ray_white);
+        game.background(raylib.black);
 
-        game.texture(#carrot, vec2f(400, 225), rotation, #scale);
+        game.texture(#carrot, vec2f(200, 200), rotation, #scale);
 
     game.end();
 
