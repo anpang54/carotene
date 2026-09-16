@@ -7,7 +7,7 @@
 
 # Carotene
 
-A bytecode-interpreted programming language coded in C++23. It is currently functional, but doesn't have many features. It serves as a place for me to learn how to make a programming language, but the end goal is that it'll have built-in tools to make applications, both text-based and graphical.
+A bytecode-interpreted programming language coded in C++23. It serves as a place for me to learn how to make a programming language, but the end goal is that it'll have built-in tools to make applications, both text-based and graphical. Those tools are currently partially complete.
 
 The chemical [Carotene](https://en.wikipedia.org/wiki/Carotene), found in carrots, turns into [Retinol](https://en.wikipedia.org/wiki/Retinol), which maintains eye health, so that you can see the GUI programs made with Carotene. Source code files are `.caro`, and bytecode files are `.reti`.
 
@@ -16,15 +16,18 @@ The chemical [Carotene](https://en.wikipedia.org/wiki/Carotene), found in carrot
 
 Carotene currently has:
 - A working tokenizer, compiler, and VM, accessible by loading a file or using the REPL
+- Classes
 - Functions
 - Variables, scoped and global, as well as constants
 - Booleans, 7 numeric types, 6 vector types, strings, arrays, dicts, and sets
 - Type casting
 - All the arithmetic and comparison operators you'd expect
-- `for` and `while`, as well as unique `repeat` and `forever`, with `break` and `continue`
-- A basic standard library with print/input, logging, time, random, hashing, and math
+- `for`, `while`, and `foreach`, as well as unique `repeat` and `forever`, with `break` and `continue`
+- General standard library stuff like print/input, logging, files, time, random, hashing, math, and HTTP
 
-And a lot more is coming.
+And partially:
+- A GUI module with GTK, Win32, BeAPI, and web backends
+- A raylib wrapper
 
 
 ## Compatibility
