@@ -1442,10 +1442,10 @@ class VM{
 
                     case OP_FOR_LOOP: {
 
-                        Value& counter = slots[READ_BYTE()];
-                        const Value& limit = slots[READ_BYTE()];
-                        const Value& step = constants[READ_BYTE()];
-                        uint16_t offset = READ_SHORT();
+                        Value&       counter = slots[READ_BYTE()];
+                        const Value& limit   = slots[READ_BYTE()];
+                        const Value& step    = constants[READ_BYTE()];
+                        uint16_t     offset  = READ_SHORT();
 
                         // fast path: an int counter against an int limit
                         if(counter.type == TYPE_INT && limit.type == TYPE_INT && step.type == TYPE_INT) {
@@ -1466,6 +1466,80 @@ class VM{
                         if(numberBinaryOperation(OP_LESS) != INTERPRET_OK) return INTERPRET_RUNTIME_ERROR;
                         if(isTruthy(pop())) ip -= offset;
 
+                        break;
+
+                    }
+
+                    case OP_FOR_EACH_LOOP: {
+
+                        Value&   object    = slots[READ_BYTE()];
+                        Value&   index     = slots[READ_BYTE()];
+                        uint8_t  itemSlot  = READ_BYTE();
+                        uint8_t  valueSlot = READ_BYTE();
+                        uint16_t offset    = READ_SHORT();
+
+                        if(index.as.Aint == 0) {
+
+                            // check if dict
+                            if(valueSlot != 0 && !isDict(object)) {
+                                SYNC();
+                                runtimeError("Only dicts can be iterated over with a key and a value, not %s.", typeofValue(object).c_str());
+                                return INTERPRET_RUNTIME_ERROR;
+                            }
+
+                            // make dicts and sets into vectors first
+                            if(isDict(object) || isSet(object)) {
+                                vector<Value> keys;
+                                if(isSet(object)) {
+                                    for(const Value& key: asSet(object)->data) {
+                                        keys.push_back(key);
+                                    }
+                                } else if(valueSlot == 0) {
+                                    for(const auto& [key, value]: asDict(object)->data) {
+                                        keys.push_back(key);
+                                    }
+                                } else {
+                                    for(const auto& [key, value]: asDict(object)->data) {
+                                        keys.push_back(key);
+                                        keys.push_back(value);
+                                    }
+                                }
+                                object = CaroObj(copyArray(std::move(keys)));
+                            }
+
+                        }
+
+                        size_t i = index.as.Aint;
+
+                        if(valueSlot != 0) {
+                            ObjArray* pairs = asArray(object);
+                            if(i * 2 >= pairs->data.size()) {
+                                ip += offset;
+                                break;
+                            }
+                            slots[itemSlot] = copyIfString(pairs->data[i * 2]);
+                            slots[valueSlot] = copyIfString(pairs->data[i * 2 + 1]);
+                        } else if(isArray(object)) {
+                            ObjArray* array = asArray(object);
+                            if(i >= array->data.size()) {
+                                ip += offset;
+                                break;
+                            }
+                            slots[itemSlot] = copyIfString(array->data[i]);
+                        } else if(isString(object)) {
+                            const string& str = asString(object)->str;
+                            if(i >= str.size()) {
+                                ip += offset;
+                                break;
+                            }
+                            slots[itemSlot] = CaroObj(copyString(string(1, str[i])));
+                        } else {
+                            SYNC();
+                            runtimeError("You can't iterate over %s.", typeofValue(object).c_str());
+                            return INTERPRET_RUNTIME_ERROR;
+                        }
+
+                        ++index.as.Aint;
                         break;
 
                     }

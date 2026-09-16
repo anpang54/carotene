@@ -105,6 +105,7 @@ enum OpCode: uint8_t{
     // loops
     OP_LOOP                      = 0xA0,
     OP_FOR_LOOP                  = 0xA1,
+    OP_FOR_EACH_LOOP             = 0xA2,
 
     // stack
     OP_POP                       = 0xFD,
@@ -205,6 +206,17 @@ class Chunk{
             jump |= this->code[offset + 5];
             cout << format("{:<16} {:4d} {:4d} {:4d} -> {:d}\n", name, counter, limit, step, offset + 6 - jump);
             return offset + 6;
+        }
+
+        int forEachInstruction(string name, int offset) {
+            uint8_t object = this->code[offset + 1];
+            uint8_t index = this->code[offset + 2];
+            uint8_t item = this->code[offset + 3];
+            uint8_t value = this->code[offset + 4];
+            uint16_t jump = (uint16_t)(this->code[offset + 5] << 8);
+            jump |= this->code[offset + 6];
+            cout << format("{:<16} {:4d} {:4d} {:4d} {:4d} -> {:d}\n", name, object, index, item, value, offset + 7 + jump);
+            return offset + 7;
         }
 
         int disassembleInstruction(int offset) {
@@ -360,6 +372,8 @@ class Chunk{
                     return jumpInstruction("OP_LOOP", -1, offset);
                 case OP_FOR_LOOP:
                     return forLoopInstruction("OP_FOR_LOOP", offset);
+                case OP_FOR_EACH_LOOP:
+                    return forEachInstruction("OP_FOR_EACH", offset);
 
                 case OP_POP:
                     return simpleInstruction("OP_POP", offset);

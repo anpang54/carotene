@@ -937,6 +937,8 @@ class Compiler{
                 whileStatement();
             } else if(match(TOKEN_FOREVER)) {
                 foreverStatement();
+            } else if(match(TOKEN_FOREACH)) {
+                foreachStatement();
             } else if(match(TOKEN_BREAK)) {
                 breakStatement();
             } else if(match(TOKEN_CONTINUE)) {
@@ -1390,6 +1392,67 @@ class Compiler{
 
         }
 
+        void foreachStatement() {
+
+            beginScope();
+
+            // consume and store the iterable
+            consume(TOKEN_LEFT_PAREN, "Expect '(' after 'foreach'.");
+            expression();
+            consume(TOKEN_RIGHT_PAREN, "Expect ')' after the iterable.");
+            uint8_t iterableSlot = makeHiddenLocal('i');
+
+            // set index
+            emitNumber(0);
+            uint8_t indexSlot = makeHiddenLocal('n');
+
+            // consume and declare the item variable
+            uint8_t valueSlot = 0;
+            if(match(TOKEN_COLON)) {
+
+                consume(TOKEN_IDENTIFIER, "Expect item or key variable name after ':'.");
+                if(this->previous.start[0] == '$') error("The item or key variable must be local.");
+                declareVariable();
+                markInitialized();
+                emitByte(OP_NULL);
+                
+                if(match(TOKEN_COMMA)) {
+
+                    consume(TOKEN_IDENTIFIER, "Expect value variable name after ','.");
+                    if(this->previous.start[0] == '$') error("The value variable must be local.");
+                    declareVariable();
+                    markInitialized();
+                    emitByte(OP_NULL);
+
+                    valueSlot = cur().localCount - 1;
+
+                }
+
+            } else {
+                makeHiddenLocal('e');
+                emitByte(OP_NULL);
+            }
+            uint8_t itemSlot = indexSlot + 1;
+
+            // load the next item
+            int loopStart = currentChunk()->code.size();
+            emitBytes(OP_FOR_EACH_LOOP, iterableSlot, indexSlot);
+            emitByte(itemSlot);
+            int exitJump = emitJump(valueSlot);
+
+            // stuff inside the block
+            beginLoop(loopStart);
+            statement();
+            emitLoop(loopStart);
+
+            patchJump(exitJump);
+            patchBreaks();
+
+            endLoop();
+            endScope();
+
+        }
+
         void expressionStatement() {
             int start = currentChunk()->code.size();
             expression();
@@ -1611,6 +1674,8 @@ class Compiler{
                     case TOKEN_FUNC:
                     case TOKEN_FOR:
                     case TOKEN_REPEAT:
+                    case TOKEN_FOREVER:
+                    case TOKEN_FOREACH:
                     case TOKEN_IF:
                     case TOKEN_WHILE:
                     case TOKEN_BREAK:
@@ -1951,6 +2016,7 @@ inline ParseRule rules[] = {
     [TOKEN_WHILE]             = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_REPEAT]            = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_FOREVER]           = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_FOREACH]           = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_BREAK]             = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_CONTINUE]          = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_TRUE]              = { &Compiler::parseLiteral, NULL,                     PREC_NONE       },

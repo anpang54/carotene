@@ -41,7 +41,7 @@ typedef enum {
     TOKEN_FUNC, TOKEN_RETURN,
     TOKEN_CLASS, TOKEN_THIS, TOKEN_SUPER,
     TOKEN_IF, TOKEN_ELIF, TOKEN_ELSE,
-    TOKEN_FOR, TOKEN_WHILE, TOKEN_REPEAT, TOKEN_FOREVER,
+    TOKEN_FOR, TOKEN_FOREACH, TOKEN_WHILE, TOKEN_REPEAT, TOKEN_FOREVER,
     TOKEN_BREAK, TOKEN_CONTINUE,
     TOKEN_TRUE, TOKEN_FALSE,
     TOKEN_NULL, TOKEN_SMTH,
@@ -178,9 +178,12 @@ class Scanner{
                         switch(this->source[this->start + 1]) {
                             case 'a': return checkKeyword(2, 3, "lse", TOKEN_FALSE);
                             case 'o':
-                                // forever starts with for so we disambiguate by length
+                                // forever and foreach start with for so we disambiguate by length
                                 if(this->current - this->start == 3) {
                                     return checkKeyword(2, 1, "r", TOKEN_FOR);
+                                }
+                                if(this->current - this->start == 7 && this->source[this->start + 4] == 'a') {
+                                    return checkKeyword(2, 5, "reach", TOKEN_FOREACH);
                                 }
                                 return checkKeyword(2, 5, "rever", TOKEN_FOREVER);
                             case 'u': return checkKeyword(2, 2, "nc", TOKEN_FUNC);
