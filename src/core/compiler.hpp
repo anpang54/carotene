@@ -1964,8 +1964,6 @@ inline ParseRule rules[] = {
     [TOKEN_COMMA]             = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_COLON]             = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_SEMICOLON]         = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_QUESTION]          = { NULL,                    &Compiler::makeTernary,   PREC_TERNARY    },
-    [TOKEN_QUESTION_QUESTION] = { NULL,                &Compiler::makeCoalesce,  PREC_COALESCE   },
     [TOKEN_AMPERSAND]         = { NULL,                    &Compiler::makeAnd,       PREC_AND        },
     [TOKEN_PIPE]              = { NULL,                    &Compiler::makeOr,        PREC_OR         },
 
@@ -1990,6 +1988,8 @@ inline ParseRule rules[] = {
     [TOKEN_LESS_EQUAL]        = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON },
     [TOKEN_GREATER]           = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON },
     [TOKEN_GREATER_EQUAL]     = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON },
+    [TOKEN_QUESTION]          = { NULL,                    &Compiler::makeTernary,   PREC_TERNARY    },
+    [TOKEN_QUESTION_QUESTION] = { NULL,                    &Compiler::makeCoalesce,  PREC_COALESCE   },
     [TOKEN_SPACESHIP]         = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON },
 
     // literals
@@ -2013,10 +2013,10 @@ inline ParseRule rules[] = {
     [TOKEN_ELIF]              = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_ELSE]              = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_FOR]               = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_FOREACH]           = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_WHILE]             = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_REPEAT]            = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_FOREVER]           = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_FOREACH]           = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_BREAK]             = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_CONTINUE]          = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_TRUE]              = { &Compiler::parseLiteral, NULL,                     PREC_NONE       },
