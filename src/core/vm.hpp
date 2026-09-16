@@ -1400,6 +1400,11 @@ class VM{
                         if(isFalsy(peek(0))) ip += offset;
                         break;
                     }
+                    case OP_JUMP_IF_NOT_NULL: {
+                        uint16_t offset = READ_SHORT();
+                        if(peek(0).type != TYPE_NULL) ip += offset;
+                        break;
+                    }
                     case OP_LOOP: {
                         uint16_t offset = READ_SHORT();
                         ip -= offset;

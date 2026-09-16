@@ -100,6 +100,7 @@ enum OpCode: uint8_t{
     OP_JUMP_IF_NOT_GREATER       = 0x95,
     OP_JUMP_IF_NOT_GREATER_EQUAL = 0x96,
     OP_JUMP_IF_FALSE             = 0x98,
+    OP_JUMP_IF_NOT_NULL          = 0x99,
 
     // loops
     OP_LOOP                      = 0xA0,
@@ -352,6 +353,8 @@ class Chunk{
                     return jumpInstruction("OP_JUMP_IF_NOT_GREATER_EQUAL", 1, offset);
                 case OP_JUMP_IF_NOT_EQUAL:
                     return jumpInstruction("OP_JUMP_IF_NOT_EQUAL", 1, offset);
+                case OP_JUMP_IF_NOT_NULL:
+                    return jumpInstruction("OP_JUMP_IF_NOT_NULL", 1, offset);
 
                 case OP_LOOP:
                     return jumpInstruction("OP_LOOP", -1, offset);
