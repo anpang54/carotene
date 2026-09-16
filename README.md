@@ -80,13 +80,13 @@ Node.js, Lua, and PHP are in their non-JIT modes.
 Trial 0 1 2 3 4 5 
 
                   min      max
-  Lua            26 ms    29 ms
-  PHP            39 ms    41 ms
-  Node.js        76 ms    94 ms
-  Carotene       98 ms   101 ms
-  Python        144 ms   182 ms
-  Wren          150 ms   165 ms
-  clox with %   165 ms   206 ms
+  Lua            26 ms    28 ms
+  PHP            39 ms    42 ms
+  Node.js        76 ms    89 ms
+  Carotene       97 ms   101 ms
+  Python        145 ms   150 ms
+  Wren          146 ms   169 ms
+  clox with %   161 ms   209 ms
 
 ```
 
