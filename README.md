@@ -70,7 +70,8 @@ My use of AI in this project is to let me skip the boring stuff like debugging, 
 
 ## Performance
 
-A benchmark, available at `tests/benchmarks/benchmark.py`, yields the following results for Carotene v0.1.2 on my PC:
+A benchmark, available at `tests/benchmarks/benchmark.py`, yields the following results for Carotene v0.2.0 beta on my PC:
+
 ```
 
 This is a rudimentary benchmark where a few bytecode interpreters start and check whether 0 - 9,999 are prime.
@@ -79,13 +80,13 @@ Node.js, Lua, and PHP are in their non-JIT modes.
 Trial 0 1 2 3 4 5 
 
                   min      max
-  Lua            27 ms    28 ms
-  PHP            39 ms    42 ms
-  Node.js        85 ms    89 ms
-  Carotene      106 ms   111 ms
-  Python        144 ms   157 ms
-  Wren          148 ms   167 ms
-  clox with %   170 ms   195 ms
+  Lua            26 ms    29 ms
+  PHP            39 ms    41 ms
+  Node.js        76 ms    94 ms
+  Carotene       98 ms   101 ms
+  Python        144 ms   182 ms
+  Wren          150 ms   165 ms
+  clox with %   165 ms   206 ms
 
 ```
 
