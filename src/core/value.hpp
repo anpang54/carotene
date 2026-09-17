@@ -302,6 +302,14 @@ int componentCount(ValueType type) { return isVec2(type)? 2: (type == TYPE_COLOR
 // truthiness
 
 bool isTruthy(Value value) {
+
+    // common cases
+    switch(value.type) {
+        case TYPE_BOOL: return value.as.Abool;
+        case TYPE_INT:  return value.as.Aint != 0;
+        default: break;
+    }
+
     if(isNumeric(value.type)) {
         if(isFloat(value.type) && std::isnan(asNumberTo<double>(value))) {
             return false;
@@ -370,24 +378,31 @@ bool numbersEqual(const Value& a, const Value& b) {
 
 bool valuesEqual(Value a, Value b) {
 
-    // same type, vectors
+    // same type
+    if(a.type == b.type) {
+        switch(a.type) {
+            case TYPE_NULL:   return true;
+            case TYPE_SMTH:   return true;
+            case TYPE_BOOL:   return a.as.Abool   == b.as.Abool;
+            case TYPE_BYTE:   return a.as.Abyte   == b.as.Abyte;
+            case TYPE_INT:    return a.as.Aint    == b.as.Aint;
+            case TYPE_UINT:   return a.as.Auint   == b.as.Auint;
+            case TYPE_LONG:   return a.as.Along   == b.as.Along;
+            case TYPE_ULONG:  return a.as.Aulong  == b.as.Aulong;
+            case TYPE_FLOAT:  return a.as.Afloat  == b.as.Afloat;
+            case TYPE_DOUBLE: return a.as.Adouble == b.as.Adouble;
+            case TYPE_OBJ:    return objectsEqual(a.as.obj, b.as.obj);
+            default: break;    // vectors
+        }
+    }
+
+    // vectors
     if(isVector(a.type) && isVector(b.type)) {
         if(componentCount(a.type) != componentCount(b.type)) return false;    // comparing a vec2 and a vec3
         for(int i = 0; i < componentCount(a.type); ++i) {    // same size, but check each element
             if(!valuesEqual(getComponent(a, i), getComponent(b, i))) return false;
         }
         return true;
-    }
-
-    // same type, neither is numeric
-    if(a.type == b.type && !isNumeric(a.type)) {
-        switch(a.type) {
-            case TYPE_BOOL:   return a.as.Abool == b.as.Abool;
-            case TYPE_NULL:   return true;
-            case TYPE_SMTH:   return true;
-            case TYPE_OBJ:    return objectsEqual(a.as.obj, b.as.obj);
-            default:          return false;
-        }
     }
 
     // different type, but numeric
