@@ -1624,6 +1624,7 @@ void maybeCollect() {
 #include "../stdlib/modules/gui.hpp"
 #include "../stdlib/modules/hash.hpp"
 #include "../stdlib/modules/http.hpp"
+#include "../stdlib/modules/json.hpp"
 #include "../stdlib/modules/math.hpp"
 #include "../stdlib/modules/random.hpp"
 #include "../stdlib/modules/raylib.hpp"

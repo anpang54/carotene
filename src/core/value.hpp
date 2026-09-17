@@ -16,7 +16,7 @@
 
 struct Obj;
 
-string printObject   (Obj* object);
+string printObject   (Obj* object, bool json);
 string typeofObject  (Obj* object);
 bool   isTruthyObject(Obj* object);
 bool   objectsEqual  (Obj* a, Obj* b);
@@ -415,32 +415,40 @@ bool valuesEqual(Value a, Value b) {
 }
 
 
-// printing
+// printing or json stringifying
 
-string printValue(Value value) {
+string printValue(Value value, bool json = false) {
+
     switch(value.type) {
 
         case TYPE_BOOL: return value.as.Abool? "true": "false";
         case TYPE_NULL: return "null";
-        case TYPE_SMTH: return "smth";
-        case TYPE_OBJ:  return printObject(value.as.obj);
+        case TYPE_SMTH: return json? "null": "smth";
+                            // todo: what should smth actually become
+        case TYPE_OBJ:  return printObject(value.as.obj, json);
 
         default:
+
             if(isNumeric(value.type)) {
                 return asNumberToString(value);
+
             } else if(isVector(value.type)) {
+                #define LB (json? "[": "(")
+                #define CM (json? ",": ", ")
+                #define RB (json? "]": ")")
                 switch(value.type) {
-                    case TYPE_VEC2I: return "(" + to_string(value.as.XYint  .Xint  ) + ", " + to_string(value.as.XYint  .Yint  ) + ")";
-                    case TYPE_VEC2U: return "(" + to_string(value.as.XYuint .Xuint ) + ", " + to_string(value.as.XYuint .Yuint ) + ")";
-                    case TYPE_VEC2F: return "(" + to_string(value.as.XYfloat.Xfloat) + ", " + to_string(value.as.XYfloat.Yfloat) + ")";
-                    case TYPE_VEC3I: return "(" + to_string(value.as.XYint  .Xint  ) + ", " + to_string(value.as.XYint  .Yint  ) + ", " + to_string(value.z.Zint  ) + ")";
-                    case TYPE_VEC3U: return "(" + to_string(value.as.XYuint .Xuint ) + ", " + to_string(value.as.XYuint .Yuint ) + ", " + to_string(value.z.Zuint ) + ")";
-                    case TYPE_VEC3F: return "(" + to_string(value.as.XYfloat.Xfloat) + ", " + to_string(value.as.XYfloat.Yfloat) + ", " + to_string(value.z.Zfloat) + ")";
-                    case TYPE_COLOR: return "(" + to_string(value.as.Acolor.r) + ", " + to_string(value.as.Acolor.g) + ", " + to_string(value.as.Acolor.b) + ", " + to_string(value.as.Acolor.a) + ")";
+                    case TYPE_VEC2I: return LB + to_string(value.as.XYint  .Xint  ) + CM + to_string(value.as.XYint  .Yint  ) + RB;
+                    case TYPE_VEC2U: return LB + to_string(value.as.XYuint .Xuint ) + CM + to_string(value.as.XYuint .Yuint ) + RB;
+                    case TYPE_VEC2F: return LB + to_string(value.as.XYfloat.Xfloat) + CM + to_string(value.as.XYfloat.Yfloat) + RB;
+                    case TYPE_VEC3I: return LB + to_string(value.as.XYint  .Xint  ) + CM + to_string(value.as.XYint  .Yint  ) + CM + to_string(value.z.Zint  ) + RB;
+                    case TYPE_VEC3U: return LB + to_string(value.as.XYuint .Xuint ) + CM + to_string(value.as.XYuint .Yuint ) + CM + to_string(value.z.Zuint ) + RB;
+                    case TYPE_VEC3F: return LB + to_string(value.as.XYfloat.Xfloat) + CM + to_string(value.as.XYfloat.Yfloat) + CM + to_string(value.z.Zfloat) + RB;
+                    case TYPE_COLOR: return LB + to_string(value.as.Acolor.r) + CM + to_string(value.as.Acolor.g) + CM + to_string(value.as.Acolor.b) + CM + to_string(value.as.Acolor.a) + RB;
                     default: return "vector";    // unreachable
                 }
+
             } else {
-                return "unknown";    // should be unreachable
+                return json? "null": "unknown";    // should be unreachable
             }
 
     }

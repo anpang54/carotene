@@ -404,11 +404,34 @@ void freeObjects() {
 
 // OBJECT FUNCTIONS
 
-string printObject(Obj* object) {
-    
+string jsonStringifyString(const string& str) {
+    string result = "\"";
+    for(char c: str) {
+        switch(c) {
+            case '\\': result += "\\\\"; break;
+            case '"':  result += "\\\""; break;
+            case '\b': result += "\\b";  break;
+            case '\f': result += "\\f";  break;
+            case '\n': result += "\\n";  break;
+            case '\r': result += "\\r";  break;
+            case '\t': result += "\\t";  break;
+            default:
+                if((unsigned char)c < 0x20) {
+                    result += format("\\u{:04x}", (unsigned char)c);
+                } else {
+                    result.push_back(c);
+                }
+        }
+    }
+    return result + "\"";
+}
+
+string printObject(Obj* object, bool json = false) {
+
     switch(object->type) {
 
         case OBJ_STRING:
+            if(json) return jsonStringifyString(static_cast<ObjString*>(object)->str);
             return static_cast<ObjString*>(object)->str;
 
         case OBJ_ARRAY: {
@@ -418,16 +441,16 @@ string printObject(Obj* object) {
             // print [...] if an array contains itself
             static set<Obj*> beingPrinted;
             if(!beingPrinted.insert(object).second) {
-                return "[...]";
+                return json? "[]": "[...]";
             }
 
             printed += "[";
             vector<Value>& array = static_cast<ObjArray*>(object)->data;
             for(auto it = array.begin(); it != array.end(); ++it) {
                 const auto& type = *it;
-                printed += printValue(type);
+                printed += printValue(type, json);
                 if(std::next(it) != array.end()) {
-                    printed += ", ";
+                    printed += json? ",": ", ";
                 }
             }
             printed += "]";
@@ -445,17 +468,22 @@ string printObject(Obj* object) {
             // print {...} if a dict contains itself
             static set<Obj*> beingPrinted;
             if(!beingPrinted.insert(object).second) {
-                return "{...}";
+                return json? "{}": "{...}";
             }
 
             printed += "{";
             unordered_map<Value, Value>& dict = static_cast<ObjDict*>(object)->data;
             for(auto it = dict.begin(); it != dict.end(); ++it) {
-                printed += printValue(it->first);
-                printed += ": ";
-                printed += printValue(it->second);
+                if(json) {
+                    printed += isString(it->first)? printValue(it->first, true): jsonStringifyString(printValue(it->first));
+                    printed += ":";
+                } else {
+                    printed += printValue(it->first);
+                    printed += ": ";
+                }
+                printed += printValue(it->second, json);
                 if(std::next(it) != dict.end()) {
-                    printed += ", ";
+                    printed += json? ",": ", ";
                 }
             }
             printed += "}";
@@ -470,22 +498,22 @@ string printObject(Obj* object) {
 
             string printed = "";
 
-            // print [...] if an array contains itself
+            // print {...} if a set contains itself
             static set<Obj*> beingPrinted;
             if(!beingPrinted.insert(object).second) {
-                return "[...]";
+                return json? "[]": "{...}";
             }
 
-            printed += "{";
+            printed += json? "[": "{";
             unordered_set<Value>& set = static_cast<ObjSet*>(object)->data;
             for(auto it = set.begin(); it != set.end(); ++it) {
                 const auto& type = *it;
-                printed += printValue(type);
+                printed += printValue(type, json);
                 if(std::next(it) != set.end()) {
-                    printed += ", ";
+                    printed += json? ",": ", ";
                 }
             }
-            printed += "}";
+            printed += json? "]": "}";
 
             beingPrinted.erase(object);
 
@@ -494,6 +522,7 @@ string printObject(Obj* object) {
         }
 
         case OBJ_FUNCTION: {
+            if(json) return "null";
             ObjFunction* function = static_cast<ObjFunction*>(object);
             if(function->name.empty())   return "<script>";
             if(function->name == "func") return "<func>";
@@ -501,24 +530,28 @@ string printObject(Obj* object) {
         }
 
         case OBJ_CLASS: {
+            if(json) return "null";
             return "<class " + static_cast<ObjClass*>(object)->name + ">";
         }
 
         case OBJ_INSTANCE: {
+            if(json) return "null";
             return "<" + static_cast<ObjInstance*>(object)->klass->name + ">";
         }
 
         case OBJ_BOUND_METHOD: {
+            if(json) return "null";
             return "<bound method>";    // todo:
         }
 
         case OBJ_NATIVE: {
+            if(json) return "null";
             return "<native func>";
         }
 
     }
 
-    return "unknown";    // should be unreachable
+    return json? "null": "unknown";    // should be unreachable
 
 }
 
