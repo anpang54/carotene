@@ -322,7 +322,8 @@ Value castToVector(VM* vm, ValueType targetType, Args args) {
     
     int       size = componentCount(targetType);
     ValueType type = componentType (targetType);
-    vector<Value> components;
+    Value     components[4];
+    int       count = 0;
 
     // 1 argument, casting
     if(args.size() == 1) {
@@ -332,14 +333,17 @@ Value castToVector(VM* vm, ValueType targetType, Args args) {
         // another vector
         if(isVector(v.type)) {
             if(componentCount(v.type) != size) cantCast(typeofType(targetType));    // no casting between vectors of different sizes
-            for(int i = 0; i < size; ++i) {
-                components.push_back(getComponent(v, i));
+            for(; count < size; ++count) {
+                components[count] = getComponent(v, count);
             }
 
         // an array
         } else if(isArray(v)) {
-            components = asArray(v)->data;
-            if((int)components.size() != size) cantCast(typeofType(targetType));    // it needs to be the same size as the vector's length
+            const vector<Value>& data = asArray(v)->data;
+            if((int)data.size() != size) cantCast(typeofType(targetType));    // it needs to be the same size as the vector's length
+            for(; count < size; ++count) {
+                components[count] = data[count];
+            }
 
         // hex string becomes a color
         } else if(targetType == TYPE_COLOR && isString(v)) {
@@ -350,18 +354,17 @@ Value castToVector(VM* vm, ValueType targetType, Args args) {
                 if(!isxdigit((uint8_t)c)) cantCast(typeofType(targetType));
             }
             for(size_t i = 0; i < hex.size(); i += 2) {
-                components.push_back(CaroInt(std::stoi(hex.substr(i, 2), nullptr, 16)));
+                components[count++] = CaroInt(std::stoi(hex.substr(i, 2), nullptr, 16));
             }
 
         } else cantCast(typeofType(targetType));
 
     // same amount of components, so construct
-    } else if((int)args.size() == size) {
-        components.assign(args.begin(), args.end());
-
     // rgb color
-    } else if(targetType == TYPE_COLOR && args.size() == 3) {
-        components.assign(args.begin(), args.end());
+    } else if((int)args.size() == size || (targetType == TYPE_COLOR && args.size() == 3)) {
+        for(; count < (int)args.size(); ++count) {
+            components[count] = args[count];
+        }
 
     // neither of those
     } else {
@@ -374,20 +377,18 @@ Value castToVector(VM* vm, ValueType targetType, Args args) {
     }
 
     // colors have a=255 (opaque) unless a was specified
-    if(targetType == TYPE_COLOR && components.size() == 3) components.push_back(CaroInt(255));
+    if(targetType == TYPE_COLOR && count == 3) components[count++] = CaroInt(255);
 
     // convert each component to the appropriate type
-    components.resize(4, CaroInt(0));
-    for(Value& value: components) {
-        value = castToNumber(vm, value, type);
+    double numbers[4] = {0, 0, 0, 0};
+    for(int i = 0; i < count; ++i) {
+        Value value = castToNumber(vm, components[i], type);
         if(vm->hadError) return CaroNull;
+        numbers[i] = asNumberTo<double>(value);
     }
 
     // return
-    return CaroVector(
-        targetType,
-        asNumberTo<double>(components[0]), asNumberTo<double>(components[1]), asNumberTo<double>(components[2]), asNumberTo<double>(components[3])
-    );
+    return CaroVector(targetType, numbers[0], numbers[1], numbers[2], numbers[3]);
 
 }
 
