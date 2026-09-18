@@ -5,6 +5,7 @@
 
 // INCLUDES
 
+#include <cstdlib>
 #include <filesystem>
 
 #include "../util/natives.hpp"
@@ -472,6 +473,104 @@ nMethod(raylib_Texture, init, {
 });
 
 
+// FONT OBJECT
+
+struct RaylibFontData: NativeData{
+
+    string path;
+    int size = 32;
+    Font font{};
+    unsigned generation = 0;
+
+    bool loaded() const {
+        return font.texture.id != 0 && generation == raylibWindowGeneration && IsWindowReady();
+    }
+
+    void unloadGlyphs() {
+        if(font.glyphs == nullptr) return;
+        UnloadFontData(font.glyphs, font.glyphCount);
+        std::free(font.recs);
+        font = {};
+    }
+
+    bool load() {
+        if(loaded()) return true;
+        unloadGlyphs();
+
+        SetTraceLogLevel(LOG_ERROR);
+        font = LoadFontEx(path.c_str(), size, nullptr, 0);
+        SetTraceLogLevel(LOG_WARNING);
+        generation = raylibWindowGeneration;
+
+        if(font.texture.id == GetFontDefault().texture.id) {
+            font = {};
+            return false;
+        }
+
+        SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
+        return true;
+    }
+
+    ~RaylibFontData() override{
+        if(loaded()) UnloadTexture(font.texture);
+        unloadGlyphs();
+    }
+
+    bool readProperty(const string& name, Value& result) override{
+        if(name != "size") return false;
+        result = CaroInt(size);
+        return true;
+    }
+
+    bool writeProperty(const string& name, Value value, string& error) override{
+        (void)value;
+        if(name != "size") return false;
+        error = "The font's size is read-only.";
+        return true;
+    }
+
+};
+
+RaylibFontData* raylibFontData(Value value) {
+    return isInstance(value)? dynamic_cast<RaylibFontData*>(asInstance(value)->native.get()): nullptr;
+}
+
+nClass(raylib_Font, "raylib", "Font");
+
+
+// constructor
+
+nMethod(raylib_Font, init, {
+    params({
+        {{OBJ_STRING}, true },    // file
+        {ANY_NUMERIC,  false}     // size
+    });
+    if(alreadyInitialized(vm, self)) return CaroNull;
+
+    // check path
+    const string& path = asString(args[0])->str;
+    if(!std::filesystem::is_regular_file(path)) {
+        vm->runtimeError("\"%s\" isn't a file.", path.c_str());
+        return CaroNull;
+    }
+
+    // check size
+    int size = args.size() >= 2? asNumberTo<int>(args[1]): 16;
+    if(size <= 0) {
+        vm->runtimeError("The font's size must be positive.");
+        return CaroNull;
+    }
+
+    // store the font
+    auto data = std::make_unique<RaylibFontData>();
+    data->path = path;
+    data->size = size;
+    asInstance(self)->native = std::move(data);
+
+    return CaroNull;
+});
+
+
 // DRAWING
 
 
@@ -611,16 +710,37 @@ nMethod(raylib_Game, line, {
 
 nMethod(raylib_Game, text, {
     params({
-        {{OBJ_STRING}, true },    // text
-        {ANY_VEC2,     true },    // position
-        {{TYPE_COLOR}, true },    // color
-        {ANY_NUMERIC,  false}     // font size
+        {{OBJ_STRING},   true },    // text
+        {ANY_VEC2,       true },    // position
+        {{TYPE_COLOR},   true },    // color
+        {ANY_NUMERIC,    false},    // font size
+        {{OBJ_INSTANCE}, false}     // raylib.Font
     });
     getShownGameData();
     Color color      = raylibColor(args[2]);
     Vector2 position = raylibVector2(args[1]);
-    int fontSize     = args.size() >= 4? asNumberTo<int>(args[3]): 16;
-    rlDrawText(asString(args[0])->str.c_str(), (int)position.x, (int)position.y, fontSize, color);
+
+    // the raylib font
+    if(args.size() < 5) {
+        int fontSize = args.size() >= 4? asNumberTo<int>(args[3]): 16;
+        rlDrawText(asString(args[0])->str.c_str(), (int)position.x, (int)position.y, fontSize, color);
+        return CaroNull;
+    }
+
+    // a custom font
+    RaylibFontData* font = raylibFontData(args[4]);
+    if(font == nullptr) {
+        vm->runtimeError("Parameter 5 should be a raylib.Font, but %s was given.", typeofValue(args[4]).c_str());
+        return CaroNull;
+    }
+    if(!font->load()) {
+        vm->runtimeError("Couldn't load \"%s\" as a font. Supported formats are TTF and OTF.", font->path.c_str());
+        return CaroNull;
+    }
+
+    float fontSize = args.size() >= 4? asNumberTo<float>(args[3]): (float)font->size;
+    rlDrawTextEx(font->font, asString(args[0])->str.c_str(), position, fontSize, 0.0f, color);
+
     return CaroNull;
 });
 
