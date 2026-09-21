@@ -72,7 +72,7 @@ size_t damerauLevenshtein(const string& source, const string& target) {
 
 // FUNCTIONS
 
-nFunc(text_levenshtein_distance, "text", "levenshtein_distance", {
+nFunc(algorithms_levenshtein_distance, "algorithms", "levenshtein_distance", {
     params({
         {{OBJ_STRING}, true},
         {{OBJ_STRING}, true}
@@ -80,7 +80,7 @@ nFunc(text_levenshtein_distance, "text", "levenshtein_distance", {
     return CaroUlong(damerauLevenshtein(asString(args[0])->str, asString(args[1])->str));
 });
 
-nFunc(text_levenshtein_ratio, "text", "levenshtein_ratio", {
+nFunc(algorithms_levenshtein_ratio, "algorithms", "levenshtein_ratio", {
     params({
         {{OBJ_STRING}, true},
         {{OBJ_STRING}, true}

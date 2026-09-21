@@ -1618,6 +1618,7 @@ void maybeCollect() {
 
 #include "../stdlib/modules/main.hpp"
 
+#include "../stdlib/modules/algorithms.hpp"
 #include "../stdlib/modules/caro.hpp"
 #include "../stdlib/modules/dom.hpp"
 #include "../stdlib/modules/fs.hpp"
@@ -1628,7 +1629,6 @@ void maybeCollect() {
 #include "../stdlib/modules/math.hpp"
 #include "../stdlib/modules/random.hpp"
 #include "../stdlib/modules/raylib.hpp"
-#include "../stdlib/modules/text.hpp"
 #include "../stdlib/modules/time.hpp"
 
 #include "../stdlib/methods/array.hpp"
