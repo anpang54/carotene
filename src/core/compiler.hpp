@@ -931,6 +931,8 @@ class Compiler{
                 repeatStatement();
             } else if(match(TOKEN_IF)) {
                 ifStatement();
+            } else if(match(TOKEN_SWITCH)) {
+                switchStatement();
             } else if (match(TOKEN_RETURN)) {
                 returnStatement();
             } else if(match(TOKEN_WHILE)) {
@@ -1298,6 +1300,77 @@ class Compiler{
             patchJump(elseJump);
         
         }
+
+        void switchStatement() {
+
+            beginScope();
+
+            // consume and store the value
+            consume(TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+            expression();
+            consume(TOKEN_RIGHT_PAREN, "Expect ')' after the value.");
+            uint8_t subjectSlot = makeHiddenLocal('s');
+
+            consume(TOKEN_LEFT_BRACE, "Expect '{' after switch value.");
+
+            vector<int> endJumps;
+            int nextCaseJump = -1;
+            bool hadDefault = false;
+
+            // cases
+            while(!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+
+                if(hadDefault) errorAtCurrent("'default' must be at the end.");
+
+                // jump
+                if(nextCaseJump != -1) {
+                    endJumps.push_back(emitJump(OP_JUMP));
+                    patchJump(nextCaseJump);
+                    nextCaseJump = -1;
+                }
+
+                if(match(TOKEN_CASE)) {
+
+                    vector<int> bodyJumps;
+                    while(true) {
+                        emitBytes(OP_GET_LOCAL, subjectSlot);
+                        expression();
+                        if(!match(TOKEN_COMMA)) break;
+                        bodyJumps.push_back(emitJump(OP_JUMP_IF_EQUAL));
+                    }
+                    nextCaseJump = emitJump(OP_JUMP_IF_NOT_EQUAL);
+                    cur().lastCmpOffset = -1;
+                    consume(TOKEN_COLON, "Expect ':' after case value.");
+
+                    for(int jump: bodyJumps) patchJump(jump);
+
+                } else if(match(TOKEN_DEFAULT)) {
+                    
+                    hadDefault = true;
+                    consume(TOKEN_COLON, "Expect ':' after 'default'.");
+
+                } else {
+                    errorAtCurrent("Expect 'case' or 'default'.");
+                }
+
+                // stuff inside the case
+                beginScope();
+                while(!check(TOKEN_CASE) && !check(TOKEN_DEFAULT) && !check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+                    declaration();
+                }
+                endScope();
+
+            }
+
+            consume(TOKEN_RIGHT_BRACE, "Expect '}' after switch cases.");
+
+            if(nextCaseJump != -1) patchJump(nextCaseJump);
+            for(int jump: endJumps) patchJump(jump);
+
+            endScope();
+
+        }
+
         void patchJump(int offset) {
 
             int jump = currentChunk()->code.size() - offset - 2;
@@ -1677,6 +1750,9 @@ class Compiler{
                     case TOKEN_FOREVER:
                     case TOKEN_FOREACH:
                     case TOKEN_IF:
+                    case TOKEN_SWITCH:
+                    case TOKEN_CASE:
+                    case TOKEN_DEFAULT:
                     case TOKEN_WHILE:
                     case TOKEN_BREAK:
                     case TOKEN_CONTINUE:
@@ -2012,6 +2088,9 @@ inline ParseRule rules[] = {
     [TOKEN_IF]                = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_ELIF]              = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_ELSE]              = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_SWITCH]            = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_CASE]              = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_DEFAULT]           = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_FOR]               = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_FOREACH]           = { NULL,                    NULL,                     PREC_NONE       },
     [TOKEN_WHILE]             = { NULL,                    NULL,                     PREC_NONE       },
