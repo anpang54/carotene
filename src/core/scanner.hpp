@@ -27,8 +27,8 @@ typedef enum {
     TOKEN_CARET,    TOKEN_CARET_EQUAL,
     TOKEN_BANG,     TOKEN_BANG_EQUAL,
     TOKEN_EQUAL,    TOKEN_EQUAL_EQUAL,
-    TOKEN_LESS,     TOKEN_LESS_EQUAL,    TOKEN_LESS_LESS,
-    TOKEN_GREATER,  TOKEN_GREATER_EQUAL, TOKEN_GREATER_GREATER,
+    TOKEN_LESS,     TOKEN_LESS_EQUAL,    TOKEN_LESS_LESS,       TOKEN_LESS_LESS_EQUAL,
+    TOKEN_GREATER,  TOKEN_GREATER_EQUAL, TOKEN_GREATER_GREATER, TOKEN_GREATER_GREATER_EQUAL,
     TOKEN_QUESTION, TOKEN_QUESTION_QUESTION,
     TOKEN_SPACESHIP,
 
@@ -46,7 +46,10 @@ typedef enum {
     TOKEN_BREAK, TOKEN_CONTINUE,
     TOKEN_TRUE, TOKEN_FALSE,
     TOKEN_NULL, TOKEN_SMTH,
-    TOKEN_AND, TOKEN_OR, TOKEN_XOR, TOKEN_NOT,
+    TOKEN_AND, TOKEN_AND_EQUAL,
+    TOKEN_OR,  TOKEN_OR_EQUAL,
+    TOKEN_XOR, TOKEN_XOR_EQUAL,
+    TOKEN_NOT,
     TOKEN_TYPEOF, TOKEN_SIZEOF,
 
     // misc
@@ -393,9 +396,23 @@ class Scanner{
 
         }
         Token scanIdentifier() {
+
             while(isAlpha(peek()) || isDigit(peek())) advance();
                 // the first char can only be a letter or _, but the other chars also be digits
-            return makeToken(identifierType());
+
+            TokenType type = identifierType();
+
+            if(peek() == '=' && peekNext() != '=') {
+                switch(type) {
+                    case TOKEN_AND: advance(); return makeToken(TOKEN_AND_EQUAL);
+                    case TOKEN_OR:  advance(); return makeToken(TOKEN_OR_EQUAL);
+                    case TOKEN_XOR: advance(); return makeToken(TOKEN_XOR_EQUAL);
+                    default: break;
+                }
+            }
+
+            return makeToken(type);
+
         }
 
 
@@ -461,12 +478,12 @@ class Scanner{
                         if(match('>')) return makeToken(TOKEN_SPACESHIP);
                         return makeToken(TOKEN_LESS_EQUAL);
                     }
-                    if(match('<')) return makeToken(TOKEN_LESS_LESS);
+                    if(match('<')) return makeToken(match('=')? TOKEN_LESS_LESS_EQUAL : TOKEN_LESS_LESS);
                     return makeToken(TOKEN_LESS);
                 }
                 case '>': {
                     if(match('=')) return makeToken(TOKEN_GREATER_EQUAL);
-                    if(match('>')) return makeToken(TOKEN_GREATER_GREATER);
+                    if(match('>')) return makeToken(match('=')? TOKEN_GREATER_GREATER_EQUAL : TOKEN_GREATER_GREATER);
                     return makeToken(TOKEN_GREATER);
                 }
                 case '?': return makeToken(match('?')? TOKEN_QUESTION_QUESTION: TOKEN_QUESTION);
