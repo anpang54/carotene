@@ -73,7 +73,7 @@ My use of AI in this project is to let me skip the boring stuff like debugging, 
 
 ## Performance
 
-A benchmark, available at `tests/benchmarks/benchmark.py`, yields the following results for Carotene v0.2.1 beta on my PC:
+A benchmark, available at `tests/benchmarks/benchmark.py`, yields the following results for Carotene v0.2.1 on my PC:
 
 ```
 
@@ -83,13 +83,14 @@ Node.js, Lua, and PHP are in their non-JIT modes.
 Trial 0 1 2 3 4 5 
 
                   min      max
-  Lua            27 ms    31 ms
-  PHP            39 ms    44 ms
-  Node.js        75 ms    88 ms
-  Carotene       85 ms    87 ms
-  Python        145 ms   148 ms
-  Wren          166 ms   167 ms
-  clox with %   191 ms   214 ms
+  Lua            26 ms    28 ms
+  PHP            39 ms    42 ms
+  Node.js        73 ms    90 ms
+  Carotene       98 ms   115 ms
+  Python        144 ms   146 ms
+  clox with %   145 ms   207 ms
+  Wren          150 ms   168 ms
+  
 ```
 
 Do note that performance varies significantly between platforms and versions.
