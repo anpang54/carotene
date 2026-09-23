@@ -150,17 +150,41 @@ T asNumberTo(const Value& v) {
         default: return (T)0;    // unreachable
     }
 }
-string asNumberToString(const Value& v) {
-    switch(v.type) {
-        case TYPE_BYTE  : return to_string(v.as.Abyte  );
-        case TYPE_INT   : return to_string(v.as.Aint   );
-        case TYPE_UINT  : return to_string(v.as.Auint  );
-        case TYPE_LONG  : return to_string(v.as.Along  );
-        case TYPE_ULONG : return to_string(v.as.Aulong );
-        case TYPE_FLOAT : return to_string(v.as.Afloat );
-        case TYPE_DOUBLE: return to_string(v.as.Adouble);
-        default: return "0";    // unreachable
+constexpr size_t NUMBER_BUFFER_SIZE = 320;
+
+template<typename T>
+void appendNumber(string& out, T n) {
+    char buffer[NUMBER_BUFFER_SIZE];
+    char* end;
+    if constexpr(std::is_floating_point_v<T>) {
+        if(std::isnan(n)) {
+            out += std::signbit(n)? "-nan": "nan";
+            return;
+        }
+        end = std::to_chars(buffer, buffer + NUMBER_BUFFER_SIZE, n, std::chars_format::fixed, 6).ptr;
+    } else {
+        end = std::to_chars(buffer, buffer + NUMBER_BUFFER_SIZE, +n).ptr;
     }
+    out.append(buffer, end);
+}
+
+void appendNumber(string& out, const Value& v) {
+    switch(v.type) {
+        case TYPE_BYTE  : appendNumber(out, v.as.Abyte  ); break;
+        case TYPE_INT   : appendNumber(out, v.as.Aint   ); break;
+        case TYPE_UINT  : appendNumber(out, v.as.Auint  ); break;
+        case TYPE_LONG  : appendNumber(out, v.as.Along  ); break;
+        case TYPE_ULONG : appendNumber(out, v.as.Aulong ); break;
+        case TYPE_FLOAT : appendNumber(out, v.as.Afloat ); break;
+        case TYPE_DOUBLE: appendNumber(out, v.as.Adouble); break;
+        default: out += '0'; break;    // unreachable
+    }
+}
+
+string asNumberToString(const Value& v) {
+    string result;
+    appendNumber(result, v);
+    return result;
 }
 
 template<typename F>
@@ -433,19 +457,24 @@ string printValue(Value value, bool json = false) {
                 return asNumberToString(value);
 
             } else if(isVector(value.type)) {
-                #define LB (json? "[": "(")
-                #define CM (json? ",": ", ")
-                #define RB (json? "]": ")")
+                string printed = json? "[": "(";
+                const char* comma = json? ",": ", ";
+                auto components = [&](auto... n) {
+                    bool first = true;
+                    ((printed += first? "": comma, first = false, appendNumber(printed, n)), ...);
+                };
                 switch(value.type) {
-                    case TYPE_VEC2I: return LB + to_string(value.as.XYint  .Xint  ) + CM + to_string(value.as.XYint  .Yint  ) + RB;
-                    case TYPE_VEC2U: return LB + to_string(value.as.XYuint .Xuint ) + CM + to_string(value.as.XYuint .Yuint ) + RB;
-                    case TYPE_VEC2F: return LB + to_string(value.as.XYfloat.Xfloat) + CM + to_string(value.as.XYfloat.Yfloat) + RB;
-                    case TYPE_VEC3I: return LB + to_string(value.as.XYint  .Xint  ) + CM + to_string(value.as.XYint  .Yint  ) + CM + to_string(value.z.Zint  ) + RB;
-                    case TYPE_VEC3U: return LB + to_string(value.as.XYuint .Xuint ) + CM + to_string(value.as.XYuint .Yuint ) + CM + to_string(value.z.Zuint ) + RB;
-                    case TYPE_VEC3F: return LB + to_string(value.as.XYfloat.Xfloat) + CM + to_string(value.as.XYfloat.Yfloat) + CM + to_string(value.z.Zfloat) + RB;
-                    case TYPE_COLOR: return LB + to_string(value.as.Acolor.r) + CM + to_string(value.as.Acolor.g) + CM + to_string(value.as.Acolor.b) + CM + to_string(value.as.Acolor.a) + RB;
+                    case TYPE_VEC2I: components(value.as.XYint  .Xint  , value.as.XYint  .Yint  ); break;
+                    case TYPE_VEC2U: components(value.as.XYuint .Xuint , value.as.XYuint .Yuint ); break;
+                    case TYPE_VEC2F: components(value.as.XYfloat.Xfloat, value.as.XYfloat.Yfloat); break;
+                    case TYPE_VEC3I: components(value.as.XYint  .Xint  , value.as.XYint  .Yint  , value.z.Zint  ); break;
+                    case TYPE_VEC3U: components(value.as.XYuint .Xuint , value.as.XYuint .Yuint , value.z.Zuint ); break;
+                    case TYPE_VEC3F: components(value.as.XYfloat.Xfloat, value.as.XYfloat.Yfloat, value.z.Zfloat); break;
+                    case TYPE_COLOR: components(value.as.Acolor.r, value.as.Acolor.g, value.as.Acolor.b, value.as.Acolor.a); break;
                     default: return "vector";    // unreachable
                 }
+                printed += json? "]": ")";
+                return printed;
 
             } else {
                 return json? "null": "unknown";    // should be unreachable

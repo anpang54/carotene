@@ -532,6 +532,13 @@ class VM{
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
+            } else if(op == OP_ADD) {    // concatenates a and b without any copying
+
+                string result = asString(peek(1))->str + asString(peek(0))->str;
+                this->stackTop -= 2;
+                push(CaroObj(copyString(std::move(result))));
+                return INTERPRET_OK;
+
             } else {
 
                 strB = popString();
@@ -542,10 +549,6 @@ class VM{
             // do the operation
             switch(op) {
 
-                case OP_ADD: {    // concatenates a and b
-                    push(CaroObj(copyString(strA + strB)));
-                    break;
-                }
                 case OP_SUBTRACT: {    // removes all occurrences of b in a
                     string result = strA;
                     replace(result, strB, "");
@@ -964,10 +967,10 @@ class VM{
                         uint8_t pieceCount = READ_BYTE();
                         string result;
                         for(Value* piece = this->stackTop - pieceCount; piece < this->stackTop; ++piece) {
-                            result += printValue(*piece);
+                            appendPrinted(result, *piece);
                         }
                         this->stackTop -= pieceCount;
-                        push(CaroObj(copyString(result)));
+                        push(CaroObj(copyString(std::move(result))));
 
                         break;
                     }

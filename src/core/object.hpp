@@ -555,6 +555,12 @@ string printObject(Obj* object, bool json = false) {
 
 }
 
+void appendPrinted(string& out, const Value& value) {
+    if(isString(value))            out += asString(value)->str;
+    else if(isNumeric(value.type)) appendNumber(out, value);
+    else                           out += printValue(value);
+}
+
 string typeofObjType(ObjType type) {
     switch(type) {
         case OBJ_STRING:       return "str";

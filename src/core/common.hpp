@@ -12,6 +12,7 @@
 #include <iostream>
 #include <format>
 #include <utility>
+#include <charconv>
 
 #include <cstddef>
 #include <cstdint>
