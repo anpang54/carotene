@@ -137,7 +137,7 @@ if(valid) {
             sh(
                 "mkdir -p " + objects + " && for f in rcore rshapes rtextures rtext rmodels raudio" + (platform == "web"? "": " rglfw") + "; do "
               + "r='" + #raylib_renames + "'; [ $f = rglfw ] && r=''; "
-              + #raylib[platform][0] + "-c -O2 -std=gnu99 " + #raylib[platform][1] + "$r -Iinclude/raylib include/raylib/$f.c -o " + objects + "/$f.o || { rm -f " + objects + "/rcore.o; exit 1; }; "
+              + #raylib[platform][0] + "-c -O2 -Wno-deprecated-pragma -Wno-tautological-compare -std=gnu99 " + #raylib[platform][1] + "$r -Iinclude/raylib include/raylib/$f.c -o " + objects + "/$f.o || { rm -f " + objects + "/rcore.o; exit 1; }; "
               + "done"
             );
         }
