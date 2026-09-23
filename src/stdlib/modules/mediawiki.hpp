@@ -22,8 +22,10 @@ string wikiEncode(const string& text, bool isTitle = false) {
     return encoded;
 }
 
-bool wikiRequest(VM* vm, const string& url, CaroHttp::Response& response) {
-    string error = CaroHttp::request("GET", url, {}, "", CaroHttp::defaultTimeout, response);
+bool wikiRequest(VM* vm, const string& method, const string& url, const string& body, CaroHttp::Response& response) {
+    vector<pair<string, string>> headers;
+    if(!body.empty()) headers.push_back({"Content-Type", "application/json"});
+    string error = CaroHttp::request(method, url, headers, body, CaroHttp::defaultTimeout, response);
     if(error.empty()) return true;
     vm->runtimeError("%s", error.c_str());
     return false;
@@ -63,6 +65,9 @@ nMethod(mediawiki_Wiki, init, {
 
 // REST API
 
+
+// getting
+
 nMethod(mediawiki_Wiki, get, {
     params({
         {{OBJ_STRING}, true },
@@ -78,7 +83,9 @@ nMethod(mediawiki_Wiki, get, {
     CaroHttp::Response response;
     if(!wikiRequest(
         vm,
+        "GET",
         data->url + "/rest.php/v1/page/" + wikiEncode(asString(args[0])->str, true) + (getHtml? "/html": ""),
+        "",
         response
     )) return CaroNull;
 
@@ -111,11 +118,61 @@ nMethod(mediawiki_Wiki, search, {
     CaroHttp::Response response;
     if(!wikiRequest(
         vm,
+        "GET",
         data->url + "/rest.php/v1/search/page?q=" + wikiEncode(asString(args[0])->str, false) + "&limit=" + std::to_string(limit),
+        "",
         response
     )) return CaroNull;
 
     GCPause pause;
     return wikiField(vm, response.body, "pages", isArray);
+
+});
+
+nMethod(mediawiki_Wiki, parse, {
+    params({
+        {{OBJ_STRING}, true },
+        {{OBJ_STRING}, false}
+    });
+
+    WikiData* data = nativeData<WikiData>(vm, self);
+    if(data == nullptr) return CaroNull;
+
+    string title = args.size() >= 2? asString(args[1])->str: "Main Page";
+
+    CaroHttp::Response response;
+    if(!wikiRequest(
+        vm,
+        "POST",
+        data->url + "/rest.php/v1/transform/wikitext/to/html/" + wikiEncode(title, true),
+        "{\"wikitext\": " + jsonStringifyString(asString(args[0])->str) + "}",
+        response
+    )) return CaroNull;
+
+    return CaroObj(copyString(response.body));
+
+});
+
+nMethod(mediawiki_Wiki, unparse, {
+    params({
+        {{OBJ_STRING}, true },
+        {{OBJ_STRING}, false}
+    });
+
+    WikiData* data = nativeData<WikiData>(vm, self);
+    if(data == nullptr) return CaroNull;
+
+    string title = args.size() >= 2? asString(args[1])->str: "Main Page";
+
+    CaroHttp::Response response;
+    if(!wikiRequest(
+        vm,
+        "POST",
+        data->url + "/rest.php/v1/transform/html/to/wikitext/" + wikiEncode(title, true),
+        "{\"html\": " + jsonStringifyString(asString(args[0])->str) + "}",
+        response
+    )) return CaroNull;
+
+    return CaroObj(copyString(response.body));
 
 });
