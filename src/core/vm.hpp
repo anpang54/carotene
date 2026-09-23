@@ -244,6 +244,22 @@ class VM{
 
         }
 
+        InterpretResult bitwiseNotOperation() {
+
+            if(!isInt(peek(0).type)) {
+                runtimeError("Operand must be an integer.");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+
+            top() = mapNumber(top(), [](auto x) -> decltype(x) {
+                if constexpr(std::is_integral_v<decltype(x)>) return ~x;
+                else return x;    // unreachable
+            });
+
+            return INTERPRET_OK;
+
+        }
+
         template<typename T>
         InterpretResult numberBinaryOperationAs(OpCode op) {
 
@@ -870,6 +886,7 @@ class VM{
                     }
 
                     #define unary()          SYNC(); if(unaryOperation()          == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
+                    #define bitwiseNot()     SYNC(); if(bitwiseNotOperation()     == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
                     #define numberBinary(op) SYNC(); if(numberBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
                     #define vectorBinary(op) SYNC(); if(vectorBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
                     #define stringBinary(op) SYNC(); if(stringBinaryOperation(op) == INTERPRET_OK) { break; } else { return INTERPRET_RUNTIME_ERROR; }
@@ -915,6 +932,7 @@ class VM{
                     case OP_BITWISE_AND: { numberBinary(OP_BITWISE_AND); break; }
                     case OP_BITWISE_OR:  { numberBinary(OP_BITWISE_OR);  break; }
                     case OP_BITWISE_XOR: { numberBinary(OP_BITWISE_XOR); break; }
+                    case OP_BITWISE_NOT: { bitwiseNot();                 break; }
                     case OP_LEFT_SHIFT:  { numberBinary(OP_LEFT_SHIFT);  break; }
                     case OP_RIGHT_SHIFT: { numberBinary(OP_RIGHT_SHIFT); break; }
 

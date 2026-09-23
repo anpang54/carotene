@@ -470,10 +470,11 @@ class Compiler{
             TokenType operatorType = this->previous.type;
             parsePrecedence(PREC_UNARY);    // compile the operand
             switch (operatorType) {    // emit the operator instruction
-                case TOKEN_MINUS:  emitByte(OP_NEGATE); break;
-                case TOKEN_BANG:   emitByte(OP_NOT);    break;
-                case TOKEN_TYPEOF: emitByte(OP_TYPEOF); break;
-                case TOKEN_SIZEOF: emitByte(OP_SIZEOF); break;
+                case TOKEN_MINUS:  emitByte(OP_NEGATE);      break;
+                case TOKEN_BANG:   emitByte(OP_NOT);         break;
+                case TOKEN_NOT:    emitByte(OP_BITWISE_NOT); break;
+                case TOKEN_TYPEOF: emitByte(OP_TYPEOF);      break;
+                case TOKEN_SIZEOF: emitByte(OP_SIZEOF);      break;
                 default: return;    // unreachable.
             }
         }
@@ -2128,6 +2129,7 @@ inline ParseRule rules[] = {
     [TOKEN_AND]               = { NULL,                    &Compiler::makeBinary,    PREC_BITWISE_AND },
     [TOKEN_OR]                = { NULL,                    &Compiler::makeBinary,    PREC_BITWISE_OR  },
     [TOKEN_XOR]               = { NULL,                    &Compiler::makeBinary,    PREC_BITWISE_XOR },
+    [TOKEN_NOT]               = { &Compiler::makeUnary,    NULL,                     PREC_NONE        },
     [TOKEN_TYPEOF]            = { &Compiler::makeUnary,    NULL,                     PREC_NONE        },
     [TOKEN_SIZEOF]            = { &Compiler::makeUnary,    NULL,                     PREC_NONE        },
 

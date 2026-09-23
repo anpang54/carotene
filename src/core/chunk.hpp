@@ -44,8 +44,9 @@ enum OpCode: uint8_t{
     OP_BITWISE_AND               = 0x38,
     OP_BITWISE_OR                = 0x39,
     OP_BITWISE_XOR               = 0x3A,
-    OP_LEFT_SHIFT                = 0x3B,
-    OP_RIGHT_SHIFT               = 0x3C,
+    OP_BITWISE_NOT               = 0x3B,
+    OP_LEFT_SHIFT                = 0x3C,
+    OP_RIGHT_SHIFT               = 0x3D,
 
     // comparison
     OP_EQUAL                     = 0x41,
@@ -272,6 +273,8 @@ class Chunk{
                     return simpleInstruction("OP_BITWISE_OR", offset);
                 case OP_BITWISE_XOR:
                     return simpleInstruction("OP_BITWISE_XOR", offset);
+                case OP_BITWISE_NOT:
+                    return simpleInstruction("OP_BITWISE_NOT", offset);
                 case OP_LEFT_SHIFT:
                     return simpleInstruction("OP_LEFT_SHIFT", offset);
                 case OP_RIGHT_SHIFT:
