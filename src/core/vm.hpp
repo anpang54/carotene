@@ -291,6 +291,12 @@ class VM{
                 case OP_GREATER_EQUAL: result = CaroBool(a >= b);                   break;
                 case OP_SPACESHIP:     result = CaroInt (a < b? -1: (a > b? 1: 0)); break;
 
+                case OP_BITWISE_AND:   if constexpr(std::is_integral_v<T>) result = num(a & b);  break;
+                case OP_BITWISE_OR:    if constexpr(std::is_integral_v<T>) result = num(a | b);  break;
+                case OP_BITWISE_XOR:   if constexpr(std::is_integral_v<T>) result = num(a ^ b);  break;
+                case OP_LEFT_SHIFT:    if constexpr(std::is_integral_v<T>) result = num(a << b); break;
+                case OP_RIGHT_SHIFT:   if constexpr(std::is_integral_v<T>) result = num(a >> b); break;
+
                 default: break;
 
             }
@@ -304,6 +310,34 @@ class VM{
             return op == OP_LESS    || op == OP_LESS_EQUAL
                 || op == OP_GREATER || op == OP_GREATER_EQUAL
                 || op == OP_SPACESHIP;
+        }
+        static bool isBitwise(OpCode op) {
+            return op >= OP_BITWISE_AND && op <= OP_RIGHT_SHIFT;
+        }
+        static bool isShift(OpCode op) {
+            return op == OP_LEFT_SHIFT || op == OP_RIGHT_SHIFT;
+        }
+
+        InterpretResult shiftOperation(OpCode op) {
+
+            ValueType type = peek(1).type;
+            int bits = sizeofType(type) * 8;
+
+            int64_t amount = asNumberTo<int64_t>(peek(0));
+            if(amount < 0 || amount >= bits) {
+                runtimeError("Shift amount must be between 0 and %d for %s.", bits - 1, typeofType(type).c_str());
+                return INTERPRET_RUNTIME_ERROR;
+            }
+
+            switch(type) {
+                case TYPE_BYTE:  return numberBinaryOperationAs< uint8_t>(op);
+                case TYPE_UINT:  return numberBinaryOperationAs<uint32_t>(op);
+                case TYPE_INT:   return numberBinaryOperationAs< int32_t>(op);
+                case TYPE_ULONG: return numberBinaryOperationAs<uint64_t>(op);
+                case TYPE_LONG:  return numberBinaryOperationAs< int64_t>(op);
+                default: return INTERPRET_RUNTIME_ERROR;    // unreachable
+            }
+
         }
 
         InterpretResult mixedSignComparison(OpCode op, bool aIsSigned) {
@@ -334,6 +368,14 @@ class VM{
                 runtimeError("Operands must be numbers.");
                 return INTERPRET_RUNTIME_ERROR;
             }
+
+            // bitwise operations are int only
+            if(isBitwise(op) && (!isInt(peek(0).type) || !isInt(peek(1).type))) {
+                runtimeError("Operands must be integers.");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+
+            if(isShift(op)) return shiftOperation(op);
 
             // do int arithmetic if both types are ints, if one or both are float then float arithmetic
             if((isInt(peek(0).type) && isInt(peek(1).type)) && op != OP_DIVIDE) {
@@ -869,6 +911,12 @@ class VM{
                     case OP_NOT:
                         top() = CaroBool(isFalsy(top()));
                         break;
+
+                    case OP_BITWISE_AND: { numberBinary(OP_BITWISE_AND); break; }
+                    case OP_BITWISE_OR:  { numberBinary(OP_BITWISE_OR);  break; }
+                    case OP_BITWISE_XOR: { numberBinary(OP_BITWISE_XOR); break; }
+                    case OP_LEFT_SHIFT:  { numberBinary(OP_LEFT_SHIFT);  break; }
+                    case OP_RIGHT_SHIFT: { numberBinary(OP_RIGHT_SHIFT); break; }
 
                     case OP_EQUAL: {
                         Value b = pop();

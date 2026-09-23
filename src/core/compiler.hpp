@@ -21,20 +21,35 @@
 // precedence
 
 enum Precedence{
+
     PREC_NONE,
+
     PREC_ASSIGNMENT,  // =
+
     PREC_TERNARY,     // c? t: f
     PREC_COALESCE,    // ??
+
     PREC_OR,          // |
     PREC_AND,         // &
+
     PREC_EQUALITY,    // == !=
     PREC_COMPARISON,  // < > <= >=
+
+    PREC_BITWISE_OR,
+    PREC_BITWISE_XOR,
+    PREC_BITWISE_AND,
+    PREC_SHIFT,
+
     PREC_TERM,        // + -
     PREC_FACTOR,      // * / %
     PREC_POWER,       // ^
+
     PREC_UNARY,       // ! -
+
     PREC_CALL,        // . ()
+
     PREC_PRIMARY
+
 };
 
 
@@ -475,12 +490,12 @@ class Compiler{
 
             switch(operatorType) {
 
-                case TOKEN_PLUS:          emitByte(OP_ADD);           break;
-                case TOKEN_MINUS:         emitByte(OP_SUBTRACT);      break;
-                case TOKEN_STAR:          emitByte(OP_MULTIPLY);      break;
-                case TOKEN_SLASH:         emitByte(OP_DIVIDE);        break;
-                case TOKEN_PERCENT:       emitByte(OP_MODULO);        break;
-                case TOKEN_CARET:         emitByte(OP_EXPONENTIATE);  break;
+                case TOKEN_PLUS:                emitByte(OP_ADD);           break;
+                case TOKEN_MINUS:               emitByte(OP_SUBTRACT);      break;
+                case TOKEN_STAR:                emitByte(OP_MULTIPLY);      break;
+                case TOKEN_SLASH:               emitByte(OP_DIVIDE);        break;
+                case TOKEN_PERCENT:             emitByte(OP_MODULO);        break;
+                case TOKEN_CARET:               emitByte(OP_EXPONENTIATE);  break;
 
                 case TOKEN_EQUAL_EQUAL:   emitComparison(OP_EQUAL);         break;
                 case TOKEN_BANG_EQUAL:    emitComparison(OP_NOT_EQUAL);     break;
@@ -488,8 +503,14 @@ class Compiler{
                 case TOKEN_LESS_EQUAL:    emitComparison(OP_LESS_EQUAL);    break;
                 case TOKEN_GREATER:       emitComparison(OP_GREATER);       break;
                 case TOKEN_GREATER_EQUAL: emitComparison(OP_GREATER_EQUAL); break;
-                case TOKEN_SPACESHIP:     emitByte(OP_SPACESHIP);           break;
+                case TOKEN_SPACESHIP:           emitByte(OP_SPACESHIP);     break;
                 
+                case TOKEN_AND:                 emitByte(OP_BITWISE_AND);   break;
+                case TOKEN_OR:                  emitByte(OP_BITWISE_OR);    break;
+                case TOKEN_XOR:                 emitByte(OP_BITWISE_XOR);   break;
+                case TOKEN_LESS_LESS:           emitByte(OP_LEFT_SHIFT);    break;
+                case TOKEN_GREATER_GREATER:     emitByte(OP_RIGHT_SHIFT);   break;
+
                 default: return;    // unreachable
 
             }
@@ -2030,84 +2051,89 @@ inline ParseRule rules[] = {
 //   token                        prefix                   infix                     precedence
 
     // 1 char
-    [TOKEN_LEFT_PAREN]        = { &Compiler::makeGrouping, &Compiler::makeCall,      PREC_CALL       },    // ( is an infix operator for function calls
-    [TOKEN_RIGHT_PAREN]       = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_LEFT_SQUARE]       = { &Compiler::parseArray,   &Compiler::makeSubscript, PREC_CALL       },    // [ is an infix operator for indexing
-    [TOKEN_RIGHT_SQUARE]      = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_LEFT_BRACE]        = { &Compiler::parseBraces,  NULL,                     PREC_NONE       },
-    [TOKEN_RIGHT_BRACE]       = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_DOT]               = { NULL,                    &Compiler::makeDot,       PREC_CALL       },
-    [TOKEN_COMMA]             = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_COLON]             = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_SEMICOLON]         = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_AMPERSAND]         = { NULL,                    &Compiler::makeAnd,       PREC_AND        },
-    [TOKEN_PIPE]              = { NULL,                    &Compiler::makeOr,        PREC_OR         },
+    [TOKEN_LEFT_PAREN]        = { &Compiler::makeGrouping, &Compiler::makeCall,      PREC_CALL        },    // ( is an infix operator for function calls
+    [TOKEN_RIGHT_PAREN]       = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_LEFT_SQUARE]       = { &Compiler::parseArray,   &Compiler::makeSubscript, PREC_CALL        },    // [ is an infix operator for indexing
+    [TOKEN_RIGHT_SQUARE]      = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_LEFT_BRACE]        = { &Compiler::parseBraces,  NULL,                     PREC_NONE        },
+    [TOKEN_RIGHT_BRACE]       = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_DOT]               = { NULL,                    &Compiler::makeDot,       PREC_CALL        },
+    [TOKEN_COMMA]             = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_COLON]             = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_SEMICOLON]         = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_AMPERSAND]         = { NULL,                    &Compiler::makeAnd,       PREC_AND         },
+    [TOKEN_PIPE]              = { NULL,                    &Compiler::makeOr,        PREC_OR          },
 
     // 1 or 2 chars
-    [TOKEN_PLUS]              = { NULL,                    &Compiler::makeBinary,    PREC_TERM       },
-    [TOKEN_PLUS_EQUAL]        = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_MINUS]             = { &Compiler::makeUnary,    &Compiler::makeBinary,    PREC_TERM       },
-    [TOKEN_MINUS_EQUAL]       = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_STAR]              = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
-    [TOKEN_STAR_EQUAL]        = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_SLASH]             = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
-    [TOKEN_SLASH_EQUAL]       = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_PERCENT]           = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR     },
-    [TOKEN_PERCENT_EQUAL]     = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_CARET]             = { NULL,                    &Compiler::makeBinary,    PREC_POWER      },
-    [TOKEN_CARET_EQUAL]       = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_BANG]              = { &Compiler::makeUnary,    NULL,                     PREC_NONE       },
-    [TOKEN_BANG_EQUAL]        = { NULL,                    &Compiler::makeBinary,    PREC_EQUALITY   },
-    [TOKEN_EQUAL]             = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_EQUAL_EQUAL]       = { NULL,                    &Compiler::makeBinary,    PREC_EQUALITY   },
-    [TOKEN_LESS]              = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON },
-    [TOKEN_LESS_EQUAL]        = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON },
-    [TOKEN_GREATER]           = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON },
-    [TOKEN_GREATER_EQUAL]     = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON },
-    [TOKEN_QUESTION]          = { NULL,                    &Compiler::makeTernary,   PREC_TERNARY    },
-    [TOKEN_QUESTION_QUESTION] = { NULL,                    &Compiler::makeCoalesce,  PREC_COALESCE   },
-    [TOKEN_SPACESHIP]         = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON },
+    [TOKEN_PLUS]              = { NULL,                    &Compiler::makeBinary,    PREC_TERM        },
+    [TOKEN_PLUS_EQUAL]        = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_MINUS]             = { &Compiler::makeUnary,    &Compiler::makeBinary,    PREC_TERM        },
+    [TOKEN_MINUS_EQUAL]       = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_STAR]              = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR      },
+    [TOKEN_STAR_EQUAL]        = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_SLASH]             = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR      },
+    [TOKEN_SLASH_EQUAL]       = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_PERCENT]           = { NULL,                    &Compiler::makeBinary,    PREC_FACTOR      },
+    [TOKEN_PERCENT_EQUAL]     = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_CARET]             = { NULL,                    &Compiler::makeBinary,    PREC_POWER       },
+    [TOKEN_CARET_EQUAL]       = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_BANG]              = { &Compiler::makeUnary,    NULL,                     PREC_NONE        },
+    [TOKEN_BANG_EQUAL]        = { NULL,                    &Compiler::makeBinary,    PREC_EQUALITY    },
+    [TOKEN_EQUAL]             = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_EQUAL_EQUAL]       = { NULL,                    &Compiler::makeBinary,    PREC_EQUALITY    },
+    [TOKEN_LESS]              = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON  },
+    [TOKEN_LESS_EQUAL]        = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON  },
+    [TOKEN_LESS_LESS]         = { NULL,                    &Compiler::makeBinary,    PREC_SHIFT       },
+    [TOKEN_GREATER]           = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON  },
+    [TOKEN_GREATER_EQUAL]     = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON  },
+    [TOKEN_GREATER_GREATER]   = { NULL,                    &Compiler::makeBinary,    PREC_SHIFT       },
+    [TOKEN_QUESTION]          = { NULL,                    &Compiler::makeTernary,   PREC_TERNARY     },
+    [TOKEN_QUESTION_QUESTION] = { NULL,                    &Compiler::makeCoalesce,  PREC_COALESCE    },
+    [TOKEN_SPACESHIP]         = { NULL,                    &Compiler::makeBinary,    PREC_COMPARISON  },
 
     // literals
-    [TOKEN_IDENTIFIER]        = { &Compiler::makeVariable, NULL,                     PREC_NONE       },
-    [TOKEN_NUMBER]            = { &Compiler::parseNumber,  NULL,                     PREC_NONE       },
-    [TOKEN_STRING]            = { &Compiler::parseString,  NULL,                     PREC_NONE       },
-    [TOKEN_FSTRING]           = { &Compiler::parseFString, NULL,                     PREC_NONE       },
+    [TOKEN_IDENTIFIER]        = { &Compiler::makeVariable, NULL,                     PREC_NONE        },
+    [TOKEN_NUMBER]            = { &Compiler::parseNumber,  NULL,                     PREC_NONE        },
+    [TOKEN_STRING]            = { &Compiler::parseString,  NULL,                     PREC_NONE        },
+    [TOKEN_FSTRING]           = { &Compiler::parseFString, NULL,                     PREC_NONE        },
 
     // keywords
-    [TOKEN_NAME]              = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_DESC]              = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_VERSION]           = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_USE]               = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_INCLUDE]           = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_FUNC]              = { &Compiler::makeAnonFunc, NULL,                     PREC_NONE       },
-    [TOKEN_RETURN]            = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_CLASS]             = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_THIS]              = { &Compiler::parseThis,    NULL,                     PREC_NONE       },
-    [TOKEN_SUPER]             = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_IF]                = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_ELIF]              = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_ELSE]              = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_SWITCH]            = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_CASE]              = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_DEFAULT]           = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_FOR]               = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_FOREACH]           = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_WHILE]             = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_REPEAT]            = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_FOREVER]           = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_BREAK]             = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_CONTINUE]          = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_TRUE]              = { &Compiler::parseLiteral, NULL,                     PREC_NONE       },
-    [TOKEN_FALSE]             = { &Compiler::parseLiteral, NULL,                     PREC_NONE       },
-    [TOKEN_NULL]              = { &Compiler::parseLiteral, NULL,                     PREC_NONE       },
-    [TOKEN_SMTH]              = { &Compiler::parseLiteral, NULL,                     PREC_NONE       },
-    [TOKEN_TYPEOF]            = { &Compiler::makeUnary,    NULL,                     PREC_NONE       },
-    [TOKEN_SIZEOF]            = { &Compiler::makeUnary,    NULL,                     PREC_NONE       },
+    [TOKEN_NAME]              = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_DESC]              = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_VERSION]           = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_USE]               = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_INCLUDE]           = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_FUNC]              = { &Compiler::makeAnonFunc, NULL,                     PREC_NONE        },
+    [TOKEN_RETURN]            = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_CLASS]             = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_THIS]              = { &Compiler::parseThis,    NULL,                     PREC_NONE        },
+    [TOKEN_SUPER]             = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_IF]                = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_ELIF]              = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_ELSE]              = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_SWITCH]            = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_CASE]              = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_DEFAULT]           = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_FOR]               = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_FOREACH]           = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_WHILE]             = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_REPEAT]            = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_FOREVER]           = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_BREAK]             = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_CONTINUE]          = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_TRUE]              = { &Compiler::parseLiteral, NULL,                     PREC_NONE        },
+    [TOKEN_FALSE]             = { &Compiler::parseLiteral, NULL,                     PREC_NONE        },
+    [TOKEN_NULL]              = { &Compiler::parseLiteral, NULL,                     PREC_NONE        },
+    [TOKEN_SMTH]              = { &Compiler::parseLiteral, NULL,                     PREC_NONE        },
+    [TOKEN_AND]               = { NULL,                    &Compiler::makeBinary,    PREC_BITWISE_AND },
+    [TOKEN_OR]                = { NULL,                    &Compiler::makeBinary,    PREC_BITWISE_OR  },
+    [TOKEN_XOR]               = { NULL,                    &Compiler::makeBinary,    PREC_BITWISE_XOR },
+    [TOKEN_TYPEOF]            = { &Compiler::makeUnary,    NULL,                     PREC_NONE        },
+    [TOKEN_SIZEOF]            = { &Compiler::makeUnary,    NULL,                     PREC_NONE        },
 
     // misc
-    [TOKEN_ERROR]             = { NULL,                    NULL,                     PREC_NONE       },
-    [TOKEN_EOF]               = { NULL,                    NULL,                     PREC_NONE       },
+    [TOKEN_ERROR]             = { NULL,                    NULL,                     PREC_NONE        },
+    [TOKEN_EOF]               = { NULL,                    NULL,                     PREC_NONE        },
 
 };
 
