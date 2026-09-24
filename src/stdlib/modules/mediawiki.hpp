@@ -6,7 +6,7 @@
 // INCLUDES
 
 #include "../util/natives.hpp"
-#include "../util/http.hpp"
+#include "../util/networking.hpp"
 #include "../util/json_parser.hpp"
 
 

@@ -4,7 +4,7 @@
 // INCLUDES
 
 #include "../util/natives.hpp"
-#include "../util/http.hpp"
+#include "../util/networking.hpp"
 
 
 // HELPERS
