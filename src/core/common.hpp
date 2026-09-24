@@ -36,8 +36,8 @@ typedef unsigned int uint;
 
 // version
 
-#define VERSION      "0.2.1"
-#define VERSION_DATE "23 Sep 2026"
+#define VERSION      "0.3.0"
+#define VERSION_DATE "24 Sep 2026"
 
 constexpr uint16_t BYTECODE_FORMAT = (0 * 1600) + (2 * 40) + 1 + 1000;
                              //    overhaul      major     minor
