@@ -29,10 +29,19 @@ const int discordIntents = (1 << 0)   // GUILDS
 
 // CLASSES
 
+struct DiscordCommand{
+    string name;
+    string description;
+    vector<pair<string, string>> options;    // name, description
+    Value handler = CaroNull;
+};
+
 struct DiscordBotData: NativeData{
 
     string token;
     string userId;
+    string applicationId;
+    vector<DiscordCommand> commands;
     bool running  = false;
     bool stopping = false;
 
@@ -47,13 +56,17 @@ struct DiscordBotData: NativeData{
         sequence  = "null";
     }
 
+    void mark() override {
+        for(const DiscordCommand& command: commands) markValue(command.handler);
+    }
+
 };
 
 nClass(discord_Bot, "discord", "Bot");
 
 nClass(discord_User, "discord", "User");
 
-struct DiscordMessageData: NativeData{
+struct DiscordBotRef: NativeData{
     Value bot = CaroNull;
     void mark() override {
         markValue(bot);
@@ -61,6 +74,10 @@ struct DiscordMessageData: NativeData{
 };
 
 nClass(discord_Message, "discord", "Message");
+
+nClass(discord_Interaction, "discord", "Interaction");
+
+nClass(discord_Options, "discord", "Options");
 
 
 // HELPERS
@@ -111,11 +128,46 @@ Value discordMessage(VM* vm, Value bot, Value dict) {
     Value author  = discordField(dict, "author");
     if(isDict(author)) asInstance(message)->fields["author"] = discordInstance(userClass, author);
 
-    auto native = std::make_unique<DiscordMessageData>();
+    auto native = std::make_unique<DiscordBotRef>();
     native->bot = bot;
     asInstance(message)->native = std::move(native);
 
     return message;
+
+}
+
+Value discordInteraction(VM* vm, Value bot, Value dict) {
+
+    ObjClass* interactionClass = discordClass(vm, "discord.Interaction");
+    ObjClass* userClass        = discordClass(vm, "discord.User");
+    ObjClass* optionsClass     = discordClass(vm, "discord.Options");
+    if(interactionClass == nullptr || userClass == nullptr || optionsClass == nullptr) return CaroNull;
+
+    Value interaction = discordInstance(interactionClass, dict);
+    ObjInstance* instance = asInstance(interaction);
+
+    // command
+    Value command = discordField(dict, "data");
+    instance->fields["name"] = discordField(command, "name");
+    ObjInstance* options = newInstance(optionsClass);
+    Value optionList = discordField(command, "options");
+    if(isArray(optionList)) {
+        for(Value option: asArray(optionList)->data) {
+            options->fields[printValue(discordField(option, "name"))] = discordField(option, "value");
+        }
+    }
+    instance->fields["options"] = CaroObj(options);
+
+    // user
+    Value user = discordField(discordField(dict, "member"), "user");
+    if(!isDict(user)) user = discordField(dict, "user");
+    if(isDict(user)) instance->fields["user"] = discordInstance(userClass, user);
+
+    auto native = std::make_unique<DiscordBotRef>();
+    native->bot = bot;
+    instance->native = std::move(native);
+
+    return interaction;
 
 }
 
@@ -143,6 +195,38 @@ bool discordRequest(VM* vm, DiscordBotData* data, const string& method, const st
     if(error.empty()) return true;
     vm->runtimeError("%s", error.c_str());
     return false;
+
+}
+
+bool discordRegisterCommands(VM* vm, DiscordBotData* data) {
+
+    if(data->commands.empty()) return true;
+    if(!discordSnowflake(data->applicationId)) {
+        vm->runtimeError("Discord didn't send a valid application ID.");
+        return false;
+    }
+
+    string body = "[";
+    for(size_t i = 0; i < data->commands.size(); ++i) {
+        const DiscordCommand& command = data->commands[i];
+        if(i > 0) body += ", ";
+        body += format(
+            "{{\"type\": 1, \"name\": {:s}, \"description\": {:s}, \"options\": [",
+            jsonStringifyString(command.name), jsonStringifyString(command.description)
+        );
+        for(size_t j = 0; j < command.options.size(); ++j) {
+            if(j > 0) body += ", ";
+            body += format(
+                "{{\"type\": 3, \"name\": {:s}, \"description\": {:s}, \"required\": true}}",
+                jsonStringifyString(command.options[j].first), jsonStringifyString(command.options[j].second)
+            );
+        }
+        body += "]}";
+    }
+    body += "]";
+
+    CaroHttp::Response response;
+    return discordRequest(vm, data, "PUT", "/applications/" + data->applicationId + "/commands", body, response);
 
 }
 
@@ -240,6 +324,7 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
         // read the event
         Value handler = CaroNull;
         vector<Value> handlerArgs;
+        bool registerCommands = false;
         {
 
             GCPause pause;
@@ -268,6 +353,8 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
                         }
                         Value user = discordField(d, "user");
                         data->userId = printValue(discordField(user, "id"));
+                        data->applicationId = printValue(discordField(discordField(d, "application"), "id"));
+                        registerCommands = true;
                         if(isDict(user)) {
                             for(const auto& [key, value]: asDict(user)->data) {
                                 asInstance(self)->fields[printValue(key)] = value;
@@ -280,6 +367,16 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
                         handler = discordHandler(self, "on_message");
                         if(handler.type == TYPE_NULL) break;
                         handlerArgs.push_back(discordMessage(vm, self, d));
+                        if(vm->hadError) return false;
+
+                    } else if(type == "INTERACTION_CREATE") {
+                        Value interactionType = discordField(d, "type");
+                        if(!isNumeric(interactionType.type) || asNumberTo<int>(interactionType) != 2) break;    // APPLICATION_COMMAND
+                        string name = printValue(discordField(discordField(d, "data"), "name"));
+                        auto command = std::ranges::find(data->commands, name, &DiscordCommand::name);
+                        if(command == data->commands.end()) break;
+                        handler = command->handler;
+                        handlerArgs.push_back(discordInteraction(vm, self, d));
                         if(vm->hadError) return false;
 
                     }
@@ -342,6 +439,8 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
 
             }
         }
+
+        if(registerCommands && !discordRegisterCommands(vm, data)) return false;
 
         if(handler.type != TYPE_NULL) {
             Value result;
@@ -424,6 +523,87 @@ nMethod(discord_Bot, stop, {
 });
 
 
+// commands
+
+bool discordCommandName(const string& name) {
+    return !name.empty() && name.size() <= 32 && std::ranges::all_of(name, [](char c) {
+        return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+    });
+}
+
+bool discordDescription(const string& description) {
+    size_t length = std::ranges::count_if(description, [](char c) { return (c & 0xC0) != 0x80; });
+    return length >= 1 && length <= 100;
+}
+
+nMethod(discord_Bot, command, {
+    params({
+        {{OBJ_STRING},                                 true},    // name
+        {{OBJ_STRING},                                 true},    // description
+        {{OBJ_DICT},                                   true},    // options
+        {{OBJ_FUNCTION, OBJ_NATIVE, OBJ_BOUND_METHOD}, true}     // handler
+    });
+
+    DiscordBotData* data = nativeData<DiscordBotData>(vm, self);
+    if(data == nullptr) return CaroNull;
+
+    // set data
+    DiscordCommand command;
+    command.name        = asString(args[0])->str;
+    command.description = asString(args[1])->str;
+    command.handler     = args[3];
+
+    // check
+    if(!discordCommandName(command.name)) {
+        vm->runtimeError("\"%s\" is an invalid command name.", command.name.c_str());
+        return CaroNull;
+    }
+    if(!discordDescription(command.description)) {
+        vm->runtimeError("\%s\" is an invalid command description.", command.name.c_str());
+        return CaroNull;
+    }
+
+    // arguments
+    for(const auto& [key, value]: asDict(args[2])->data) {
+        if(!isString(key) || !isString(value)) {
+            vm->runtimeError("The arguments of \"%s\" should have string-string pairs.", command.name.c_str());
+            return CaroNull;
+        }
+        const string& optionName = asString(key)->str;
+        if(!discordCommandName(optionName)) {
+            vm->runtimeError("\"%s\" is an invalid argument name.", optionName.c_str());
+            return CaroNull;
+        }
+        if(!discordDescription(asString(value)->str)) {
+            vm->runtimeError("\"%s\" is an invalid argument name.", optionName.c_str());
+            return CaroNull;
+        }
+        command.options.emplace_back(optionName, asString(value)->str);
+    }
+    if(command.options.size() > 25) {
+        vm->runtimeError("A command can't have more than 25 arguments.");
+        return CaroNull;
+    }
+    std::ranges::sort(command.options);
+
+    // add or replace
+    auto existing = std::ranges::find(data->commands, command.name, &DiscordCommand::name);
+    if(existing != data->commands.end()) {
+        *existing = std::move(command);
+    } else if(data->commands.size() >= 100) {
+        vm->runtimeError("A bot can't have more than 100 commands.");
+        return CaroNull;
+    } else {
+        data->commands.push_back(std::move(command));
+    }
+
+    // already connected
+    if(data->running && !data->applicationId.empty()) discordRegisterCommands(vm, data);
+
+    return CaroNull;
+});
+
+
 // send
 
 Value discordSend(VM* vm, Value bot, const string& channel, const string& body) {
@@ -465,7 +645,7 @@ nMethod(discord_Message, reply, {
     
     bool ping = args.size() < 2 || args[1].as.Abool;
 
-    DiscordMessageData* data = nativeData<DiscordMessageData>(vm, self);
+    DiscordBotRef* data = nativeData<DiscordBotRef>(vm, self);
     if(data == nullptr) return CaroNull;
 
     string channel = printValue(discordHandler(self, "channel_id"));
@@ -481,4 +661,55 @@ nMethod(discord_Message, reply, {
         "\"allowed_mentions\": {{\"parse\": [\"users\", \"roles\", \"everyone\"], \"replied_user\": {:s}}}",
         jsonStringifyString(asString(args[0])->str), jsonStringifyString(message), ping? "true": "false"
     ));
+});
+
+nMethod(discord_Interaction, reply, {
+    params({
+        {{OBJ_STRING}, true },    // content
+        {{TYPE_BOOL},  false}     // ephemeral
+    });
+
+    bool ephemeral = args.size() >= 2 && args[1].as.Abool;
+
+    DiscordBotRef* ref = nativeData<DiscordBotRef>(vm, self);
+    if(ref == nullptr) return CaroNull;
+    DiscordBotData* data = nativeData<DiscordBotData>(vm, ref->bot);
+    if(data == nullptr) return CaroNull;
+
+    if(!data->running) {
+        vm->runtimeError("The bot isn't running.");
+        return CaroNull;
+    }
+
+    string id    = printValue(discordHandler(self, "id"));
+    Value  token = discordHandler(self, "token");
+    if(!discordSnowflake(id)) {
+        vm->runtimeError("\"%s\" isn't a valid interaction id.", id.c_str());
+        return CaroNull;
+    }
+    if(!isString(token) || asString(token)->str.empty()) {
+        vm->runtimeError("This interaction doesn't have a token.");
+        return CaroNull;
+    }
+
+    CaroHttp::Response response;
+    discordRequest(
+        vm, data,
+        "POST",
+        "/interactions/" + id + "/" + asString(token)->str + "/callback",
+        format(
+            "{{"
+                "\"type\": 4, "
+                "\"data\": {{"
+                    "\"content\": {:s}, "
+                    "{:s}"
+                    "\"allowed_mentions\": {{\"parse\": [\"users\", \"roles\", \"everyone\"]}}"
+                "}}"
+            "}}",
+            jsonStringifyString(asString(args[0])->str), ephemeral? "\"flags\": 64, ": ""
+        ),
+        response
+    );
+
+    return CaroNull;
 });

@@ -17,4 +17,12 @@ $bot.on_message = func(message) {
     }
 };
 
+$bot.command(
+    "echo", "Repeats some text",
+    {"text": "Text"},
+    func(interaction) {
+        interaction.reply(interaction.options.text, false);
+    }
+);
+
 $bot.run(fs.read("examples/discord/token.txt"));
