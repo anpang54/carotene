@@ -556,7 +556,7 @@ class VM{
 
                 string result = asString(peek(1))->str + asString(peek(0))->str;
                 this->stackTop -= 2;
-                push(CaroObj(copyString(std::move(result))));
+                push(CaroObj(freshString(std::move(result))));
                 return INTERPRET_OK;
 
             } else {
@@ -572,7 +572,7 @@ class VM{
                 case OP_SUBTRACT: {    // removes all occurrences of b in a
                     string result = strA;
                     replace(result, strB, "");
-                    push(CaroObj(copyString(result)));
+                    push(CaroObj(freshString(result)));
                     break;
                 }
 
@@ -582,7 +582,7 @@ class VM{
                         return INTERPRET_RUNTIME_ERROR;
                     }
                     if(strA.empty()) {
-                        push(CaroObj(copyString(strA)));
+                        push(CaroObj(freshString(strA)));
                         break;
                     }
                     if((uint64_t)multiplier > MAX_STRING_LENGTH / strA.length()) {
@@ -594,7 +594,7 @@ class VM{
                     for(int64_t i = 0; i < multiplier; ++i) {
                         result += strA;
                     }
-                    push(CaroObj(copyString(result)));
+                    push(CaroObj(freshString(result)));
                     break;
                 }
 
@@ -628,7 +628,7 @@ class VM{
                         return INTERPRET_RUNTIME_ERROR;
                     }
                     int64_t eachPartLength = strA.length() / multiplier;
-                    push(CaroObj(copyString(strA.substr(eachPartLength * multiplier))));
+                    push(CaroObj(freshString(strA.substr(eachPartLength * multiplier))));
                     break;
                 }
 
@@ -759,10 +759,13 @@ class VM{
             if(!callValue(callee, (int)args.size())) return false;
 
             if(this->frames.size() > depth) {
-                return run(depth, result) == INTERPRET_OK;
+                if(run(depth, result) != INTERPRET_OK) return false;
+                clearFresh(*result);
+                return true;
             }
 
             *result = pop();
+            clearFresh(*result);
             return true;
 
         }
@@ -825,6 +828,7 @@ class VM{
                 return false;
             }
 
+            clearFresh(peek(0));
             top() = CaroObj(newBoundMethod(peek(0), found->second.as.obj));
             return true;
 

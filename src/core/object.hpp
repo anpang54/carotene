@@ -83,6 +83,7 @@ struct Obj{
 struct ObjString: Obj{
     string str;
     bool immutable = false;
+    bool fresh = false;
 };
     // just a wrapper around an std::string
 
@@ -100,9 +101,24 @@ ObjString* copyString(string str) {
     return object;
 }
 
+ObjString* freshString(string str) {
+    ObjString* object = copyString(std::move(str));
+    object->fresh = true;
+    return object;
+}
+
 Value copyIfString(const Value& value) {
     if(!isString(value)) return value;
-    return CaroObj(copyString(asString(value)->str));
+    ObjString* str = asString(value);
+    if(str->fresh) {
+        str->fresh = false;
+        return value;
+    }
+    return CaroObj(copyString(str->str));
+}
+
+void clearFresh(const Value& value) {
+    if(isString(value)) asString(value)->fresh = false;
 }
 
 
