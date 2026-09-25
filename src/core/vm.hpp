@@ -262,10 +262,28 @@ class VM{
 
         template<typename T>
         InterpretResult numberBinaryOperationAs(OpCode op) {
-
-            // get a and b
             T b = asNumberTo<T>(pop());
             T a = asNumberTo<T>(pop());
+            return binaryOperationAs<T>(op, a, b);
+        }
+
+        bool isSameTypePair(OpCode op) {
+            ValueType type = peek(0).type;
+            if(type != peek(1).type) return false;
+            if(type == TYPE_INT) return op != OP_DIVIDE && !isShift(op);
+            if(type == TYPE_FLOAT || type == TYPE_DOUBLE) return !isBitwise(op);
+            return false;
+        }
+        InterpretResult sameTypeBinaryOperation(OpCode op) {
+            Value b = pop();
+            Value a = pop();
+            if(a.type == TYPE_INT)   return binaryOperationAs<int32_t>(op, a.as.Aint,   b.as.Aint);
+            if(a.type == TYPE_FLOAT) return binaryOperationAs<float>  (op, a.as.Afloat, b.as.Afloat);
+            return binaryOperationAs<double>(op, a.as.Adouble, b.as.Adouble);
+        }
+
+        template<typename T>
+        InterpretResult binaryOperationAs(OpCode op, T a, T b) {
 
             // check division by zero
             if((op == OP_DIVIDE || op == OP_MODULO) && b == 0) {
@@ -378,6 +396,8 @@ class VM{
         }
 
         InterpretResult numberBinaryOperation(OpCode op) {
+
+            if(isSameTypePair(op)) return sameTypeBinaryOperation(op);
 
             // check that both operands are some sort of numeric type
             if(!isNumeric(peek(0).type) || !isNumeric(peek(1).type)) {
@@ -621,6 +641,9 @@ class VM{
         }
 
         InterpretResult addOrSubtract(OpCode op) {
+
+            if(isSameTypePair(op)) return sameTypeBinaryOperation(op);
+            
             if(isString(peek(0)) && isString(peek(1))) {
                 return stringBinaryOperation(op);
             } else if(isVector(peek(0).type) || isVector(peek(1).type)) {
@@ -628,8 +651,10 @@ class VM{
             } else if(isNumeric(peek(0).type) && isNumeric(peek(1).type)) {
                 return numberBinaryOperation(op);
             }
+
             runtimeError("Operands must be numbers or strings.");
             return INTERPRET_RUNTIME_ERROR;
+            
         }
 
 
