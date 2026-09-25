@@ -13,7 +13,7 @@ $bot.on_message = func(message) {
         case "!ping":
             $bot.send(message.channel_id, "Pong!");
         case "!reply":
-            message.reply("Replied!");
+            message.reply("Replied!", false);
     }
 };
 

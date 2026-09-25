@@ -459,8 +459,11 @@ nMethod(discord_Bot, send, {
 
 nMethod(discord_Message, reply, {
     params({
-        {{OBJ_STRING}, true}    // content
+        {{OBJ_STRING}, true },   // content
+        {{TYPE_BOOL},  false}    // ping
     });
+    
+    bool ping = args.size() < 2 || args[1].as.Abool;
 
     DiscordMessageData* data = nativeData<DiscordMessageData>(vm, self);
     if(data == nullptr) return CaroNull;
@@ -473,8 +476,9 @@ nMethod(discord_Message, reply, {
     }
 
     return discordSend(vm, data->bot, channel, format(
-        "\"content\": {:s}, \"message_reference\": {{\"message_id\": {:s}, \"fail_if_not_exists\": false}}",
-        jsonStringifyString(asString(args[0])->str), jsonStringifyString(message)
+        "\"content\": {:s}, "
+        "\"message_reference\": {{\"message_id\": {:s}, \"fail_if_not_exists\": false}}, "
+        "\"allowed_mentions\": {{\"parse\": [\"users\", \"roles\", \"everyone\"], \"replied_user\": {:s}}}",
+        jsonStringifyString(asString(args[0])->str), jsonStringifyString(message), ping? "true": "false"
     ));
-    
 });
