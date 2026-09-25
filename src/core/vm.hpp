@@ -820,6 +820,19 @@ class VM{
         }
 
 
+        // dicts
+
+        [[gnu::noinline]] void setDictEntry(ObjDict* dict, Value key, Value value) {
+            if(!isString(key)) {
+                dict->data.insert_or_assign(key, copyIfString(value));
+                return;
+            }
+            auto found = dict->data.find(key);
+            if(found != dict->data.end()) found->second = copyIfString(value);
+            else dict->data.try_emplace(copyIfString(key), copyIfString(value));
+        }
+
+
         // run
 
         InterpretResult run(size_t exitDepth = 0, Value* result = nullptr) {
@@ -1377,8 +1390,7 @@ class VM{
 
                             Value value = pop();
                             Value key = pop();
-                            ObjDict* dict = asDict(pop());
-                            dict->data.insert_or_assign(copyIfString(key), copyIfString(value));
+                            setDictEntry(asDict(pop()), key, value);
                             push(value);
 
                         } else {
