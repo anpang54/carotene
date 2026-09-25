@@ -49,8 +49,17 @@ struct DiscordBotData: NativeData{
 
 };
 
-nClass(discord_Bot,     "discord", "Bot"    );
-nClass(discord_User,    "discord", "User"   );
+nClass(discord_Bot, "discord", "Bot");
+
+nClass(discord_User, "discord", "User");
+
+struct DiscordMessageData: NativeData{
+    Value bot = CaroNull;
+    void mark() override {
+        markValue(bot);
+    }
+};
+
 nClass(discord_Message, "discord", "Message");
 
 
@@ -92,7 +101,7 @@ Value discordHandler(Value self, const string& name) {
     return field == asInstance(self)->fields.end()? CaroNull: field->second;
 }
 
-Value discordMessage(VM* vm, Value dict) {
+Value discordMessage(VM* vm, Value bot, Value dict) {
 
     ObjClass* messageClass = discordClass(vm, "discord.Message");
     ObjClass* userClass    = discordClass(vm, "discord.User");
@@ -102,8 +111,16 @@ Value discordMessage(VM* vm, Value dict) {
     Value author  = discordField(dict, "author");
     if(isDict(author)) asInstance(message)->fields["author"] = discordInstance(userClass, author);
 
+    auto native = std::make_unique<DiscordMessageData>();
+    native->bot = bot;
+    asInstance(message)->native = std::move(native);
+
     return message;
 
+}
+
+bool discordSnowflake(const string& id) {
+    return !id.empty() && std::ranges::all_of(id, [](char c) { return c >= '0' && c <= '9'; });
 }
 
 bool discordRequest(VM* vm, DiscordBotData* data, const string& method, const string& path, const string& body, CaroHttp::Response& response) {
@@ -262,7 +279,7 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
                         if(printValue(discordField(discordField(d, "author"), "id")) == data->userId) break;
                         handler = discordHandler(self, "on_message");
                         if(handler.type == TYPE_NULL) break;
-                        handlerArgs.push_back(discordMessage(vm, d));
+                        handlerArgs.push_back(discordMessage(vm, self, d));
                         if(vm->hadError) return false;
 
                     }
@@ -341,12 +358,18 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
 
 // BOT METHODS
 
+
+// init
+
 nMethod(discord_Bot, init, {
     params({});
     if(alreadyInitialized(vm, self)) return CaroNull;
     asInstance(self)->native = std::make_unique<DiscordBotData>();
     return CaroNull;
 });
+
+
+// run
 
 nMethod(discord_Bot, run, {
     params({
@@ -389,6 +412,9 @@ nMethod(discord_Bot, run, {
     return CaroNull;
 });
 
+
+// stop
+
 nMethod(discord_Bot, stop, {
     params({});
     DiscordBotData* data = nativeData<DiscordBotData>(vm, self);
@@ -397,13 +423,12 @@ nMethod(discord_Bot, stop, {
     return CaroNull;
 });
 
-nMethod(discord_Bot, send, {
-    params({
-        {{OBJ_STRING, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG}, true},    // channel id
-        {{OBJ_STRING},                                             true}     // content
-    });
 
-    DiscordBotData* data = nativeData<DiscordBotData>(vm, self);
+// send
+
+Value discordSend(VM* vm, Value bot, const string& channel, const string& body) {
+
+    DiscordBotData* data = nativeData<DiscordBotData>(vm, bot);
     if(data == nullptr) return CaroNull;
 
     if(!data->running) {
@@ -411,23 +436,45 @@ nMethod(discord_Bot, send, {
         return CaroNull;
     }
 
-    string channel = printValue(args[0]);
-    if(channel.empty() || !std::ranges::all_of(channel, [](char c) { return c >= '0' && c <= '9'; })) {
+    if(!discordSnowflake(channel)) {
         vm->runtimeError("\"%s\" isn't a valid channel id.", channel.c_str());
         return CaroNull;
     }
 
     CaroHttp::Response response;
-    if(!discordRequest(
-        vm,
-        data,
-        "POST",
-        "/channels/" + channel + "/messages",
-        "{\"content\": " + jsonStringifyString(asString(args[1])->str) + "}",
-        response
-    )) return CaroNull;
+    if(!discordRequest(vm, data, "POST", "/channels/" + channel + "/messages", "{" + body + "}", response)) return CaroNull;
 
     GCPause pause;
-    return discordMessage(vm, discordParse(response.body));
+    return discordMessage(vm, bot, discordParse(response.body));
 
+}
+
+nMethod(discord_Bot, send, {
+    params({
+        {{OBJ_STRING, TYPE_UINT, TYPE_INT, TYPE_ULONG, TYPE_LONG}, true},    // channel id
+        {{OBJ_STRING},                                             true}     // content
+    });
+    return discordSend(vm, self, printValue(args[0]), "\"content\": " + jsonStringifyString(asString(args[1])->str));
+});
+
+nMethod(discord_Message, reply, {
+    params({
+        {{OBJ_STRING}, true}    // content
+    });
+
+    DiscordMessageData* data = nativeData<DiscordMessageData>(vm, self);
+    if(data == nullptr) return CaroNull;
+
+    string channel = printValue(discordHandler(self, "channel_id"));
+    string message = printValue(discordHandler(self, "id"));
+    if(!discordSnowflake(message)) {
+        vm->runtimeError("\"%s\" isn't a valid message id.", message.c_str());
+        return CaroNull;
+    }
+
+    return discordSend(vm, data->bot, channel, format(
+        "\"content\": {:s}, \"message_reference\": {{\"message_id\": {:s}, \"fail_if_not_exists\": false}}",
+        jsonStringifyString(asString(args[0])->str), jsonStringifyString(message)
+    ));
+    
 });

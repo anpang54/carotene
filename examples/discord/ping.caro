@@ -9,8 +9,11 @@ $bot.on_ready = func() {
 };
 
 $bot.on_message = func(message) {
-    if(message.content == "!ping") {
-        $bot.send(message.channel_id, "Pong!");
+    switch(message.content) {
+        case "!ping":
+            $bot.send(message.channel_id, "Pong!");
+        case "!reply":
+            message.reply("Replied!");
     }
 };
 
