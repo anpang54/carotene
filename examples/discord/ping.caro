@@ -4,6 +4,10 @@ use fs;
 
 $bot = discord.Bot();
 
+$bot.on_ready = func() {
+    print(f"Logged in as {$bot.username}#{$bot.discriminator}!");
+};
+
 $bot.on_message = func(message) {
     if(message.content == "!ping") {
         $bot.send(message.channel_id, "Pong!");

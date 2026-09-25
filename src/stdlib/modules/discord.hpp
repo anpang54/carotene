@@ -70,6 +70,11 @@ Value discordInstance(ObjClass* klass, Value dict) {
     return CaroObj(instance);
 }
 
+Value discordHandler(Value self, const string& name) {
+    auto field = asInstance(self)->fields.find(name);
+    return field == asInstance(self)->fields.end()? CaroNull: field->second;
+}
+
 Value discordMessage(VM* vm, Value dict) {
 
     ObjClass* messageClass = discordClass(vm, "discord.Message");
@@ -190,7 +195,7 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
 
         // read the event
         Value handler = CaroNull;
-        Value message = CaroNull;
+        vector<Value> handlerArgs;
         {
 
             GCPause pause;
@@ -210,14 +215,20 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
                     string type = printValue(discordField(payload, "t"));
 
                     if(type == "READY") {
-                        data->userId = printValue(discordField(discordField(d, "user"), "id"));
+                        Value user = discordField(d, "user");
+                        data->userId = printValue(discordField(user, "id"));
+                        if(isDict(user)) {
+                            for(const auto& [key, value]: asDict(user)->data) {
+                                asInstance(self)->fields[printValue(key)] = value;
+                            }
+                        }
+                        handler = discordHandler(self, "on_ready");
 
                     } else if(type == "MESSAGE_CREATE") {
                         if(printValue(discordField(discordField(d, "author"), "id")) == data->userId) break;
-                        auto field = asInstance(self)->fields.find("on_message");
-                        if(field == asInstance(self)->fields.end() || field->second.type == TYPE_NULL) break;
-                        handler = field->second;
-                        message = discordMessage(vm, d);
+                        handler = discordHandler(self, "on_message");
+                        if(handler.type == TYPE_NULL) break;
+                        handlerArgs.push_back(discordMessage(vm, d));
                         if(vm->hadError) return false;
 
                     }
@@ -283,9 +294,9 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
             }
         }
 
-        if(message.type != TYPE_NULL) {
+        if(handler.type != TYPE_NULL) {
             Value result;
-            if(!vm->callFromNative(handler, {message}, &result)) return false;
+            if(!vm->callFromNative(handler, handlerArgs, &result)) return false;
         }
 
     }
