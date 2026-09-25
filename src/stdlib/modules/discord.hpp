@@ -274,27 +274,12 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
                     if(!connection.send("{\"op\": 1, \"d\": " + data->sequence + "}").empty()) return true;
                     break;
                 }
-
-                // Identify
-             // case 2:
-
-                // Presence Update
-             // case 3:
-
-                 // Voice State Update
-             // case 4:
-
-                 // Resume
-             // case 6:
              
                 // Reconnect
                 case 7: {
                     connection.close(discordCloseResumable);
                     return true;
                 }
-
-                // Request Guild Members
-             // case 8:
 
                 // Invalid Session
                 case 9: {
@@ -334,12 +319,6 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
                     acknowledged = true;
                     break;
                 }
-
-                // Request Soundboard Sounds
-             // case 31:
-
-                // Request Channel Info
-             // case 43:
 
                 // what
                 default: break;
