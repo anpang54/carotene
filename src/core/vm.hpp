@@ -1689,6 +1689,7 @@ void maybeCollect() {
 
 #include "../stdlib/modules/algorithms.hpp"
 #include "../stdlib/modules/caro.hpp"
+#include "../stdlib/modules/discord.hpp"
 #include "../stdlib/modules/dom.hpp"
 #include "../stdlib/modules/fs.hpp"
 #include "../stdlib/modules/gui.hpp"
