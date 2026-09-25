@@ -10,12 +10,16 @@
 #include "../util/networking.hpp"
 #include "../util/json_parser.hpp"
 #include <thread>
+#include <random>
 
 
 // SETTINGS
 
-#define DISCORD_API     "https://discord.com/api/v10"
-#define DISCORD_GATEWAY "wss://gateway.discord.gg/?v=10&encoding=json"
+#define DISCORD_API           "https://discord.com/api/v10"
+#define DISCORD_GATEWAY       "wss://gateway.discord.gg"
+#define DISCORD_GATEWAY_QUERY "/?v=10&encoding=json"
+
+const uint16_t discordCloseResumable = 4000;
 
 const int discordIntents = (1 << 0)   // GUILDS
                          | (1 << 9)   // GUILD_MESSAGES
@@ -26,10 +30,23 @@ const int discordIntents = (1 << 0)   // GUILDS
 // CLASSES
 
 struct DiscordBotData: NativeData{
+
     string token;
     string userId;
     bool running  = false;
     bool stopping = false;
+
+    // resuming
+    string sessionId;
+    string resumeUrl;
+    string sequence = "null";
+
+    void forgetSession() {
+        sessionId = "";
+        resumeUrl = "";
+        sequence  = "null";
+    }
+
 };
 
 nClass(discord_Bot,     "discord", "Bot"    );
@@ -115,25 +132,22 @@ bool discordRequest(VM* vm, DiscordBotData* data, const string& method, const st
 
 // GATEWAY
 
-bool discordCloseRecoverable(VM* vm, uint16_t code, const string& reason) {
+bool discordCloseRecoverable(VM* vm, DiscordBotData* data, uint16_t code, const string& reason) {
 
     string problem;
     switch(code) {
-        case 4000: problem = "Unknown error";         break;
-        case 4001: problem = "Unknown opcode";        break;
-        case 4002: problem = "Decode error";          break;
-        case 4003: problem = "Not authenticated";     break;
         case 4004: problem = "Authentication failed"; break;
-        case 4005: problem = "Already authenticated"; break;
-        case 4007: problem = "Invalid seq";           break;
-        case 4008: problem = "Rate limited";          break;
-        case 4009: problem = "Session timed out";     break;
         case 4010: problem = "Invalid shard";         break;
         case 4011: problem = "Sharding required";     break;
         case 4012: problem = "Invalid API version";   break;
         case 4013: problem = "Invalid intent(s)";     break;
         case 4014: problem = "Disallowed intents";    break;
             // https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway
+
+        case 4007: case 4009:
+            data->forgetSession();
+            return true;
+
         default: return true;
     }
 
@@ -148,9 +162,14 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
     using namespace CaroWebSocket;
 
     // open connection
+    bool resuming = !data->sessionId.empty();
     Connection connection;
-    string error = connection.open(DISCORD_GATEWAY);
+    string error = connection.open((resuming? data->resumeUrl: DISCORD_GATEWAY) + DISCORD_GATEWAY_QUERY);
     if(!error.empty()) {
+        if(resuming) {
+            data->forgetSession();
+            return true;
+        }
         vm->runtimeError("%s", error.c_str());
         return false;
     }
@@ -163,7 +182,7 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
     // heartbeat
     double heartbeatInterval = -1;
     Clock::time_point nextHeartbeat = Clock::time_point::max();
-    string sequence = "null";
+    bool acknowledged = true;
 
     Message received;
 
@@ -171,8 +190,16 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
 
         // heartbeat
         if(Clock::now() >= nextHeartbeat) {
-            if(!connection.send("{\"op\": 1, \"d\": " + sequence + "}").empty()) return true;
+
+            if(!acknowledged) {
+                connection.close(discordCloseResumable, "", false);
+                return true;
+            }
+
+            if(!connection.send("{\"op\": 1, \"d\": " + data->sequence + "}").empty()) return true;
+            acknowledged  = false;
             nextHeartbeat = deadlineAfter(heartbeatInterval);
+
         }
 
         // wait for the next event
@@ -190,7 +217,7 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
 
         // closed
         if(event == EVENT_CLOSED) {
-            return discordCloseRecoverable(vm, connection.closeCode, connection.closeReason);
+            return discordCloseRecoverable(vm, data, connection.closeCode, connection.closeReason);
         }
 
         // read the event
@@ -206,7 +233,7 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
             int op = isNumeric(opValue.type)? asNumberTo<int>(opValue): -1;
             Value d = discordField(payload, "d");
             Value s = discordField(payload, "s");
-            if(isInt(s.type)) sequence = printValue(s);
+            if(isInt(s.type)) data->sequence = printValue(s);
 
             switch(op) {
 
@@ -215,6 +242,13 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
                     string type = printValue(discordField(payload, "t"));
 
                     if(type == "READY") {
+                        Value sessionId = discordField(d, "session_id");
+                        Value resumeUrl = discordField(d, "resume_gateway_url");
+                        if(isString(sessionId) && isString(resumeUrl)) {
+                            data->sessionId = asString(sessionId)->str;
+                            data->resumeUrl = asString(resumeUrl)->str;
+                            while(data->resumeUrl.ends_with('/')) data->resumeUrl.pop_back();
+                        }
                         Value user = discordField(d, "user");
                         data->userId = printValue(discordField(user, "id"));
                         if(isDict(user)) {
@@ -237,7 +271,7 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
 
                 // Heartbeat
                 case 1: {
-                    nextHeartbeat = Clock::now();
+                    if(!connection.send("{\"op\": 1, \"d\": " + data->sequence + "}").empty()) return true;
                     break;
                 }
 
@@ -254,13 +288,20 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
              // case 6:
              
                 // Reconnect
-                case 7: return true;
+                case 7: {
+                    connection.close(discordCloseResumable);
+                    return true;
+                }
 
                 // Request Guild Members
              // case 8:
 
                 // Invalid Session
-                case 9: return true;
+                case 9: {
+                    if(d.type != TYPE_BOOL || !d.as.Abool) data->forgetSession();
+                    connection.close(discordCloseResumable);
+                    return true;
+                }
 
                 // Hello
                 case 10: {
@@ -270,17 +311,29 @@ bool discordSession(VM* vm, Value self, DiscordBotData* data) {
                         return false;
                     }
                     heartbeatInterval = asNumberTo<double>(interval) / 1000;
-                    nextHeartbeat = deadlineAfter(heartbeatInterval);
-                    string identify = format(
-                        "{{\"op\": 2, \"d\": {{\"token\": {:s}, \"intents\": {:d}, \"properties\": {{\"os\": {:s}, \"browser\": \"carotene\", \"device\": \"carotene\"}}}}}}",
-                        jsonStringifyString(data->token), discordIntents, jsonStringifyString(platform)
-                    );
-                    if(!connection.send(identify).empty()) return true;
+
+                    std::random_device device;
+                    std::mt19937 generator(device());
+                    nextHeartbeat = deadlineAfter(heartbeatInterval * std::uniform_real_distribution<double>(0, 1)(generator));
+
+                    string hello = resuming?
+                        format(
+                            "{{\"op\": 6, \"d\": {{\"token\": {:s}, \"session_id\": {:s}, \"seq\": {:s}}}}}",
+                            jsonStringifyString(data->token), jsonStringifyString(data->sessionId), data->sequence
+                        ):
+                        format(
+                            "{{\"op\": 2, \"d\": {{\"token\": {:s}, \"intents\": {:d}, \"properties\": {{\"os\": {:s}, \"browser\": \"carotene\", \"device\": \"carotene\"}}}}}}",
+                            jsonStringifyString(data->token), discordIntents, jsonStringifyString(platform)
+                        );
+                    if(!connection.send(hello).empty()) return true;
                     break;
                 }
 
                 // Heartbeat ACK
-                case 11: break;
+                case 11: {
+                    acknowledged = true;
+                    break;
+                }
 
                 // Request Soundboard Sounds
              // case 31:
@@ -341,6 +394,7 @@ nMethod(discord_Bot, run, {
     data->userId   = "";
     data->running  = true;
     data->stopping = false;
+    data->forgetSession();
 
     while(discordSession(vm, self, data)) {
         #ifdef __EMSCRIPTEN__
