@@ -2,6 +2,7 @@
 CLAUDE.md
 builds
 caro
+examples/discord/token.txt
 optimization_notes
 src/core/licenses.hpp
 src/stdlib/util/gui_styles.hpp

@@ -1,0 +1,13 @@
+
+use discord;
+use fs;
+
+$bot = discord.Bot();
+
+$bot.on_message = func(message) {
+    if(message.content == "!ping") {
+        $bot.send(message.channel_id, "Pong!");
+    }
+};
+
+$bot.run(fs.read("examples/discord/token.txt"));
